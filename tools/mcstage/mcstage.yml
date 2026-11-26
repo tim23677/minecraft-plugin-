@@ -27,8 +27,11 @@ steps:
   - expect: "OrderHub"
     timeout: 30s
 
+  # Die Initialisierung laeuft asynchron (Datenbank, Recovery). Erst danach antwortet der Befehl.
+  - wait: 10s
+
   # Die Konsole darf das Menue nicht oeffnen.
   - send: "orderhub"
-  - expect: "Only players can use this command."
+  - expect: "This command can only be used by players."
 
   - wait: 5s

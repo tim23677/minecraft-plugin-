@@ -279,3 +279,14 @@ Erwartetes Ergebnis: Eintrag in MANUAL_REVIEW, keine automatische Zahlung.
 Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
 
 Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## Echter Serverlauf (mcstage)
+
+Befehl: `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` (EULA-Zustimmung vom Nutzer im Auftrag erteilt).
+
+| Plattform | Ergebnis | Geprüft |
+|---|---|---|
+| Paper 1.21.11 (Build 132) | bestanden | Plugin lädt, `OrderHub enabled (server-id main, SQLITE)`, Recovery läuft ohne Fehler, Konsolenbefehl `orderhub` antwortet "only be used by players" |
+| Folia 1.21.11 (Build 14) | bestanden | wie oben |
+
+Summary: 2 passed in 51.0s. Nicht geprüft: Auftrag erstellen, liefern, abholen, Neustart mit Spieler und Vault-Economy (braucht einen Bot-Spieler und ein Economy-Plugin, siehe RELEASE_REPORT.md).
