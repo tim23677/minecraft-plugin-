@@ -291,13 +291,16 @@ Befehl: `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` (EULA-Zustimmung vom N
 
 Summary: 2 passed in 51.0s. Nicht geprüft: Auftrag erstellen, liefern, abholen, Neustart mit Spieler und Vault-Economy (braucht einen Bot-Spieler und ein Economy-Plugin, siehe RELEASE_REPORT.md).
 
-## Lauf für 1.0.0
+## Lauf für 1.1.0
 
 | Prüfung | Befehl | Ergebnis |
 |---|---|---|
-| Build mit -Xlint:all -Werror, Spotless, SpotBugs, Tests | `./gradlew clean build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 815 Tests, 0 Fehler, 0 übersprungen |
+| Build mit -Xlint:all -Werror, Spotless, SpotBugs (Main und Test), Tests | `./gradlew clean build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 860 Tests, 0 Fehler, 0 übersprungen |
 | Integrationstests gegen MariaDB 11.4 (Testcontainers) | `TESTCONTAINERS_RYUK_DISABLED=true ./gradlew integrationTest --max-workers=1` | erfolgreich, 49 bestanden, 1 übersprungen (SQLite-Test) |
-| Lasttest SQLite, 100.000 Aufträge, 8 Sucher | `./gradlew loadTest --max-workers=1` | p50 19 ms, p95 163 ms, Maximum 1.246 ms (vorher p95 1.026 ms) |
-| Echter Server Paper 1.21.11 und Folia 1.21.11 | `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` | 2 bestanden in 86,5 s, Bibliotheken per Paper-Loader geladen, keine SLF4J- oder ERROR-Zeilen |
+| Lasttest SQLite, 100.000 Aufträge, 8 Sucher | `./gradlew loadTest --max-workers=1` | p50 19 ms, p95 156 ms, Maximum 867 ms |
+| Echter Server Paper 1.21.11 und Folia 1.21.11, mit Konsolenbefehlen `orderadmin health`, `backup`, `export orders`, `export ledger`, `review list` | `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` | 2 bestanden in 82,8 s |
+| Spieler-Szenario, Paper 1.21.11, VaultUnlocked 2.20.3, EssentialsX 2.22.0, zwei Bots | `node tools/e2e/e2e.js ../srv ../result.json` | 17 von 17 bestanden |
 
-Nicht ausgeführt: Spieler-Szenario mit Vault und Economy-Plugin auf dem echten Server, MariaDB-Lasttest, MariaDB 10.11, `dependencyCheckAnalyze` (kein NVD_API_KEY).
+Das Spieler-Szenario prüft: Server startet ohne ERROR und SLF4J-Zeilen, Vault-Economy erkannt, Auftrag erstellt und Escrow 50,00 gebucht, Lieferung mit 3 Überschuss-Items (8 im Menü, 5 gebraucht), Auftrag COMPLETED, Auszahlung COMPLETED (49,00 nach 2 % Steuer, per `/balance` bei EssentialsX bestätigt), Überschuss wieder beim Lieferanten, Abholung der 5 Diamanten, Claim CLAIMED, Storno mit Erstattung (REFUND COMPLETED, 40,00), harter Absturz (SIGKILL) direkt nach dem Bestätigen einer Lieferung mit 9 Items im Menü, Neustart, Recovery mit `itemsReturned=1`, keine offene Reservierung, Claim + Rückgabe = 9, keine Zahlung in MANUAL_REVIEW.
+
+Nicht ausgeführt: Spieler-Szenario auf Folia (EssentialsX läuft nicht auf Folia), andere Economy-Plugins, MariaDB-Lasttest, MariaDB 10.11, `dependencyCheckAnalyze` (kein NVD_API_KEY).
