@@ -64,6 +64,7 @@ public final class OrderService {
     IN_PROGRESS,
     INVALID_PRICE,
     INVALID_QUANTITY,
+    INVALID_LIFETIME,
     INVALID_AMOUNT,
     LIMIT_REACHED,
     INSUFFICIENT_FUNDS,
@@ -187,6 +188,12 @@ public final class OrderService {
   }
 
   private CreateStatus validate(CreateOrderRequest r) {
+    if (r.lifetime() != null
+        && (r.lifetime().isZero()
+            || r.lifetime().isNegative()
+            || r.lifetime().compareTo(java.time.Duration.ofDays(366)) > 0)) {
+      return CreateStatus.INVALID_LIFETIME;
+    }
     if (r.unitPrice() < limits.minPrice() || r.unitPrice() > limits.maxPrice()) {
       return CreateStatus.INVALID_PRICE;
     }

@@ -52,7 +52,8 @@ public final class DatabaseSetup {
                 + m.getInt("port", 3306)
                 + "/"
                 + m.getString("database", "orderhub")
-                + (m.getBoolean("use-ssl", false) ? "?sslMode=trust" : "?sslMode=disable");
+                + "?sslMode="
+                + sslMode(m);
         pool =
             DataSourceFactory.mariaDb(
                 url, m.getString("username", "orderhub"), password, m.getInt("pool-size", 10));
@@ -71,5 +72,30 @@ public final class DatabaseSetup {
       }
       throw new IllegalStateException("database could not be opened: " + e.getMessage(), e);
     }
+  }
+
+  /** Gueltige Modi: disable, trust (nur verschluesseln), verify-ca, verify-full. */
+  static String sslMode(ConfigurationSection m) {
+    String configured = java.util.Objects.requireNonNullElse(m.getString("ssl-mode"), "auto");
+    String mode =
+        switch (configured.toLowerCase(java.util.Locale.ROOT)) {
+          case "disable", "trust", "verify-ca", "verify-full" ->
+              configured.toLowerCase(java.util.Locale.ROOT);
+          default -> m.getBoolean("use-ssl", false) ? "verify-full" : "disable";
+        };
+    String host = java.util.Objects.requireNonNullElse(m.getString("host"), "localhost");
+    boolean local = host.equals("localhost") || host.equals("127.0.0.1") || host.equals("::1");
+    if (mode.equals("disable") && !local) {
+      java.util.logging.Logger.getLogger("OrderHub")
+          .warning(
+              "database.yml: the database host is not local and ssl-mode is 'disable'. Credentials and"
+                  + " data travel unencrypted. Set ssl-mode to verify-full.");
+    }
+    if (mode.equals("trust")) {
+      java.util.logging.Logger.getLogger("OrderHub")
+          .warning(
+              "database.yml: ssl-mode 'trust' encrypts but does not verify the server certificate.");
+    }
+    return mode;
   }
 }

@@ -55,10 +55,18 @@ permissions:
   orderhub.admin.recovery:
     description: Run recovery and purge expired orders
     default: op
+  orderhub.admin.view:
+    description: List orders, statistics and debug info
+    default: op
+  orderhub.admin.cancel:
+    description: Cancel any order (with confirmation and reason)
+    default: op
   orderhub.admin:
     description: All administration commands
     default: op
     children:
+      orderhub.admin.view: true
+      orderhub.admin.cancel: true
       orderhub.admin.reload: true
       orderhub.admin.transactions: true
       orderhub.admin.recovery: true

@@ -169,7 +169,9 @@ public final class PayoutWorker {
    * @return {@code true}, wenn nach MANUAL_REVIEW eskaliert wurde
    */
   private boolean releaseOrEscalate(PayoutRepository.Item item, EconomyResult result) {
-    boolean exhausted = item.attempts() + 1 >= maxAttempts;
+    // item.attempts() ist der Stand vor diesem Versuch. Ein voruebergehend fehlender Anbieter
+    // (UNAVAILABLE) fuehrt nie in die manuelle Pruefung, er wird mit Backoff weiter versucht.
+    boolean exhausted = result != EconomyResult.UNAVAILABLE && item.attempts() + 1 >= maxAttempts;
     try {
       return TxRunner.run(
           storage,

@@ -592,6 +592,42 @@ abstract class StorageContractTest {
   }
 
   @Test
+  void ownerLimitHoldsWhenTheTransactionAlreadyReadBeforeLocking() throws Exception {
+    UUID owner = UUID.randomUUID();
+    JdbcStorage s1 = server("srv-a");
+    JdbcStorage s2 = server("srv-b");
+    int limit = 3;
+    AtomicInteger created = new AtomicInteger();
+    runConcurrently(
+        THREADS,
+        i -> {
+          Storage s = i % 2 == 0 ? s1 : s2;
+          boolean ok =
+              tx(
+                  s,
+                  (UnitOfWork u) -> {
+                    // erste Lesung legt unter REPEATABLE READ den Snapshot fest (wie OrderService)
+                    u.journal().findByKey("stale-snapshot-" + owner + "-" + i);
+                    u.orders().lockOwner(owner);
+                    if (u.orders().countOpenByOwner(owner) >= limit) {
+                      return false;
+                    }
+                    try {
+                      Thread.sleep(30);
+                    } catch (InterruptedException e) {
+                      Thread.currentThread().interrupt();
+                    }
+                    u.orders().insert(TestData.order(owner, "minecraft:dirt", 1, 1), u.now());
+                    return true;
+                  });
+          if (ok) {
+            created.incrementAndGet();
+          }
+        });
+    assertThat(created.get()).isEqualTo(limit);
+  }
+
+  @Test
   void lockOwnerIsIdempotentAndLeavesNoEscrow() {
     UUID owner = UUID.randomUUID();
     tx(

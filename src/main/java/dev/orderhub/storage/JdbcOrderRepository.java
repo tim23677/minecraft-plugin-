@@ -184,7 +184,10 @@ final class JdbcOrderRepository implements OrderRepository {
   public int countOpenByOwner(UUID owner) {
     return (int)
         jdbc.count(
-            "SELECT COUNT(*) FROM orders WHERE owner_uuid = ? AND status IN ('ACTIVE','PAUSED')",
+            "SELECT COUNT(*) FROM orders WHERE owner_uuid = ? AND status IN ('ACTIVE','PAUSED')"
+                // Gesperrtes Lesen sieht den neuesten Stand, auch bei REPEATABLE READ mit altem
+                // Snapshot.
+                + (jdbc.dialect() == Dialect.MARIADB ? " FOR UPDATE" : ""),
             owner);
   }
 

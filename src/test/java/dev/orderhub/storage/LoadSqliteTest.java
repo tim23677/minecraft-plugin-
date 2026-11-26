@@ -143,7 +143,7 @@ class LoadSqliteTest {
               + "\n";
       System.out.println(report);
       Path out = Path.of("build/reports/load.txt");
-      Files.createDirectories(out.getParent());
+      Files.createDirectories(java.util.Objects.requireNonNull(out.getParent()));
       Files.writeString(out, report.replace("\n", System.lineSeparator()));
     }
   }

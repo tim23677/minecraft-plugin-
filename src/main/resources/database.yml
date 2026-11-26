@@ -14,6 +14,9 @@ mariadb:
   # Das Passwort wird bevorzugt aus der Umgebungsvariable ORDERHUB_DB_PASSWORD gelesen.
   # Nur wenn sie fehlt, wird dieser Wert benutzt. Passwort nie in ein oeffentliches Repository legen.
   password: ""
+  # ssl-mode: auto, disable, trust (verschluesselt ohne Zertifikatspruefung), verify-ca, verify-full.
+  # auto: verify-full, wenn use-ssl true ist, sonst disable. Bei nicht lokalem Host verify-full nutzen.
+  ssl-mode: "auto"
   use-ssl: false
   pool-size: 10
   connection-timeout-ms: 10000

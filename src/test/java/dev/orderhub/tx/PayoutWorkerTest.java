@@ -88,18 +88,34 @@ class PayoutWorkerTest {
   }
 
   @Test
-  void economyOutageEscalatesAfterBoundedAttempts() {
+  void providerOutageNeverEscalatesAndIsPaidWhenTheProviderReturns() {
     Harness h = harness();
     UUID j = oneDelivery(h);
     h.economy.setUnavailable(true);
+    for (int i = 0; i < 10; i++) {
+      h.worker.runOnce(10);
+      h.clock.advance(Duration.ofMinutes(10).toMillis());
+    }
+    assertThat(row(h).state()).isEqualTo(PayoutRepository.State.PENDING);
+    assertThat(state(h, j)).isEqualTo(TxState.PAYOUT_PENDING);
+    assertThat(h.economy.mutationCount()).isEqualTo(1); // nur die Abbuchung beim Erstellen
+    h.economy.setUnavailable(false);
+    h.worker.runOnce(10);
+    assertThat(h.economy.balance(SUPPLIER)).isEqualTo(100);
+    assertThat(Invariants.check(h, MONEY)).isEmpty();
+  }
+
+  @Test
+  void repeatedRefusalEscalatesAfterBoundedAttemptsAndIsNeverRepeated() {
+    Harness h = harness();
+    UUID j = oneDelivery(h);
     for (int i = 0; i < 3; i++) {
+      h.economy.failNext(Op.DEPOSIT, Mode.RETURN_FAILED);
       h.worker.runOnce(10);
       h.clock.advance(Duration.ofMinutes(10).toMillis());
     }
     assertThat(row(h).state()).isEqualTo(PayoutRepository.State.REVIEW);
     assertThat(state(h, j)).isEqualTo(TxState.MANUAL_REVIEW);
-    assertThat(h.economy.mutationCount()).isEqualTo(1); // nur die Abbuchung beim Erstellen
-    h.economy.setUnavailable(false);
     h.worker.runOnce(10);
     assertThat(h.economy.balance(SUPPLIER)).isZero(); // wird nie automatisch nachgeholt
     assertThat(Invariants.check(h, MONEY)).isEmpty();

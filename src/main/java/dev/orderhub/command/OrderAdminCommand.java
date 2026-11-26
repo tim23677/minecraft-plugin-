@@ -53,7 +53,7 @@ public final class OrderAdminCommand implements org.bukkit.command.TabExecutor {
       @NotNull Command command,
       @NotNull String label,
       @NotNull String[] args) {
-    if (!sender.hasPermission("orderhub.admin")) {
+    if (!hasAnyAdmin(sender)) {
       sender.sendMessage(s.messages().prefixed("general.no-permission"));
       return true;
     }
@@ -72,8 +72,15 @@ public final class OrderAdminCommand implements org.bukkit.command.TabExecutor {
         reload.run();
         sender.sendMessage(s.messages().prefixed("general.reloaded"));
       }
-      case "list" -> async(sender, () -> list(sender, args));
+      case "list" -> {
+        if (need(sender, "orderhub.admin.view")) {
+          async(sender, () -> list(sender, args));
+        }
+      }
       case "cancel" -> {
+        if (!need(sender, "orderhub.admin.cancel")) {
+          return true;
+        }
         if (args.length < 2 || !args[1].matches("[0-9]{1,18}")) {
           sender.sendMessage(
               s.messages()
@@ -150,7 +157,8 @@ public final class OrderAdminCommand implements org.bukkit.command.TabExecutor {
               reply(sender, Component.text(report.summary()));
             });
       }
-      case "statistics" ->
+      case "statistics" -> {
+        if (need(sender, "orderhub.admin.view")) {
           async(
               sender,
               () -> {
@@ -171,7 +179,10 @@ public final class OrderAdminCommand implements org.bukkit.command.TabExecutor {
                             + " manual-review="
                             + st.manualReview()));
               });
-      case "debug" ->
+        }
+      }
+      case "debug" -> {
+        if (need(sender, "orderhub.admin.view")) {
           sender.sendMessage(
               Component.text(
                   "server-id="
@@ -180,6 +191,8 @@ public final class OrderAdminCommand implements org.bukkit.command.TabExecutor {
                       + s.storage().dialect()
                       + " menus-open="
                       + s.menus().openCount()));
+        }
+      }
       default -> sender.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
     }
     return true;
@@ -196,6 +209,22 @@ public final class OrderAdminCommand implements org.bukkit.command.TabExecutor {
       return null;
     }
     return reason;
+  }
+
+  private static boolean hasAnyAdmin(CommandSender sender) {
+    for (String permission :
+        List.of(
+            "orderhub.admin",
+            "orderhub.admin.view",
+            "orderhub.admin.cancel",
+            "orderhub.admin.reload",
+            "orderhub.admin.transactions",
+            "orderhub.admin.recovery")) {
+      if (sender.hasPermission(permission)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private boolean need(CommandSender sender, String permission) {
@@ -318,7 +347,7 @@ public final class OrderAdminCommand implements org.bukkit.command.TabExecutor {
       @NotNull Command command,
       @NotNull String alias,
       @NotNull String[] args) {
-    if (!sender.hasPermission("orderhub.admin")) {
+    if (!hasAnyAdmin(sender)) {
       return List.of();
     }
     if (args.length == 1) {
