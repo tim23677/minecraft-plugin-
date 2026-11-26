@@ -117,6 +117,28 @@ final class JdbcPayoutRepository implements PayoutRepository {
     return transitionFromInProgress(id, "REVIEW", now, true, r);
   }
 
+  @Override
+  public boolean markReviewIfUnchanged(UUID id, long expectedUpdatedAt, String reason, long now) {
+    String r =
+        reason != null && reason.length() > MAX_REASON ? reason.substring(0, MAX_REASON) : reason;
+    for (Kind kind : KINDS) {
+      int rows =
+          jdbc.update(
+              "UPDATE "
+                  + table(kind)
+                  + " SET state = 'REVIEW', review_reason = ?, updated_at = ? "
+                  + "WHERE id = ? AND state = 'IN_PROGRESS' AND updated_at = ?",
+              r,
+              now,
+              id,
+              expectedUpdatedAt);
+      if (rows == 1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private boolean transitionFromInProgress(
       UUID id, String target, long now, boolean withReason, String reason) {
     for (Kind kind : KINDS) {

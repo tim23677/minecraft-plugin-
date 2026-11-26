@@ -927,6 +927,40 @@ abstract class StorageContractTest {
   }
 
   @Test
+  void markReviewIfUnchangedIsCompareAndSetOnUpdatedAt() {
+    UUID txId = UUID.randomUUID();
+    UUID p = UUID.randomUUID();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.payouts().enqueue(txId, p, PayoutRepository.Kind.PAYOUT, 100, TestData.T0);
+          return null;
+        });
+    PayoutRepository.Item claimed =
+        tx(storage(), (UnitOfWork u) -> u.payouts().claimBatch(10, TestData.T0 + 1)).stream()
+            .filter(i -> i.txId().equals(txId))
+            .findFirst()
+            .orElseThrow();
+    // Veralteter Zeitstempel (ein anderer Server hat die Zeile fortgeschrieben): keine Wirkung.
+    assertThat(
+            txBool(
+                storage(),
+                (UnitOfWork u) ->
+                    u.payouts()
+                        .markReviewIfUnchanged(
+                            claimed.id(), claimed.updatedAt() - 1, "stale", TestData.T0 + 5)))
+        .isFalse();
+    assertThat(
+            txBool(
+                storage(),
+                (UnitOfWork u) ->
+                    u.payouts()
+                        .markReviewIfUnchanged(
+                            claimed.id(), claimed.updatedAt(), "unclear", TestData.T0 + 6)))
+        .isTrue();
+  }
+
+  @Test
   void payoutClaimBatchWithEightThreadsClaimsEveryPaymentExactlyOnce() throws Exception {
     JdbcStorage s1 = server("srv-a");
     JdbcStorage s2 = server("srv-b");
