@@ -164,6 +164,22 @@ final class JdbcOrderRepository implements OrderRepository {
   }
 
   @Override
+  public void lockOwner(UUID owner) {
+    if (!jdbc.dialect().supportsRowLocks()) {
+      return;
+    }
+    jdbc.update(
+        "INSERT INTO escrow_accounts(player_uuid, reserved, updated_at) VALUES (?,0,?) "
+            + "ON DUPLICATE KEY UPDATE player_uuid = player_uuid",
+        owner,
+        0L);
+    jdbc.list(
+        "SELECT player_uuid FROM escrow_accounts WHERE player_uuid = ? FOR UPDATE",
+        rs -> rs.getString(1),
+        owner);
+  }
+
+  @Override
   public int countOpenByOwner(UUID owner) {
     return (int)
         jdbc.count(
