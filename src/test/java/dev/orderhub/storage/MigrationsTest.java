@@ -24,16 +24,22 @@ class MigrationsTest {
               .collect(Collectors.toList());
     }
     List<String> listed =
-        Migrations.read(Migrations.MANIFEST).lines().map(String::trim)
-            .filter(l -> !l.isEmpty() && !l.startsWith("#")).sorted().collect(Collectors.toList());
+        Migrations.read(Migrations.MANIFEST)
+            .lines()
+            .map(String::trim)
+            .filter(l -> !l.isEmpty() && !l.startsWith("#"))
+            .sorted()
+            .collect(Collectors.toList());
     assertThat(listed).isEqualTo(onDisk);
   }
 
   @Test
   void loadsCommonBeforeDialectPerVersion() {
-    assertThat(Migrations.load(Dialect.SQLITE)).extracting(Migrations.Script::scope)
+    assertThat(Migrations.load(Dialect.SQLITE))
+        .extracting(Migrations.Script::scope)
         .containsExactly("common", "sqlite");
-    assertThat(Migrations.load(Dialect.MARIADB)).extracting(Migrations.Script::scope)
+    assertThat(Migrations.load(Dialect.MARIADB))
+        .extracting(Migrations.Script::scope)
         .containsExactly("common", "mariadb");
   }
 
@@ -48,7 +54,8 @@ class MigrationsTest {
 
   @Test
   void splitsOnSeparatorAndDropsCommentOnlyParts() {
-    String sql = "-- header\nSELECT 1;\n-- @@\n-- nur Kommentar\n-- @@\nCREATE TRIGGER t\nBEGIN\n  SELECT 2;\nEND\n";
+    String sql =
+        "-- header\nSELECT 1;\n-- @@\n-- nur Kommentar\n-- @@\nCREATE TRIGGER t\nBEGIN\n  SELECT 2;\nEND\n";
     assertThat(Migrations.split(sql)).hasSize(2);
     assertThat(Migrations.split(sql).get(1)).contains("SELECT 2;").endsWith("END");
   }
@@ -61,8 +68,12 @@ class MigrationsTest {
 
   @Test
   void retryClassification() {
-    assertThat(JdbcStorage.isRetryable(new StorageException(new java.sql.SQLException("x", "40001", 1213)))).isTrue();
-    assertThat(JdbcStorage.isRetryable(new java.sql.SQLException("[SQLITE_BUSY] locked", null, 5))).isTrue();
+    assertThat(
+            JdbcStorage.isRetryable(
+                new StorageException(new java.sql.SQLException("x", "40001", 1213))))
+        .isTrue();
+    assertThat(JdbcStorage.isRetryable(new java.sql.SQLException("[SQLITE_BUSY] locked", null, 5)))
+        .isTrue();
     assertThat(JdbcStorage.isRetryable(new java.sql.SQLException("dup", "23000", 1062))).isFalse();
     assertThat(JdbcStorage.isRetryable(new IllegalStateException("x"))).isFalse();
   }

@@ -1,8 +1,12 @@
 package dev.orderhub.storage;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 
 /** Repositories auf einer Verbindung, gueltig bis zum Ende der Transaktion. */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP",
+    justification = "Die Repositories sind der Zweck dieser Klasse und an die Transaktion gebunden")
 final class JdbcUnitOfWork implements UnitOfWork {
 
   private final long now;

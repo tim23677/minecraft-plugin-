@@ -24,9 +24,9 @@ public interface JournalRepository {
   Optional<JournalEntry> findByKey(String idempotencyKey);
 
   /**
-   * Strikter Uebergang als Compare-and-Set auf {@code (id, state, version)}. Wirft
-   * {@link dev.orderhub.tx.InvalidTransitionException} bei unzulaessigem Uebergang, liefert {@code
-   * false} bei veraltetem Zustand oder veralteter Version. Bei Erfolg steigt die Version um 1.
+   * Strikter Uebergang als Compare-and-Set auf {@code (id, state, version)}. Wirft {@link
+   * dev.orderhub.tx.InvalidTransitionException} bei unzulaessigem Uebergang, liefert {@code false}
+   * bei veraltetem Zustand oder veralteter Version. Bei Erfolg steigt die Version um 1.
    */
   boolean transition(JournalEntry current, TxState target, String detail, long now);
 

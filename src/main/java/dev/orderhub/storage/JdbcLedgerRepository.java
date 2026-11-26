@@ -20,7 +20,10 @@ final class JdbcLedgerRepository implements LedgerRepository {
 
   @Override
   public void append(Entry e) {
-    String note = e.note() != null && e.note().length() > MAX_NOTE ? e.note().substring(0, MAX_NOTE) : e.note();
+    String note =
+        e.note() != null && e.note().length() > MAX_NOTE
+            ? e.note().substring(0, MAX_NOTE)
+            : e.note();
     jdbc.update(
         "INSERT INTO transactions(id, tx_id, player_uuid, kind, amount, created_at, note) "
             + "VALUES (?,?,?,?,?,?,?)",

@@ -31,15 +31,16 @@ import javax.sql.DataSource;
  * implizit; die Skripte nutzen deshalb {@code IF NOT EXISTS}, damit ein abgebrochener Lauf
  * wiederholbar bleibt.
  *
- * <p>Statements in den Dateien werden durch eine Zeile {@code -- @@} getrennt. Platzhalter:
- * {@code ${AUTO_ID}}, {@code ${BLOB}} und {@code ${TABLE_OPTS}} (MariaDB: InnoDB, utf8mb4_bin).
+ * <p>Statements in den Dateien werden durch eine Zeile {@code -- @@} getrennt. Platzhalter: {@code
+ * ${AUTO_ID}}, {@code ${BLOB}} und {@code ${TABLE_OPTS}} (MariaDB: InnoDB, utf8mb4_bin).
  */
 public final class Migrations {
 
   static final String MANIFEST = "db/migration/migrations.list";
   static final String LOCK_NAME = "orderhub_migration";
   private static final int LOCK_TIMEOUT_SECONDS = 120;
-  private static final Pattern FILE = Pattern.compile("(common|sqlite|mariadb)/V(\\d+)__(\\w+)\\.sql");
+  private static final Pattern FILE =
+      Pattern.compile("(common|sqlite|mariadb)/V(\\d+)__(\\w+)\\.sql");
   private static final String SEPARATOR = "-- @@";
 
   private Migrations() {}
@@ -161,7 +162,8 @@ public final class Migrations {
         try (Statement s = c.createStatement()) {
           s.execute(statement);
         } catch (SQLException e) {
-          throw new MigrationException("migration " + script.path() + " failed: " + e.getMessage(), e);
+          throw new MigrationException(
+              "migration " + script.path() + " failed: " + e.getMessage(), e);
         }
       }
       try (PreparedStatement ps =
@@ -223,7 +225,8 @@ public final class Migrations {
       case MARIADB ->
           sql.replace("${AUTO_ID}", "BIGINT PRIMARY KEY AUTO_INCREMENT")
               .replace("${BLOB}", "LONGBLOB")
-              .replace("${TABLE_OPTS}", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin");
+              .replace(
+                  "${TABLE_OPTS}", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin");
     };
   }
 
@@ -244,7 +247,11 @@ public final class Migrations {
 
   private static void flush(List<String> out, StringBuilder current) {
     boolean hasCode =
-        current.toString().lines().map(String::trim).anyMatch(l -> !l.isEmpty() && !l.startsWith("--"));
+        current
+            .toString()
+            .lines()
+            .map(String::trim)
+            .anyMatch(l -> !l.isEmpty() && !l.startsWith("--"));
     if (hasCode) {
       out.add(current.toString().strip());
     }

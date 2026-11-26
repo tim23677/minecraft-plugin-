@@ -1,6 +1,5 @@
 package dev.orderhub.storage;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,9 +39,6 @@ final class Jdbc {
     return dialect.supportsRowLocks() ? " FOR UPDATE" : "";
   }
 
-  @SuppressFBWarnings(
-      value = {"SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING"},
-      justification = "sql besteht nur aus festen Fragmenten, Werte werden gebunden")
   private PreparedStatement prepare(String sql, boolean keys, Object... params)
       throws SQLException {
     PreparedStatement ps =

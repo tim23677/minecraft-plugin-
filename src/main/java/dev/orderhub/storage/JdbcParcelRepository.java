@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** JDBC-Implementierung von {@link ParcelRepository} fuer {@code item_claims} und {@code item_returns}. */
+/**
+ * JDBC-Implementierung von {@link ParcelRepository} fuer {@code item_claims} und {@code
+ * item_returns}.
+ */
 final class JdbcParcelRepository implements ParcelRepository {
 
   private static final String COLUMNS =
@@ -27,7 +30,8 @@ final class JdbcParcelRepository implements ParcelRepository {
   }
 
   @Override
-  public long add(UUID owner, Long orderId, ItemSnapshot item, int quantity, UUID sourceTx, long now) {
+  public long add(
+      UUID owner, Long orderId, ItemSnapshot item, int quantity, UUID sourceTx, long now) {
     if (quantity < 0) {
       throw new IllegalArgumentException("quantity");
     }
@@ -56,15 +60,17 @@ final class JdbcParcelRepository implements ParcelRepository {
     }
     // Paralleler Insert eines anderen Servers: sperrendes Lesen sieht den neuesten Stand.
     return existingId(sourceTx, owner, true)
-        .orElseThrow(
-            () ->
-                new StorageException(
-                    "duplicate parcel but row not found", new SQLException("duplicate without row")));
+        .orElseThrow(() ->
+            new StorageException(
+                "duplicate parcel but row not found", new SQLException("duplicate without row")));
   }
 
   private Optional<Long> existingId(UUID sourceTx, UUID owner, boolean lock) {
     return jdbc.one(
-        "SELECT id FROM " + table + " WHERE source_tx = ? AND owner_uuid = ?" + (lock ? jdbc.forUpdate() : ""),
+        "SELECT id FROM "
+            + table
+            + " WHERE source_tx = ? AND owner_uuid = ?"
+            + (lock ? jdbc.forUpdate() : ""),
         rs -> rs.getLong(1),
         sourceTx,
         owner);
@@ -95,7 +101,9 @@ final class JdbcParcelRepository implements ParcelRepository {
   public int countAvailable(UUID owner) {
     return (int)
         jdbc.count(
-            "SELECT COUNT(*) FROM " + table + " WHERE owner_uuid = ? AND state = 'AVAILABLE' AND quantity > 0",
+            "SELECT COUNT(*) FROM "
+                + table
+                + " WHERE owner_uuid = ? AND state = 'AVAILABLE' AND quantity > 0",
             owner);
   }
 
@@ -150,7 +158,11 @@ final class JdbcParcelRepository implements ParcelRepository {
   @Override
   public List<Parcel> findReserved(int limit) {
     return jdbc.list(
-        "SELECT " + COLUMNS + " FROM " + table + " WHERE state = 'RESERVED' ORDER BY updated_at ASC, id ASC LIMIT ?",
+        "SELECT "
+            + COLUMNS
+            + " FROM "
+            + table
+            + " WHERE state = 'RESERVED' ORDER BY updated_at ASC, id ASC LIMIT ?",
         JdbcParcelRepository::map,
         Math.max(1, limit));
   }
@@ -161,7 +173,8 @@ final class JdbcParcelRepository implements ParcelRepository {
         rs.getLong("id"),
         Jdbc.uuid(rs, "owner_uuid"),
         Jdbc.nullableLong(rs, "order_id"),
-        new ItemSnapshot(rs.getString("item_key"), rs.getInt("item_format_version"), rs.getBytes("item_data")),
+        new ItemSnapshot(
+            rs.getString("item_key"), rs.getInt("item_format_version"), rs.getBytes("item_data")),
         rs.getInt("quantity"),
         State.valueOf(rs.getString("state")),
         reserved == null ? null : UUID.fromString(reserved),

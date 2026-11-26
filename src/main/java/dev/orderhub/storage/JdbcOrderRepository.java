@@ -130,7 +130,8 @@ final class JdbcOrderRepository implements OrderRepository {
     if (delta == 0) {
       return;
     }
-    String sql = "UPDATE escrow_accounts SET reserved = reserved + ?, updated_at = ? WHERE player_uuid = ?";
+    String sql =
+        "UPDATE escrow_accounts SET reserved = reserved + ?, updated_at = ? WHERE player_uuid = ?";
     if (jdbc.update(sql, delta, now, owner) == 1) {
       return;
     }
@@ -190,7 +191,8 @@ final class JdbcOrderRepository implements OrderRepository {
   @Override
   public List<Order> findExpired(long now, int limit) {
     return jdbc.list(
-        SELECT + "WHERE o.status = 'ACTIVE' AND o.expires_at <= ? ORDER BY o.expires_at, o.id LIMIT ?",
+        SELECT
+            + "WHERE o.status = 'ACTIVE' AND o.expires_at <= ? ORDER BY o.expires_at, o.id LIMIT ?",
         JdbcOrderRepository::map,
         now,
         Math.max(1, limit));
@@ -232,7 +234,8 @@ final class JdbcOrderRepository implements OrderRepository {
 
   static Order map(ResultSet rs) throws SQLException {
     ItemSnapshot item =
-        new ItemSnapshot(rs.getString("item_key"), rs.getInt("format_version"), rs.getBytes("item_data"));
+        new ItemSnapshot(
+            rs.getString("item_key"), rs.getInt("format_version"), rs.getBytes("item_data"));
     return new Order(
         rs.getLong("id"),
         Jdbc.uuid(rs, "owner_uuid"),

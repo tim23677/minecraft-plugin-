@@ -52,7 +52,13 @@ public record StorageConfig(
 
   public StorageConfig withBackoff(long baseMillis, long maxMillis) {
     return new StorageConfig(
-        serverId, dbThreads, queueCapacity, maxAttempts, baseMillis, maxMillis, closeTimeoutSeconds);
+        serverId,
+        dbThreads,
+        queueCapacity,
+        maxAttempts,
+        baseMillis,
+        maxMillis,
+        closeTimeoutSeconds);
   }
 
   public StorageConfig withDbThreads(int threads) {

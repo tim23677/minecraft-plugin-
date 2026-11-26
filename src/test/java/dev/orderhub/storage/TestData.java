@@ -18,7 +18,8 @@ final class TestData {
   }
 
   static NewOrder order(UUID owner, String itemKey, long unitPrice, int qty) {
-    return new NewOrder(owner, "srv-a", item(itemKey), unitPrice, qty, 1, T0 + 100_000, false, "blocks");
+    return new NewOrder(
+        owner, "srv-a", item(itemKey), unitPrice, qty, 1, T0 + 100_000, false, "blocks");
   }
 
   static JournalEntry journal(String key, UUID player, Long orderId) {

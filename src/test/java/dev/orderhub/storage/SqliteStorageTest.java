@@ -33,7 +33,9 @@ class SqliteStorageTest extends StorageContractTest {
     pools.clear();
     raw = null;
     try (var walk = Files.walk(dir)) {
-      walk.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+      for (Path p : walk.sorted(Comparator.reverseOrder()).toList()) {
+        Files.deleteIfExists(p);
+      }
     }
   }
 
@@ -62,7 +64,9 @@ class SqliteStorageTest extends StorageContractTest {
   @Override
   void resetDatabase() throws Exception {
     try (var walk = Files.walk(dir)) {
-      walk.filter(p -> !p.equals(dir)).forEach(p -> p.toFile().delete());
+      for (Path p : walk.filter(x -> !x.equals(dir)).toList()) {
+        Files.deleteIfExists(p);
+      }
     }
   }
 

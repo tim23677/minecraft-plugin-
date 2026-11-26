@@ -65,11 +65,10 @@ final class JdbcJournalRepository implements JournalRepository {
                 SELECT + "WHERE idempotency_key = ?" + jdbc.forUpdate(),
                 JdbcJournalRepository::map,
                 e.idempotencyKey())
-            .orElseThrow(
-                () ->
-                    new StorageException(
-                        "duplicate key but entry not found",
-                        new SQLException("duplicate idempotency key without row")));
+            .orElseThrow(() ->
+                new StorageException(
+                    "duplicate key but entry not found",
+                    new SQLException("duplicate idempotency key without row")));
     return new InsertResult(winner, false);
   }
 
@@ -80,7 +79,8 @@ final class JdbcJournalRepository implements JournalRepository {
 
   @Override
   public Optional<JournalEntry> findByKey(String idempotencyKey) {
-    return jdbc.one(SELECT + "WHERE idempotency_key = ?", JdbcJournalRepository::map, idempotencyKey);
+    return jdbc.one(
+        SELECT + "WHERE idempotency_key = ?", JdbcJournalRepository::map, idempotencyKey);
   }
 
   @Override
@@ -142,7 +142,9 @@ final class JdbcJournalRepository implements JournalRepository {
   }
 
   private static String truncate(String detail) {
-    return detail == null || detail.length() <= MAX_DETAIL ? detail : detail.substring(0, MAX_DETAIL);
+    return detail == null || detail.length() <= MAX_DETAIL
+        ? detail
+        : detail.substring(0, MAX_DETAIL);
   }
 
   static JournalEntry map(ResultSet rs) throws SQLException {

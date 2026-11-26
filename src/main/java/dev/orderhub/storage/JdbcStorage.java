@@ -114,7 +114,8 @@ public final class JdbcStorage implements Storage {
     if (capped <= 1) {
       return capped;
     }
-    // Jitter: 50..100 % der Wartezeit, damit konkurrierende Transaktionen nicht im Gleichtakt laufen.
+    // Jitter: 50..100 % der Wartezeit, damit konkurrierende Transaktionen nicht im Gleichtakt
+    // laufen.
     return capped / 2 + ThreadLocalRandom.current().nextLong(capped / 2 + 1);
   }
 

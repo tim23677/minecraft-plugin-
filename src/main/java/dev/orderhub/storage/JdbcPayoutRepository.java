@@ -7,11 +7,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** JDBC-Implementierung von {@link PayoutRepository} ueber {@code payout_queue}/{@code refund_queue}. */
+/**
+ * JDBC-Implementierung von {@link PayoutRepository} ueber {@code payout_queue}/{@code
+ * refund_queue}.
+ */
 final class JdbcPayoutRepository implements PayoutRepository {
 
   private static final int MAX_REASON = 500;
-  private static final String COLUMNS = "id, tx_id, player_uuid, amount, state, attempts, updated_at";
+  private static final String COLUMNS =
+      "id, tx_id, player_uuid, amount, state, attempts, updated_at";
 
   private final Jdbc jdbc;
 
@@ -62,7 +66,9 @@ final class JdbcPayoutRepository implements PayoutRepository {
     String table = table(kind);
     List<UUID> candidates =
         jdbc.list(
-            "SELECT id FROM " + table + " WHERE state = 'PENDING' ORDER BY created_at ASC, id ASC LIMIT ?",
+            "SELECT id FROM "
+                + table
+                + " WHERE state = 'PENDING' ORDER BY created_at ASC, id ASC LIMIT ?",
             rs -> Jdbc.uuid(rs, "id"),
             limit);
     for (UUID id : candidates) {
@@ -88,7 +94,9 @@ final class JdbcPayoutRepository implements PayoutRepository {
   @Override
   public Optional<Item> findByTx(UUID txId, Kind kind) {
     return jdbc.one(
-        "SELECT " + COLUMNS + " FROM " + table(kind) + " WHERE tx_id = ?", rs -> map(rs, kind), txId);
+        "SELECT " + COLUMNS + " FROM " + table(kind) + " WHERE tx_id = ?",
+        rs -> map(rs, kind),
+        txId);
   }
 
   @Override
@@ -104,7 +112,8 @@ final class JdbcPayoutRepository implements PayoutRepository {
 
   @Override
   public boolean markReview(UUID id, String reason, long now) {
-    String r = reason != null && reason.length() > MAX_REASON ? reason.substring(0, MAX_REASON) : reason;
+    String r =
+        reason != null && reason.length() > MAX_REASON ? reason.substring(0, MAX_REASON) : reason;
     return transitionFromInProgress(id, "REVIEW", now, true, r);
   }
 
