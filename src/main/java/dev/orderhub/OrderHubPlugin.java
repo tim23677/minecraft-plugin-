@@ -206,18 +206,17 @@ public class OrderHubPlugin extends JavaPlugin {
             st.payoutMaxAttempts(),
             Duration.ofSeconds(5),
             Duration.ofMinutes(5));
+    // Laufender Betrieb (periodisch und per Admin): fremde oder gerade laufende Vorgaenge bleiben
+    // zwei Minuten unangetastet, sonst wuerde die Recovery eine laufende Lieferung zurueckrollen.
     RecoveryService recovery =
         new RecoveryService(
-            storage,
-            claims,
-            returns,
-            audit,
-            Clock.systemUTC(),
-            // Ein einzelner Server darf frische Eintraege sofort aufraeumen, bei mehreren Servern
-            // muss ein laufender Vorgang eines anderen Servers unangetastet bleiben.
-            storage.dialect() == dev.orderhub.storage.Dialect.SQLITE
-                ? Duration.ZERO
-                : Duration.ofMinutes(2));
+            storage, claims, returns, audit, Clock.systemUTC(), Duration.ofMinutes(2));
+    // Nur beim Start eines einzelnen Servers: dort kann nichts mehr laufen, alle offenen Eintraege
+    // stammen aus dem vorigen Lauf. Bei mehreren Servern bleibt die Wartezeit bestehen.
+    RecoveryService startupRecovery =
+        storage.dialect() == dev.orderhub.storage.Dialect.SQLITE
+            ? new RecoveryService(storage, claims, returns, audit, Clock.systemUTC(), Duration.ZERO)
+            : recovery;
 
     returnQueue = new ReturnQueue(storage, scheduler, codec, getLogger());
     menus =
@@ -324,7 +323,7 @@ public class OrderHubPlugin extends JavaPlugin {
         };
     scheduler.runAsync(() -> {
       try {
-        recovery.runAtStartup();
+        startupRecovery.runAtStartup();
       } catch (RuntimeException e) {
         getLogger().log(Level.SEVERE, "startup recovery failed", e);
       } finally {
