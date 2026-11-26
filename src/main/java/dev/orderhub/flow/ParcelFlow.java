@@ -153,7 +153,7 @@ public final class ParcelFlow {
               .prefixed(
                   key,
                   Messages.number("quantity", given),
-                  Messages.component("item", template.effectiveName())));
+                  Messages.component("item", ItemService.nameOf(template))));
     }
     after.accept(remainingAfter == 0 && given == r.quantity());
     if (item == null) {

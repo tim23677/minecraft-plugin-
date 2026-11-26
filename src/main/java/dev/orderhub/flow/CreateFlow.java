@@ -128,7 +128,7 @@ public final class CreateFlow {
             .prefixed(
                 "create.summary",
                 Messages.number("quantity", q.getAsInt()),
-                Messages.component("item", template.effectiveName()),
+                Messages.component("item", ItemService.nameOf(template)),
                 Messages.text("unit", Money.format(unit)),
                 Messages.text("total", Money.format(total)),
                 Messages.text("fee", Money.format(fee))));
@@ -206,7 +206,7 @@ public final class CreateFlow {
       int quantity,
       long unit,
       OrderService.CreateResult result) {
-    var item = Messages.component("item", template.effectiveName());
+    var item = Messages.component("item", ItemService.nameOf(template));
     switch (result.status()) {
       case CREATED, ALREADY_CREATED -> {
         if (result.status() == OrderService.CreateStatus.CREATED && result.orderId() != null) {
@@ -284,7 +284,7 @@ public final class CreateFlow {
                                     .prefixed(
                                         "notify.price-alert",
                                         Messages.number("quantity", quantity),
-                                        Messages.component("item", template.effectiveName()),
+                                        Messages.component("item", ItemService.nameOf(template)),
                                         Messages.text("unit", Money.format(unit)),
                                         Messages.number("id", orderId))));
               }

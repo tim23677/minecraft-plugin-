@@ -417,7 +417,7 @@ public final class DeliveryFlow {
                 .prefixed(
                     "delivery.success",
                     Messages.number("quantity", quantity),
-                    Messages.component("item", template.effectiveName()),
+                    Messages.component("item", ItemService.nameOf(template)),
                     Messages.number("id", order.id()),
                     Messages.text("amount", Money.format(net))));
         if (surplus > 0) {
@@ -448,7 +448,7 @@ public final class DeliveryFlow {
                             completed ? "order.completed" : "notify.delivered",
                             Messages.number("id", order.id()),
                             Messages.number("quantity", quantity),
-                            Messages.component("item", template.effectiveName()))));
+                            Messages.component("item", ItemService.nameOf(template)))));
   }
 
   /** Gibt Items zurueck, was nicht ins Inventar passt, wird persistent als Return gespeichert. */
@@ -462,7 +462,7 @@ public final class DeliveryFlow {
               .prefixed(
                   "delivery.stored-for-later",
                   Messages.number("quantity", rest),
-                  Messages.component("item", template.effectiveName())));
+                  Messages.component("item", ItemService.nameOf(template))));
     }
   }
 

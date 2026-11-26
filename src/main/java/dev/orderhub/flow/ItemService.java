@@ -17,6 +17,18 @@ public final class ItemService {
   private ItemService() {}
 
   /** Wie viele Stueck von {@code item} noch in den Hauptinventarteil (36 Slots) passen. */
+  /**
+   * Anzeigename eines Items. Faellt auf den Namen des Materials zurueck, falls die Laufzeit {@code
+   * effectiveName()} nicht kennt (zum Beispiel Testumgebungen).
+   */
+  public static net.kyori.adventure.text.Component nameOf(ItemStack item) {
+    try {
+      return item.effectiveName();
+    } catch (RuntimeException e) {
+      return net.kyori.adventure.text.Component.translatable(item.getType().translationKey());
+    }
+  }
+
   public static int capacityFor(Player player, ItemStack item) {
     PlayerInventory inv = player.getInventory();
     int max = Math.max(1, item.getMaxStackSize());

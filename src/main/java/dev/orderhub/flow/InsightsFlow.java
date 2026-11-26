@@ -111,7 +111,7 @@ public final class InsightsFlow {
       return;
     }
     String key = hand.getType().getKey().toString();
-    Component name = hand.effectiveName();
+    Component name = ItemService.nameOf(hand);
     String action = args[1].toLowerCase(Locale.ROOT);
     switch (action) {
       case "add" ->
