@@ -123,7 +123,8 @@ public final class DeliveryFlow {
 
   private void confirm(Player player, DeliveryMenu menu, Order order) {
     menu.freeze(); // ab jetzt gehoeren die Items im Menue diesem Ablauf, nicht dem Schliessen-Hook
-    int available = Math.min(count(menu.inputContents(), order.item()), order.remaining());
+    int inMenu = count(menu.inputContents(), order.item());
+    int available = Math.min(inMenu, order.remaining());
     if (available <= 0) {
       player.sendMessage(s.messages().prefixed("delivery.nothing"));
       giveAll(player, menu.takeInputs());
@@ -141,7 +142,7 @@ public final class DeliveryFlow {
               s.delivery()
                   .prepare(
                       new DeliveryEngine.PrepareRequest(
-                          order.id(), supplier, available, nonce, null, false));
+                          order.id(), supplier, available, nonce, null, false, inMenu));
           if (!prepared.ok()) {
             return new Step(prepared, null);
           }
@@ -159,10 +160,44 @@ public final class DeliveryFlow {
         // Menue
         // bis hierher und werden nie doppelt zurueckgegeben.
         step -> finishWithoutPlayer(supplier, menu, order, step),
-        () -> {
-          player.sendMessage(s.messages().prefixed("general.database-error"));
-          giveAll(player, menu.takeInputs());
-          player.closeInventory();
+        () -> prepareOutcomeUnknown(player, menu, order, supplier, nonce));
+  }
+
+  /**
+   * prepare ist mit einer Ausnahme beendet: Die Reservierung kann trotzdem committed sein. Nur wenn
+   * das Journal den Versuch nicht kennt, gehen die Items direkt zurueck. Existiert er, gibt die
+   * Recovery die Reservierung frei (sonst gaebe es die Items doppelt).
+   */
+  private void prepareOutcomeUnknown(
+      Player player, DeliveryMenu menu, Order order, UUID supplier, String nonce) {
+    player.sendMessage(s.messages().prefixed("general.database-error"));
+    s.scheduler()
+        .runAsync(() -> {
+          boolean known;
+          try {
+            known = s.delivery().lookup(order.id(), supplier, nonce).isPresent();
+          } catch (RuntimeException e) {
+            s.logger().log(java.util.logging.Level.SEVERE, "prepare lookup failed", e);
+            known = false;
+          }
+          boolean recoveryOwnsItems = known;
+          boolean handled =
+              s.scheduler()
+                  .tryRunOn(
+                      player,
+                      () -> {
+                        if (!recoveryOwnsItems) {
+                          giveAll(player, menu.takeInputs());
+                        }
+                        player.closeInventory();
+                      });
+          if (!handled && !recoveryOwnsItems) {
+            for (ItemStack stack : menu.takeInputs()) {
+              ItemStack template = stack.clone();
+              template.setAmount(1);
+              queueReturn(supplier, template, stack.getAmount());
+            }
+          }
         });
   }
 
@@ -201,27 +236,23 @@ public final class DeliveryFlow {
       player.closeInventory();
       return;
     }
-    UUID supplier = player.getUniqueId();
     s.scheduler()
         .runAsync(() -> {
           DeliveryEngine.CommitResult result = commitSafely(step.prepared().journalId());
           // Alles Spielerunabhaengige zuerst, damit es auch bei einem Abgang nie ausfaellt.
           postCommit(order, taken.template(), taken.quantity(), result);
-          boolean shown =
-              s.scheduler()
-                  .tryRunOn(
-                      player,
-                      () ->
-                          afterCommitForPlayer(
-                              player,
-                              order,
-                              taken.template(),
-                              taken.quantity(),
-                              taken.surplus(),
-                              result));
-          if (!shown && taken.surplus() > 0) {
-            queueReturn(supplier, taken.template(), taken.surplus());
-          }
+          // Ein Ueberschuss ist bereits in der Datenbank als Rueckgabe gespeichert (Commit).
+          s.scheduler()
+              .tryRunOn(
+                  player,
+                  () ->
+                      afterCommitForPlayer(
+                          player,
+                          order,
+                          taken.template(),
+                          taken.quantity(),
+                          taken.surplus(),
+                          result));
         });
   }
 
@@ -246,9 +277,6 @@ public final class DeliveryFlow {
     }
     DeliveryEngine.CommitResult result = commitSafely(step.prepared().journalId());
     postCommit(order, taken.template(), taken.quantity(), result);
-    if (taken.surplus() > 0) {
-      queueReturn(supplier, taken.template(), taken.surplus());
-    }
   }
 
   private record Taken(ItemStack template, int quantity, int surplus) {}
@@ -337,13 +365,6 @@ public final class DeliveryFlow {
       int quantity,
       int surplus,
       DeliveryEngine.CommitResult result) {
-    if (surplus > 0) {
-      if (player.isOnline()) {
-        giveOrQueue(player, template, surplus);
-      } else {
-        queueReturn(player.getUniqueId(), template, surplus);
-      }
-    }
     player.closeInventory();
     if (result == null) {
       player.sendMessage(s.messages().prefixed("delivery.processing"));
@@ -360,6 +381,10 @@ public final class DeliveryFlow {
                     Messages.component("item", template.effectiveName()),
                     Messages.number("id", order.id()),
                     Messages.text("amount", Money.format(net))));
+        if (surplus > 0) {
+          // Der Ueberschuss liegt als Rueckgabe bereit und wird ins Inventar uebernommen.
+          new ParcelFlow(s, ParcelFlow.Kind.RETURN).claimAll(player);
+        }
       }
       case REJECTED_ITEMS_RETURNED -> {
         player.sendMessage(s.messages().prefixed("delivery.returned"));

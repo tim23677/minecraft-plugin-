@@ -82,6 +82,7 @@ public final class InMemoryStorage implements Storage {
     Map<Long, ParcelRepository.Parcel> returns = new LinkedHashMap<>();
     Map<String, Long> returnKeys = new HashMap<>();
     List<dev.orderhub.storage.AuditRepository.Entry> audit = new ArrayList<>();
+    Map<UUID, dev.orderhub.storage.HoldRepository.Hold> holds = new LinkedHashMap<>();
 
     State copy() {
       State s = new State();
@@ -99,6 +100,7 @@ public final class InMemoryStorage implements Storage {
       s.returns = new LinkedHashMap<>(returns);
       s.returnKeys = new HashMap<>(returnKeys);
       s.audit = new ArrayList<>(audit);
+      s.holds = new LinkedHashMap<>(holds);
       return s;
     }
   }
@@ -287,6 +289,15 @@ public final class InMemoryStorage implements Storage {
       List<ParcelRepository.Parcel> claims,
       List<ParcelRepository.Parcel> returns) {}
 
+  public java.util.List<dev.orderhub.storage.HoldRepository.Hold> holds() {
+    lock.lock();
+    try {
+      return List.copyOf(committed.holds.values());
+    } finally {
+      lock.unlock();
+    }
+  }
+
   public Snapshot snapshot() {
     lock.lock();
     try {
@@ -364,6 +375,51 @@ public final class InMemoryStorage implements Storage {
     @Override
     public ParcelRepository claims() {
       return claims;
+    }
+
+    @Override
+    public dev.orderhub.storage.HoldRepository holds() {
+      return new dev.orderhub.storage.HoldRepository() {
+        @Override
+        public void add(
+            UUID txId,
+            UUID owner,
+            Long orderId,
+            dev.orderhub.domain.ItemSnapshot item,
+            int quantity,
+            long at) {
+          if (quantity <= 0) {
+            throw new ConstraintViolation("hold quantity must be positive");
+          }
+          s.holds.putIfAbsent(
+              txId, new Hold(txId, owner, orderId, item, quantity, State.HELD, at, at));
+        }
+
+        @Override
+        public java.util.Optional<Hold> find(UUID txId) {
+          return java.util.Optional.ofNullable(s.holds.get(txId));
+        }
+
+        @Override
+        public boolean finish(UUID txId, State target, long at) {
+          Hold h = s.holds.get(txId);
+          if (h == null || h.state() != State.HELD) {
+            return false;
+          }
+          s.holds.put(
+              txId,
+              new Hold(
+                  h.txId(),
+                  h.owner(),
+                  h.orderId(),
+                  h.item(),
+                  h.quantity(),
+                  target,
+                  h.createdAt(),
+                  at));
+          return true;
+        }
+      };
     }
 
     @Override

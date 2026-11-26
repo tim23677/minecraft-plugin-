@@ -1,8 +1,10 @@
 package dev.orderhub.tx;
 
 import dev.orderhub.config.Fees;
+import dev.orderhub.domain.ItemSnapshot;
 import dev.orderhub.domain.Order;
 import dev.orderhub.money.Money;
+import dev.orderhub.storage.HoldRepository;
 import dev.orderhub.storage.LedgerRepository;
 import dev.orderhub.storage.PayoutRepository;
 import dev.orderhub.storage.Storage;
@@ -25,10 +27,22 @@ public final class DeliveryEngine {
       int quantity,
       String nonce,
       Long expectedOrderVersion,
-      boolean taxExempt) {
+      boolean taxExempt,
+      int heldQuantity) {
     public PrepareRequest {
       Objects.requireNonNull(supplier, "supplier");
       Objects.requireNonNull(nonce, "nonce");
+    }
+
+    /** Ohne Ueberschuss: die Reservierung haelt genau {@code quantity} Items. */
+    public PrepareRequest(
+        long orderId,
+        UUID supplier,
+        int quantity,
+        String nonce,
+        Long expectedOrderVersion,
+        boolean taxExempt) {
+      this(orderId, supplier, quantity, nonce, expectedOrderVersion, taxExempt, quantity);
     }
   }
 
@@ -162,6 +176,15 @@ public final class DeliveryEngine {
     if (!inserted.created()) {
       return replay(inserted.entry());
     }
+    // Rueckgabe-Reservierung im selben Schritt: ab hier gehen die Items im Menue nie verloren.
+    uow.holds()
+        .add(
+            inserted.entry().id(),
+            r.supplier(),
+            order.id(),
+            order.item(),
+            Math.max(r.heldQuantity(), r.quantity()),
+            uow.now());
     JournalEntry prepared =
         JournalSteps.to(uow, inserted.entry(), TxState.PREPARED, "validated v" + order.version());
     return new PrepareResult(PrepareStatus.PREPARED, prepared.id(), r.quantity(), net);
@@ -270,6 +293,7 @@ public final class DeliveryEngine {
                   "order=" + orderId));
     }
     uow.claims().add(order.owner(), orderId, order.item(), e.quantity(), e.id(), now);
+    settleHoldAfterCommit(uow, e, order.item(), orderId, now);
     JournalEntry committed = JournalSteps.to(uow, e, TxState.COMMITTED, "order=" + orderId);
     if (net > 0) {
       uow.payouts().enqueue(e.id(), e.playerId(), PayoutRepository.Kind.PAYOUT, net, now);
@@ -313,6 +337,8 @@ public final class DeliveryEngine {
           JournalEntry e = found.get();
           return switch (e.state()) {
             case CREATED, PREPARED -> {
+              // Der Aufrufer gibt die Items selbst zurueck: die Reservierung ist damit verbraucht.
+              uow.holds().finish(e.id(), HoldRepository.State.CONSUMED, uow.now());
               JournalSteps.to(uow, e, TxState.FAILED, "aborted before items removed");
               yield AbortResult.ABORTED;
             }
@@ -326,16 +352,38 @@ public final class DeliveryEngine {
         });
   }
 
-  /** Legt den Return fuer den Lieferanten an und setzt das Journal auf FAILED. */
+  /**
+   * Legt den Return fuer den Lieferanten an und setzt das Journal auf FAILED. Gibt es eine
+   * Reservierung, geht ihre gesamte Menge (auch der Ueberschuss) zurueck.
+   */
   static JournalEntry failWithReturn(UnitOfWork uow, JournalEntry entry, String reason) {
+    int quantity = entry.quantity();
+    Optional<HoldRepository.Hold> hold = uow.holds().find(entry.id());
+    if (hold.isPresent() && hold.get().state() == HoldRepository.State.HELD) {
+      quantity = hold.get().quantity();
+      uow.holds().finish(entry.id(), HoldRepository.State.RELEASED, uow.now());
+    }
     uow.returns()
-        .add(
-            entry.playerId(),
-            entry.orderId(),
-            entry.item(),
-            entry.quantity(),
-            entry.id(),
-            uow.now());
+        .add(entry.playerId(), entry.orderId(), entry.item(), quantity, entry.id(), uow.now());
     return JournalSteps.to(uow, entry, TxState.FAILED, reason);
+  }
+
+  /** Verbraucht die Reservierung; Ueberschuss ueber die gelieferte Menge wird zur Rueckgabe. */
+  private static void settleHoldAfterCommit(
+      UnitOfWork uow, JournalEntry e, ItemSnapshot item, long orderId, long now) {
+    Optional<HoldRepository.Hold> hold = uow.holds().find(e.id());
+    if (hold.isEmpty() || hold.get().state() != HoldRepository.State.HELD) {
+      return;
+    }
+    int surplus = hold.get().quantity() - e.quantity();
+    if (surplus > 0) {
+      uow.returns().add(e.playerId(), orderId, item, surplus, e.id(), now);
+    }
+    uow.holds().finish(e.id(), HoldRepository.State.CONSUMED, now);
+  }
+
+  /** Journal-Eintrag zu einem Lieferversuch (fuer Aufrufer mit unklarem Ausgang von prepare). */
+  public Optional<JournalEntry> lookup(long orderId, UUID supplier, String nonce) {
+    return TxRunner.run(storage, uow -> uow.journal().findByKey(key(orderId, supplier, nonce)));
   }
 }

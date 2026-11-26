@@ -114,6 +114,7 @@ abstract class StorageContractTest {
             "refund_queue",
             "item_claims",
             "item_returns",
+            "delivery_holds",
             "player_statistics",
             "player_favorites",
             "price_history",
@@ -138,7 +139,7 @@ abstract class StorageContractTest {
         Statement st = c.createStatement();
         var rs = st.executeQuery("SELECT COUNT(*), MIN(LENGTH(checksum)) FROM schema_version")) {
       assertThat(rs.next()).isTrue();
-      assertThat(rs.getInt(1)).isEqualTo(2);
+      assertThat(rs.getInt(1)).isEqualTo(3);
       assertThat(rs.getInt(2)).isEqualTo(64);
     }
   }
@@ -307,7 +308,7 @@ abstract class StorageContractTest {
       for (Future<Integer> f : results) {
         total += f.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
       }
-      assertThat(total).isEqualTo(2);
+      assertThat(total).isEqualTo(3);
     } finally {
       pool.shutdownNow();
     }
@@ -1769,5 +1770,37 @@ abstract class StorageContractTest {
   @FunctionalInterface
   interface ThrowingIntConsumer {
     void accept(int i) throws Exception;
+  }
+
+  @Test
+  void deliveryHoldsAreIdempotentAndFinishOnlyOnce() throws Exception {
+    java.util.UUID tx = java.util.UUID.randomUUID();
+    java.util.UUID owner = java.util.UUID.randomUUID();
+    var item = TestData.item("minecraft:dirt");
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.holds().add(tx, owner, null, item, 7, TestData.T0);
+          u.holds().add(tx, owner, null, item, 99, TestData.T0 + 1); // Wiederholung: wirkungslos
+          return null;
+        });
+    var hold = tx(storage(), (UnitOfWork u) -> u.holds().find(tx)).orElseThrow();
+    assertThat(hold.quantity()).isEqualTo(7);
+    assertThat(hold.state()).isEqualTo(HoldRepository.State.HELD);
+    assertThat(hold.item().itemKey()).isEqualTo("minecraft:dirt");
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.holds().finish(tx, HoldRepository.State.RELEASED, TestData.T0 + 2)))
+        .isTrue();
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.holds().finish(tx, HoldRepository.State.CONSUMED, TestData.T0 + 3)))
+        .isFalse();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.holds().find(tx)).orElseThrow().state())
+        .isEqualTo(HoldRepository.State.RELEASED);
   }
 }

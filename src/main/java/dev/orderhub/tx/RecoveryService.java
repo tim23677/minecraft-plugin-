@@ -166,7 +166,19 @@ public final class RecoveryService {
   private boolean earlyState(
       UnitOfWork uow, JournalEntry e, Counters c, List<RecoveryReport.Escalation> out) {
     switch (e.type()) {
-      case DELIVERY, CLAIM, ITEM_RETURN -> {
+      case DELIVERY -> {
+        var hold = uow.holds().find(e.id());
+        if (hold.isPresent()
+            && hold.get().state() == dev.orderhub.storage.HoldRepository.State.HELD) {
+          // Die Items lagen nur im fluechtigen Menue: die Reservierung gibt sie zurueck.
+          DeliveryEngine.failWithReturn(uow, e, "recovered: held items returned to supplier");
+          c.itemsReturned++;
+        } else {
+          JournalSteps.to(uow, e, TxState.FAILED, "recovered: nothing had happened");
+          c.failedBeforeItems++;
+        }
+      }
+      case CLAIM, ITEM_RETURN -> {
         JournalSteps.to(uow, e, TxState.FAILED, "recovered: nothing had happened");
         c.failedBeforeItems++;
       }

@@ -17,6 +17,7 @@ final class JdbcUnitOfWork implements UnitOfWork {
   private final JdbcParcelRepository claims;
   private final JdbcParcelRepository returns;
   private final JdbcAuditRepository audit;
+  private final JdbcHoldRepository holds;
   private final JdbcInsightsRepository insights;
   private final JdbcOutboxRepository outbox;
 
@@ -30,6 +31,7 @@ final class JdbcUnitOfWork implements UnitOfWork {
     this.claims = new JdbcParcelRepository(jdbc, "item_claims");
     this.returns = new JdbcParcelRepository(jdbc, "item_returns");
     this.audit = new JdbcAuditRepository(jdbc);
+    this.holds = new JdbcHoldRepository(jdbc);
     this.insights = new JdbcInsightsRepository(jdbc);
     this.outbox = new JdbcOutboxRepository(jdbc);
   }
@@ -62,6 +64,11 @@ final class JdbcUnitOfWork implements UnitOfWork {
   @Override
   public ParcelRepository returns() {
     return returns;
+  }
+
+  @Override
+  public HoldRepository holds() {
+    return holds;
   }
 
   @Override

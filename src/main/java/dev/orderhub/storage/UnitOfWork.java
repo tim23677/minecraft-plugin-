@@ -16,6 +16,11 @@ public interface UnitOfWork {
 
   AuditRepository audit();
 
+  /** Rueckgabe-Reservierungen laufender Lieferungen. */
+  default HoldRepository holds() {
+    throw new UnsupportedOperationException("holds not available");
+  }
+
   /** Statistik, Handelsverlauf, Favoriten, Benachrichtigungen. */
   default InsightsRepository insights() {
     throw new UnsupportedOperationException("insights not available");

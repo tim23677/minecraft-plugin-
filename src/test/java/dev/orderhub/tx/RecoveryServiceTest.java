@@ -49,10 +49,17 @@ class RecoveryServiceTest {
     h.restart();
 
     RecoveryReport report = h.recovery.runAtStartup();
-    assertThat(report.failedBeforeItems()).isEqualTo(2);
+    // CREATED ohne Reservierung: nichts war passiert. PREPARED mit Reservierung: Items zurueck.
+    assertThat(report.failedBeforeItems()).isEqualTo(1);
+    assertThat(report.itemsReturned()).isEqualTo(1);
     assertThat(journal(h, prepared.journalId()).state()).isEqualTo(TxState.FAILED);
     assertThat(journal(h, created.id()).state()).isEqualTo(TxState.FAILED);
-    assertThat(h.storage.snapshot().returns()).isEmpty();
+    assertThat(h.storage.snapshot().returns())
+        .singleElement()
+        .satisfies(p -> {
+          assertThat(p.quantity()).isEqualTo(2);
+          assertThat(p.owner()).isEqualTo(SUPPLIER);
+        });
     assertThat(h.storage.snapshot().orders().get(0).quantityFilled()).isZero();
     assertThat(report.hasEscalations()).isFalse();
     assertThat(Invariants.check(h, MONEY)).isEmpty();
@@ -324,9 +331,10 @@ class RecoveryServiceTest {
     h.clock.advance(1_000);
     RecoveryReport report = careful.runAtStartup();
     assertThat(report.failedBeforeItems()).isZero();
+    assertThat(report.itemsReturned()).isZero();
     assertThat(report.skippedFresh()).isEqualTo(2); // PREPARED-Lieferung und COMMITTED-Erstellung
     assertThat(journal(h, p.journalId()).state()).isEqualTo(TxState.PREPARED);
     h.clock.advance(Duration.ofMinutes(10).toMillis());
-    assertThat(careful.sweep().failedBeforeItems()).isEqualTo(1);
+    assertThat(careful.sweep().itemsReturned()).isEqualTo(1);
   }
 }
