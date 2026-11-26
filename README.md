@@ -13,7 +13,7 @@ OrderHub 0.1.0 is a development build. The core flow (create, deliver, pay out, 
 - Paper or Folia 1.21.x (built against Paper API 1.21.11), Java 21
 - Vault and an economy plugin that registers with Vault (required to create orders and to pay out)
 - Optional: PlaceholderAPI
-- Optional: MariaDB or MySQL for several servers sharing one marketplace (SQLite is the default for a single server)
+- Optional: MariaDB 10.11 for several servers sharing one marketplace (SQLite is the default for a single server). MySQL is not supported yet.
 
 ## Installation
 
@@ -73,7 +73,7 @@ Available placeholders: `%orderhub_open_orders%`, `%orderhub_completed_orders%`,
 
 Single server: nothing to do, SQLite is used (`plugins/OrderHub/orderhub.db`).
 
-Several servers: set `storage.type: mariadb` in `config.yml`, fill in `storage.mariadb.jdbc-url` and `user`, create an empty database and a user for it, and give every server its own `server-id`. The password is never stored in the file: `storage.mariadb.password-env` names the environment variable that holds it (default `ORDERHUB_DB_PASSWORD`). Tested with MariaDB 10.11. MySQL has not been tested.
+Several servers: set `storage.type: mariadb` in `config.yml`, fill in `storage.mariadb.jdbc-url` and `user`, create an empty database and a user for it, and give every server its own `server-id`. The password is never stored in the file: `storage.mariadb.password-env` names the environment variable that holds it (default `ORDERHUB_DB_PASSWORD`). Tested with MariaDB 10.11. MySQL is not supported (the migrations use `CREATE INDEX IF NOT EXISTS`, which MySQL 8 does not have).
 
 ## Discord
 
