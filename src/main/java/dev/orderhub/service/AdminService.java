@@ -54,27 +54,30 @@ public final class AdminService {
   /** Storniert einen Auftrag eines beliebigen Spielers. {@code reason} ist Pflicht. */
   public OrderService.ActionResult cancel(long orderId, String actor, String reason) {
     requireReason(reason);
-    OrderService.ActionResult result = orders.cancelOrder(orderId, SYSTEM, true);
-    audit(actor, "order.cancel", String.valueOf(orderId), reason, result.status().name());
-    return result;
+    // Stornierung und Audit-Eintrag in einer Transaktion.
+    return orders.cancelOrder(
+        orderId,
+        SYSTEM,
+        true,
+        (uow, result) ->
+            recordAudit(
+                uow,
+                actor,
+                "order.cancel",
+                String.valueOf(orderId),
+                reason,
+                result.status().name()));
   }
 
   /** Verarbeitet abgelaufene Auftraege sofort. */
   public OrderService.ExpiryReport purgeExpired(String actor, String reason) {
     requireReason(reason);
-    OrderService.ExpiryReport report = orders.expireDue(200);
-    audit(
-        actor,
-        "order.purge-expired",
-        null,
-        reason,
-        "expired="
-            + report.expired()
-            + " renewed="
-            + report.renewed()
-            + " errors="
-            + report.errors());
-    return report;
+    // Je abgelaufenem Auftrag ein Audit-Eintrag in derselben Transaktion wie der Ablauf.
+    return orders.expireDue(
+        200,
+        id -> {},
+        (uow, id) ->
+            recordAudit(uow, actor, "order.purge-expired", String.valueOf(id), reason, "EXPIRED"));
   }
 
   public RecoveryReport runRecovery(String actor, String reason) {
@@ -274,6 +277,24 @@ public final class AdminService {
 
   private static long count(dev.orderhub.storage.UnitOfWork uow, OrderStatus status) {
     return uow.orders().count(new OrderQuery(null, null, null, status, null, 0, 1));
+  }
+
+  /** Audit fuer {@code /orderadmin reload}. Es gibt keine Datenbankaenderung, nur den Eintrag. */
+  public void auditReload(String actor, String detail) {
+    audit(actor, "config.reload", null, "reload", detail);
+  }
+
+  private void recordAudit(
+      dev.orderhub.storage.UnitOfWork uow,
+      String actor,
+      String action,
+      String target,
+      String reason,
+      String detail) {
+    uow.audit()
+        .append(
+            new AuditRepository.Entry(
+                actor, action, target, reason, detail, storage.serverId(), uow.now()));
   }
 
   private void audit(String actor, String action, String target, String reason, String detail) {

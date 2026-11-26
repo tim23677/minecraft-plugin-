@@ -25,4 +25,6 @@ Added
 - API `createOrder` checks `orderhub.create`, the owner's `orderhub.limit.*` tier and `orderhub.bypass.fee` like the command, rejects offline owners unless `CreateOptions(bypassChecks=true)` is passed, and writes the calling plugin to the audit log (`api.order.create`). New add-only statuses `NO_PERMISSION` and `FEE_CHANGED`
 - A delivery whose prepare outcome is unknown is closed atomically with a tombstone before items go back directly; a recovery that was faster than the flow never leads to returning items twice
 
+- Audit entries for `cancel`, `purge-expired` and `review resolve` are written in the same transaction as the action, `reload` is audited. `recovery` writes one summary entry after the sweep (a sweep spans many transactions; each changed journal entry carries its own detail)
+
 Known gaps are listed in RELEASE_REPORT.md.

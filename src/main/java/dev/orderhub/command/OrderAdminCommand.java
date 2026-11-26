@@ -72,6 +72,7 @@ public final class OrderAdminCommand implements CommandHandler {
         }
         reload.run();
         sender.sendMessage(s.messages().prefixed("general.reloaded"));
+        async(sender, () -> admin.auditReload(actor, "reloaded by " + actor));
       }
       case "list" -> {
         if (need(sender, "orderhub.admin.view")) {

@@ -453,6 +453,33 @@ public final class OrderService {
 
   // ---------------------------------------------------------------- Verwaltung
 
+  /**
+   * Wie {@link #cancelOrder(long, UUID, boolean)}. {@code inTransaction} laeuft in derselben
+   * Datenbanktransaktion wie die Stornierung (z. B. fuer den Audit-Eintrag): Beides gilt oder keins
+   * von beiden.
+   */
+  public ActionResult cancelOrder(
+      long orderId,
+      UUID actor,
+      boolean admin,
+      java.util.function.BiConsumer<UnitOfWork, ActionResult> inTransaction) {
+    return TxRunner.run(
+        storage,
+        uow -> {
+          ActionResult result =
+              terminateWithRefund(
+                  uow,
+                  orderId,
+                  actor,
+                  admin,
+                  OrderStatus.CANCELLED,
+                  TxType.CANCEL_REFUND,
+                  "cancel:");
+          inTransaction.accept(uow, result);
+          return result;
+        });
+  }
+
   /** Storniert den Auftrag und stellt den Restescrow in die Refund-Queue. */
   public ActionResult cancelOrder(long orderId, UUID actor, boolean admin) {
     return TxRunner.run(
@@ -663,6 +690,17 @@ public final class OrderService {
    * die Transaktion festgeschrieben ist (nie innerhalb der Transaktion).
    */
   public ExpiryReport expireDue(int batchSize, java.util.function.LongConsumer onExpired) {
+    return expireDue(batchSize, onExpired, (uow, id) -> {});
+  }
+
+  /**
+   * Wie oben. {@code inTransaction} laeuft je abgelaufenem Auftrag in derselben Transaktion wie der
+   * Ablauf (Audit-Eintrag).
+   */
+  public ExpiryReport expireDue(
+      int batchSize,
+      java.util.function.LongConsumer onExpired,
+      java.util.function.BiConsumer<UnitOfWork, Long> inTransaction) {
     int renewed = 0;
     int expired = 0;
     int errors = 0;
@@ -675,7 +713,16 @@ public final class OrderService {
       int progress = 0;
       for (Order o : due) {
         try {
-          Expired result = TxRunner.run(storage, uow -> expireOne(uow, o.id()));
+          Expired result =
+              TxRunner.run(
+                  storage,
+                  uow -> {
+                    Expired r = expireOne(uow, o.id());
+                    if (r == Expired.EXPIRED) {
+                      inTransaction.accept(uow, o.id());
+                    }
+                    return r;
+                  });
           if (result == Expired.RENEWED) {
             renewed++;
             progress++;
