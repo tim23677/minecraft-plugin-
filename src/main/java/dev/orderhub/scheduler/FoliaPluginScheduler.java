@@ -56,6 +56,11 @@ final class FoliaPluginScheduler implements PluginScheduler {
   }
 
   @Override
+  public boolean isActive() {
+    return plugin.isEnabled();
+  }
+
+  @Override
   public void cancelAll() {
     plugin.getServer().getGlobalRegionScheduler().cancelTasks(plugin);
     plugin.getServer().getAsyncScheduler().cancelTasks(plugin);

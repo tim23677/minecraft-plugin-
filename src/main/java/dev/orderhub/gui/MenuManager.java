@@ -146,7 +146,10 @@ public final class MenuManager {
     }
     UUID playerId = player.getUniqueId();
     open.remove(playerId, menu);
-    List<ItemStack> items = menu.drainInputs();
+    // Ein eingefrorenes Menue (laufende Lieferung) gibt seine Items nicht beim Schliessen heraus,
+    // der
+    // Ablauf nimmt sie selbst heraus. Sonst waeren sie nach einem Schliessen doppelt vorhanden.
+    List<ItemStack> items = menu.isFrozen() ? List.of() : menu.drainInputs();
     try {
       if (reason.abandoned()) {
         menu.onAbandon(playerId, reason);
@@ -240,7 +243,10 @@ public final class MenuManager {
       return;
     }
     open.remove(playerId, menu);
-    List<ItemStack> items = menu.disarm();
+    boolean frozen = menu.isFrozen();
+    List<ItemStack> disarmed = menu.disarm();
+    // Bei einer laufenden Lieferung entscheidet die Recovery anhand des Journals ueber die Items.
+    List<ItemStack> items = frozen ? List.of() : disarmed;
     try {
       menu.onAbandon(playerId, CloseReason.PLUGIN_DISABLE);
     } catch (RuntimeException e) {

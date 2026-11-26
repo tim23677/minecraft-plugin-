@@ -61,15 +61,20 @@ public final class PlaceholderCache {
     if (!loading.add(key)) {
       return;
     }
-    async.accept(() -> {
-      try {
-        entries.put(key, new Entry(loader.get(), clock.getAsLong()));
-      } catch (RuntimeException e) {
-        // Alter Wert bleibt bestehen, naechster Zugriff versucht es erneut.
-      } finally {
-        loading.remove(key);
-      }
-    });
+    try {
+      async.accept(() -> {
+        try {
+          entries.put(key, new Entry(loader.get(), clock.getAsLong()));
+        } catch (RuntimeException e) {
+          // Alter Wert bleibt bestehen, naechster Zugriff versucht es erneut.
+        } finally {
+          loading.remove(key);
+        }
+      });
+    } catch (RuntimeException e) {
+      // Scheduler nimmt nichts mehr an (Plugin wird deaktiviert): Fallback bleibt, Schluessel frei.
+      loading.remove(key);
+    }
   }
 
   public int size() {

@@ -122,10 +122,11 @@ public final class DeliveryFlow {
   }
 
   private void confirm(Player player, DeliveryMenu menu, Order order) {
-    menu.freeze();
+    menu.freeze(); // ab jetzt gehoeren die Items im Menue diesem Ablauf, nicht dem Schliessen-Hook
     int available = Math.min(count(menu.inputContents(), order.item()), order.remaining());
     if (available <= 0) {
       player.sendMessage(s.messages().prefixed("delivery.nothing"));
+      giveAll(player, menu.takeInputs());
       player.closeInventory();
       return;
     }
@@ -154,50 +155,122 @@ public final class DeliveryFlow {
           return new Step(prepared, confirmed);
         },
         step -> afterPrepare(player, menu, order, step),
-        orphan ->
-            s.logger().warning("player left during delivery prepare, journal left to recovery"));
+        // Spieler weg: der Ablauf laeuft ohne Spieler zu Ende, die Items bleiben im eingefrorenen
+        // Menue
+        // bis hierher und werden nie doppelt zurueckgegeben.
+        step -> finishWithoutPlayer(supplier, menu, order, step),
+        () -> {
+          player.sendMessage(s.messages().prefixed("general.database-error"));
+          giveAll(player, menu.takeInputs());
+          player.closeInventory();
+        });
   }
 
+  private static boolean usable(Step step) {
+    return step.prepared() != null && step.prepared().ok() && step.confirmed() != null;
+  }
+
+  private String failureKey(Step step) {
+    if (step.prepared() == null) {
+      return "general.busy";
+    }
+    return switch (step.prepared().status()) {
+      case BELOW_MINIMUM -> "delivery.below-minimum";
+      case SELF_DELIVERY -> "delivery.own-order";
+      case ORDER_NOT_ACTIVE, ORDER_NOT_FOUND -> "order.not-active";
+      default -> "general.busy";
+    };
+  }
+
+  /** Entity-Kontext, Spieler online. */
   private void afterPrepare(Player player, DeliveryMenu menu, Order order, Step step) {
-    if (step.prepared() == null || !step.prepared().ok() || step.confirmed() == null) {
-      String key =
-          step.prepared() == null
-              ? "general.busy"
-              : switch (step.prepared().status()) {
-                case BELOW_MINIMUM -> "delivery.below-minimum";
-                case SELF_DELIVERY -> "delivery.own-order";
-                case ORDER_NOT_ACTIVE, ORDER_NOT_FOUND -> "order.not-active";
-                default -> "general.busy";
-              };
-      player.sendMessage(s.messages().prefixed(key, Messages.number("min", order.minDelivery())));
-      player.closeInventory(); // das Framework gibt die Items zurueck
-      return;
-    }
-    int quantity = step.prepared().quantity();
-    UUID journal = step.prepared().journalId();
-    List<ItemStack> drained = menu.takeInputs();
-    int total = 0;
-    for (ItemStack stack : drained) {
-      if (s.matcher().matches(stack, order.item())) {
-        total += stack.getAmount();
-      }
-    }
-    if (total < quantity) {
-      s.logger()
-          .severe(
-              "delivery " + journal + ": menu held fewer items than prepared; left to recovery");
+    if (!usable(step)) {
+      player.sendMessage(
+          s.messages().prefixed(failureKey(step), Messages.number("min", order.minDelivery())));
+      giveAll(player, menu.takeInputs());
       player.closeInventory();
       return;
     }
-    int surplus = total - quantity;
-    ItemStack template = drained.get(0).clone();
-    template.setAmount(1);
+    Taken taken = take(menu, order, step.prepared().quantity());
+    if (taken == null) {
+      s.logger()
+          .severe(
+              "delivery "
+                  + step.prepared().journalId()
+                  + ": menu held fewer items than prepared; left to recovery");
+      player.closeInventory();
+      return;
+    }
+    UUID supplier = player.getUniqueId();
     s.scheduler()
         .runAsync(() -> {
-          DeliveryEngine.CommitResult result = commitSafely(journal);
-          s.scheduler()
-              .runOn(player, () -> afterCommit(player, order, template, quantity, surplus, result));
+          DeliveryEngine.CommitResult result = commitSafely(step.prepared().journalId());
+          // Alles Spielerunabhaengige zuerst, damit es auch bei einem Abgang nie ausfaellt.
+          postCommit(order, taken.template(), taken.quantity(), result);
+          boolean shown =
+              s.scheduler()
+                  .tryRunOn(
+                      player,
+                      () ->
+                          afterCommitForPlayer(
+                              player,
+                              order,
+                              taken.template(),
+                              taken.quantity(),
+                              taken.surplus(),
+                              result));
+          if (!shown && taken.surplus() > 0) {
+            queueReturn(supplier, taken.template(), taken.surplus());
+          }
         });
+  }
+
+  /** Spieler nicht mehr erreichbar (laeuft auf einem Async-Thread). */
+  private void finishWithoutPlayer(UUID supplier, DeliveryMenu menu, Order order, Step step) {
+    if (!usable(step)) {
+      for (ItemStack stack : menu.takeInputs()) {
+        ItemStack template = stack.clone();
+        template.setAmount(1);
+        queueReturn(supplier, template, stack.getAmount());
+      }
+      return;
+    }
+    Taken taken = take(menu, order, step.prepared().quantity());
+    if (taken == null) {
+      s.logger()
+          .severe(
+              "delivery "
+                  + step.prepared().journalId()
+                  + ": menu held fewer items than prepared; left to recovery");
+      return;
+    }
+    DeliveryEngine.CommitResult result = commitSafely(step.prepared().journalId());
+    postCommit(order, taken.template(), taken.quantity(), result);
+    if (taken.surplus() > 0) {
+      queueReturn(supplier, taken.template(), taken.surplus());
+    }
+  }
+
+  private record Taken(ItemStack template, int quantity, int surplus) {}
+
+  /** Nimmt die Items aus dem Menue. {@code null}, wenn weniger als vorbereitet drin sind. */
+  private Taken take(DeliveryMenu menu, Order order, int quantity) {
+    List<ItemStack> drained = menu.takeInputs();
+    int total = 0;
+    ItemStack template = null;
+    for (ItemStack stack : drained) {
+      if (s.matcher().matches(stack, order.item())) {
+        total += stack.getAmount();
+        if (template == null) {
+          template = stack.clone();
+          template.setAmount(1);
+        }
+      }
+    }
+    if (template == null || total < quantity) {
+      return null;
+    }
+    return new Taken(template, quantity, total - quantity);
   }
 
   private DeliveryEngine.CommitResult commitSafely(UUID journal) {
@@ -209,7 +282,55 @@ public final class DeliveryFlow {
     }
   }
 
-  private void afterCommit(
+  /**
+   * Spielerunabhaengig, laeuft auf dem Async-Thread: Ereignisse, Statistik, Auszahlung, Besitzer.
+   */
+  private void postCommit(
+      Order order, ItemStack template, int quantity, DeliveryEngine.CommitResult result) {
+    if (result == null) {
+      return;
+    }
+    switch (result.status()) {
+      case COMMITTED, ALREADY_COMMITTED -> {
+        DeliveryCommitted event = result.event();
+        try {
+          s.payouts().runOnce(10);
+        } catch (RuntimeException e) {
+          s.logger().log(java.util.logging.Level.WARNING, "payout kick failed", e);
+        }
+        if (event != null) {
+          dev.orderhub.integration.Events.fire(
+              new dev.orderhub.api.event.OrderDeliveryEvent(
+                  event.orderId(),
+                  event.supplier(),
+                  event.owner(),
+                  event.itemKey(),
+                  event.quantity(),
+                  event.gross(),
+                  event.netPayout()));
+          dev.orderhub.integration.Events.fire(
+              new dev.orderhub.api.event.TransactionStateChangeEvent(
+                  event.journalId(), "DELIVERY", "COMMITTED", event.gross()));
+          if (event.orderCompleted()) {
+            dev.orderhub.integration.Events.fire(
+                new dev.orderhub.api.event.OrderCompleteEvent(
+                    event.orderId(), event.owner(), event.itemKey()));
+          }
+          try {
+            s.insights().deliveryCommitted(event);
+          } catch (RuntimeException e) {
+            s.logger().log(java.util.logging.Level.WARNING, "insights after delivery failed", e);
+          }
+        }
+        notifyOwner(order, template, quantity, event != null && event.orderCompleted());
+      }
+      case REJECTED_ITEMS_RETURNED -> s.logger().info("delivery rejected, items stored as return");
+      default -> s.logger().warning("delivery commit ended with " + result.status());
+    }
+  }
+
+  /** Entity-Kontext: Ueberschuss zurueckgeben, Menue schliessen, Meldung. */
+  private void afterCommitForPlayer(
       Player player,
       Order order,
       ItemStack template,
@@ -217,7 +338,11 @@ public final class DeliveryFlow {
       int surplus,
       DeliveryEngine.CommitResult result) {
     if (surplus > 0) {
-      giveOrQueue(player, template, surplus);
+      if (player.isOnline()) {
+        giveOrQueue(player, template, surplus);
+      } else {
+        queueReturn(player.getUniqueId(), template, surplus);
+      }
     }
     player.closeInventory();
     if (result == null) {
@@ -226,8 +351,7 @@ public final class DeliveryFlow {
     }
     switch (result.status()) {
       case COMMITTED, ALREADY_COMMITTED -> {
-        DeliveryCommitted event = result.event();
-        long net = event == null ? 0 : event.netPayout();
+        long net = result.event() == null ? 0 : result.event().netPayout();
         player.sendMessage(
             s.messages()
                 .prefixed(
@@ -236,36 +360,6 @@ public final class DeliveryFlow {
                     Messages.component("item", template.effectiveName()),
                     Messages.number("id", order.id()),
                     Messages.text("amount", Money.format(net))));
-        s.scheduler().runAsync(() -> s.payouts().runOnce(10));
-        if (event != null) {
-          s.scheduler()
-              .runAsync(() -> {
-                dev.orderhub.integration.Events.fire(
-                    new dev.orderhub.api.event.OrderDeliveryEvent(
-                        event.orderId(),
-                        event.supplier(),
-                        event.owner(),
-                        event.itemKey(),
-                        event.quantity(),
-                        event.gross(),
-                        event.netPayout()));
-                dev.orderhub.integration.Events.fire(
-                    new dev.orderhub.api.event.TransactionStateChangeEvent(
-                        event.journalId(), "DELIVERY", "COMMITTED", event.gross()));
-                if (event.orderCompleted()) {
-                  dev.orderhub.integration.Events.fire(
-                      new dev.orderhub.api.event.OrderCompleteEvent(
-                          event.orderId(), event.owner(), event.itemKey()));
-                }
-                try {
-                  s.insights().deliveryCommitted(event);
-                } catch (RuntimeException e) {
-                  s.logger()
-                      .log(java.util.logging.Level.WARNING, "insights after delivery failed", e);
-                }
-              });
-        }
-        notifyOwner(order, template, quantity, event != null && event.orderCompleted());
       }
       case REJECTED_ITEMS_RETURNED -> {
         player.sendMessage(s.messages().prefixed("delivery.returned"));

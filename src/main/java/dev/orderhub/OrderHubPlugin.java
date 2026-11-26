@@ -75,6 +75,7 @@ public class OrderHubPlugin extends JavaPlugin {
   private JdbcStorage storage;
   private Services services;
   private ReturnQueue returnQueue;
+  private dev.orderhub.placeholder.OrderHubExpansion expansion;
 
   @Override
   public void onEnable() {
@@ -183,14 +184,16 @@ public class OrderHubPlugin extends JavaPlugin {
             message ->
                 scheduler.runGlobal(() -> {
                   for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.hasPermission("orderhub.admin")) {
-                      scheduler.tryRunOn(
-                          p,
-                          () ->
-                              p.sendMessage(
-                                  messages.prefixed(
-                                      "admin.warning", Messages.text("message", message))));
-                    }
+                    // Rechtepruefung und Nachricht im Kontext des jeweiligen Spielers.
+                    scheduler.tryRunOn(
+                        p,
+                        () -> {
+                          if (p.hasPermission("orderhub.admin")) {
+                            p.sendMessage(
+                                messages.prefixed(
+                                    "admin.warning", Messages.text("message", message)));
+                          }
+                        });
                   }
                 }));
 
@@ -331,15 +334,18 @@ public class OrderHubPlugin extends JavaPlugin {
       }
     });
     if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-      new dev.orderhub.placeholder.OrderHubExpansion(
+      var created =
+          new dev.orderhub.placeholder.OrderHubExpansion(
               services,
               getPluginMeta().getVersion(),
               new dev.orderhub.placeholder.PlaceholderCache(
                   st.cacheMaxEntries(),
                   15_000,
                   System::currentTimeMillis,
-                  task -> scheduler.runAsync(task)))
-          .register();
+                  task -> scheduler.runAsync(task)));
+      if (created.register()) {
+        expansion = created;
+      }
     }
     getLogger()
         .info("OrderHub enabled (server-id " + st.serverId() + ", " + storage.dialect() + ")");
@@ -433,6 +439,10 @@ public class OrderHubPlugin extends JavaPlugin {
 
   @Override
   public void onDisable() {
+    if (expansion != null) {
+      expansion.unregister();
+      expansion = null;
+    }
     if (menus != null) {
       menus.closeAll();
     }

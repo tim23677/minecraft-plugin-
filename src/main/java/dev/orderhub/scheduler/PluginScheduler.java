@@ -41,6 +41,11 @@ public interface PluginScheduler {
    */
   void runAsyncRepeating(Runnable task, long initialDelayMillis, long periodMillis);
 
+  /** Ob dieser Scheduler noch neue Tasks annimmt (false nach dem Disable). */
+  default boolean isActive() {
+    return true;
+  }
+
   /** Bricht alle von diesem Scheduler gestarteten Tasks ab. */
   void cancelAll();
 

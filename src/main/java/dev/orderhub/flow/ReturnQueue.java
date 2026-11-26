@@ -58,12 +58,27 @@ public final class ReturnQueue {
       return;
     }
     Runnable work =
-        () ->
+        () -> {
+          try {
             storage
                 .transact(uow ->
                     uow.returns().add(owner, null, snapshot, amount, UUID.randomUUID(), uow.now()))
                 .join();
-    if (sync) {
+          } catch (RuntimeException e) {
+            // Nie still verlieren: Besitzer, Item und Menge stehen im Log, damit ein Admin
+            // erstattet.
+            logger.log(
+                Level.SEVERE,
+                "RETURN NOT SAVED owner="
+                    + owner
+                    + " item="
+                    + snapshot.itemKey()
+                    + " amount="
+                    + amount,
+                e);
+          }
+        };
+    if (sync || !scheduler.isActive()) {
       work.run();
     } else {
       scheduler.runAsync(work);

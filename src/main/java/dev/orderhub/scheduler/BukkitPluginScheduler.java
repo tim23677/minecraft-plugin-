@@ -25,7 +25,10 @@ final class BukkitPluginScheduler implements PluginScheduler {
 
   @Override
   public boolean tryRunOn(Entity entity, Runnable task) {
-    if (!plugin.isEnabled()) {
+    if (!plugin.isEnabled() || !entity.isValid()) {
+      return false;
+    }
+    if (entity instanceof org.bukkit.entity.Player p && !p.isOnline()) {
       return false;
     }
     try {
@@ -53,6 +56,11 @@ final class BukkitPluginScheduler implements PluginScheduler {
         .getScheduler()
         .runTaskTimerAsynchronously(
             plugin, task, Math.max(1, initialDelayMillis / 50), Math.max(1, periodMillis / 50));
+  }
+
+  @Override
+  public boolean isActive() {
+    return plugin.isEnabled();
   }
 
   @Override

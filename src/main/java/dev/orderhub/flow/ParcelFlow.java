@@ -113,7 +113,13 @@ public final class ParcelFlow {
           return new Prepared(r, engine().beginHandover(r.journalId()));
         },
         prepared -> handover(player, template.get(), prepared, after),
-        orphan -> {});
+        orphan -> {
+          // Spieler weg, bevor Items uebergeben wurden: Reservierung sofort freigeben.
+          if (orphan.reservation().reserved()) {
+            engine().settle(orphan.reservation().journalId(), 0);
+          }
+        },
+        () -> player.sendMessage(s.messages().prefixed("general.database-error")));
   }
 
   private void handover(
