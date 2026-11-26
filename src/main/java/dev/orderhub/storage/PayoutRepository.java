@@ -59,5 +59,13 @@ public interface PayoutRepository {
    */
   boolean markReviewIfUnchanged(UUID id, long expectedUpdatedAt, String reason, long now);
 
+  /**
+   * Loest eine Zeile in REVIEW auf (Compare-and-Set auf den Zustand REVIEW) und setzt sie auf
+   * {@code target} (COMPLETED oder FAILED). Fuer die Admin-Aufloesung von MANUAL_REVIEW.
+   *
+   * @return {@code true}, wenn eine Zeile in REVIEW geaendert wurde
+   */
+  boolean resolveReview(UUID txId, Kind kind, State target, long now);
+
   List<Item> findByState(State state, int limit);
 }

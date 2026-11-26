@@ -679,6 +679,17 @@ public final class InMemoryStorage implements Storage {
       }
 
       @Override
+      public boolean resolveReview(UUID txId, Kind kind, State target, long at) {
+        UUID id = s.payoutKeys.get(txId + ":" + kind);
+        Item i = id == null ? null : s.payouts.get(id);
+        if (i == null || i.state() != State.REVIEW) {
+          return false;
+        }
+        s.payouts.put(id, copy(i, target, i.attempts(), at));
+        return true;
+      }
+
+      @Override
       public List<Item> findByState(State state, int limit) {
         return s.payouts.values().stream().filter(i -> i.state() == state).limit(limit).toList();
       }

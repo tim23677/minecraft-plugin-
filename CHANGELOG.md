@@ -16,4 +16,6 @@ Added
 
 - Vault calls run on the global server thread by default (`economy.async-safe: false`), with timeout treated as unknown outcome
 
+- `/orderadmin review list|show|resolve <tx> paid|refund|discard confirm <reason>` resolves MANUAL_REVIEW entries through the journal, idempotent, audited in the same transaction
+
 Known gaps are listed in RELEASE_REPORT.md.

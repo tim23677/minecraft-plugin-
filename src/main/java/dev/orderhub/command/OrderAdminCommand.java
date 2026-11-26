@@ -34,6 +34,7 @@ public final class OrderAdminCommand implements CommandHandler {
           "recovery",
           "statistics",
           "inspect",
+          "review",
           "debug");
 
   private final Services s;
@@ -141,6 +142,7 @@ public final class OrderAdminCommand implements CommandHandler {
         }
         async(sender, () -> inspect(sender, sub, args));
       }
+      case "review" -> review(sender, args, actor);
       case "recovery" -> {
         if (!need(sender, "orderhub.admin.recovery")) {
           return true;
@@ -196,6 +198,88 @@ public final class OrderAdminCommand implements CommandHandler {
       default -> sender.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
     }
     return true;
+  }
+
+  private void review(CommandSender sender, String[] args, String actor) {
+    String action = args.length < 2 ? "list" : args[1].toLowerCase(Locale.ROOT);
+    switch (action) {
+      case "list" -> {
+        if (need(sender, "orderhub.admin.transactions")) {
+          async(
+              sender,
+              () -> {
+                var open = admin.manualReview(50);
+                reply(sender, Component.text("MANUAL_REVIEW: " + open.size()));
+                for (JournalEntry e : open) {
+                  reply(
+                      sender,
+                      Component.text(
+                          e.id()
+                              + " "
+                              + e.type()
+                              + " "
+                              + Money.format(e.amount())
+                              + " player="
+                              + e.playerId()
+                              + " "
+                              + String.valueOf(e.detail())));
+                }
+              });
+        }
+      }
+      case "show" -> {
+        if (need(sender, "orderhub.admin.transactions")) {
+          if (args.length < 3) {
+            sender.sendMessage(
+                s.messages().prefixed("general.invalid-number", Messages.text("input", "")));
+            return;
+          }
+          async(
+              sender, () -> inspect(sender, "transaction", new String[] {"transaction", args[2]}));
+        }
+      }
+      case "resolve" -> {
+        if (!need(sender, "orderhub.admin.recovery")) {
+          return;
+        }
+        if (args.length < 4) {
+          sender.sendMessage(
+              Component.text(
+                  "/orderadmin review resolve <tx> paid|refund|discard confirm <reason>"));
+          return;
+        }
+        UUID tx;
+        AdminService.Resolution how;
+        try {
+          tx = UUID.fromString(args[2]);
+          how = AdminService.Resolution.valueOf(args[3].toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+          sender.sendMessage(
+              s.messages().prefixed("general.invalid-number", Messages.text("input", args[2])));
+          return;
+        }
+        String reason = confirmedReason(sender, args, 4);
+        if (reason == null) {
+          return;
+        }
+        async(
+            sender,
+            () -> {
+              var r = admin.resolveReview(tx, how, actor, reason);
+              reply(
+                  sender,
+                  Component.text(
+                      "review "
+                          + tx
+                          + " "
+                          + how
+                          + ": "
+                          + r.status()
+                          + (r.refundTx() == null ? "" : " refund-tx=" + r.refundTx())));
+            });
+      }
+      default -> sender.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
+    }
   }
 
   private String confirmedReason(CommandSender sender, String[] args, int from) {
@@ -357,6 +441,14 @@ public final class OrderAdminCommand implements CommandHandler {
     }
     if (args.length == 1) {
       return OrderCommand.filter(SUBCOMMANDS, args[0]);
+    }
+    if (args.length == 2 && args[0].equalsIgnoreCase("review")) {
+      return OrderCommand.filter(List.of("list", "show", "resolve"), args[1]);
+    }
+    if (args.length == 4
+        && args[0].equalsIgnoreCase("review")
+        && args[1].equalsIgnoreCase("resolve")) {
+      return OrderCommand.filter(List.of("paid", "refund", "discard"), args[3]);
     }
     if (args.length == 2 && args[0].equalsIgnoreCase("list")) {
       return OrderCommand.filter(

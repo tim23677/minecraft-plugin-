@@ -41,7 +41,6 @@ Nicht vorhanden:
 - Auftragsvorlagen, Bulk-Erstellung, Reputation, Gruppen- und Weltbeschränkungen, Sound-Konfiguration (Option vorhanden, ohne Wirkung).
 - Bedienbare Auto-Verlängerung und Mindestliefermenge (die Engine kann beides, die Befehle setzen `false` bzw. 1).
 - GUI-Menüs für Statistik, Marktanalyse, Favoriten, Verlauf, Admin-Dashboard und Transaction Inspector. Diese Funktionen gibt es als Chatausgabe und Befehl.
-- Admin-Befehl zum Auflösen von MANUAL_REVIEW-Einträgen. Ein Administrator muss unklare Zahlungen außerhalb von OrderHub klären.
 - Konfigurationsversionierung mit Migrationsregeln: `config-version` und `menu-version` werden nicht ausgewertet, `ConfigUpdater` ergänzt nur fehlende Schlüssel.
 - Die Optionen `cache.*`, `create-cooldown-seconds`, `recommendation-window-days`, `notifications.batch-window-seconds`, `reputation.enabled`, `sounds.*`, `commands.aliases` und die meisten Einträge in `menus.yml` sind eingelesen, haben aber keine Wirkung (in CONFIGURATION.md vermerkt).
 - Eigene Pakete `order`, `transaction`, `statistics`, `notification`, `migration`, `security`, `util` laut Vorgabe: Die Funktionen liegen in `service`, `tx`, `storage`, `flow`, `bootstrap`.

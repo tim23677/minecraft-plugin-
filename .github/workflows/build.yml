@@ -63,3 +63,24 @@ jobs:
       - name: Dependency check
         if: steps.key.outputs.present == 'true'
         run: ./gradlew dependencyCheckAnalyze
+
+  server-smoke:
+    # Echter Paper- und Folia-Lauf. Laeuft nur, wenn die Besitzerin oder der Besitzer die
+    # Repository-Variable ACCEPT_MINECRAFT_EULA auf "true" gesetzt hat (Minecraft-EULA).
+    if: ${{ vars.ACCEPT_MINECRAFT_EULA == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Paper and Folia smoke test (mcstage)
+        env:
+          ACCEPT_MINECRAFT_EULA: ${{ vars.ACCEPT_MINECRAFT_EULA }}
+        run: tools/mcstage/run.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcstage-reports
+          path: build/reports/mcstage*

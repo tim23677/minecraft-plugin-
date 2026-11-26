@@ -118,6 +118,22 @@ final class JdbcPayoutRepository implements PayoutRepository {
   }
 
   @Override
+  public boolean resolveReview(UUID txId, Kind kind, State target, long now) {
+    if (target != State.COMPLETED && target != State.FAILED) {
+      throw new IllegalArgumentException("target must be COMPLETED or FAILED");
+    }
+    int rows =
+        jdbc.update(
+            "UPDATE "
+                + table(kind)
+                + " SET state = ?, updated_at = ? WHERE tx_id = ? AND state = 'REVIEW'",
+            target.name(),
+            now,
+            txId);
+    return rows == 1;
+  }
+
+  @Override
   public boolean markReviewIfUnchanged(UUID id, long expectedUpdatedAt, String reason, long now) {
     String r =
         reason != null && reason.length() > MAX_REASON ? reason.substring(0, MAX_REASON) : reason;
