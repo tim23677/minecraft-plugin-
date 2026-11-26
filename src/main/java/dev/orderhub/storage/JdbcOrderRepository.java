@@ -229,9 +229,8 @@ final class JdbcOrderRepository implements OrderRepository {
       case NEWEST -> "o.created_at DESC, o.id DESC";
       case HIGHEST_PRICE -> "o.unit_price DESC, o.id ASC";
       case LOWEST_PRICE -> "o.unit_price ASC, o.id ASC";
-      case ALMOST_COMPLETED -> "(o.quantity_filled * 1.0 / o.quantity_total) DESC, o.id ASC";
-      case HIGHEST_DEMAND ->
-          "(o.quantity_total - o.quantity_filled) DESC, o.escrow_remaining DESC, o.id ASC";
+      case ALMOST_COMPLETED -> "o.fill_ratio DESC, o.id ASC";
+      case HIGHEST_DEMAND -> "o.remaining_qty DESC, o.escrow_remaining DESC, o.id ASC";
     };
   }
 

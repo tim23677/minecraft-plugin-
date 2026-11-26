@@ -139,7 +139,7 @@ abstract class StorageContractTest {
         Statement st = c.createStatement();
         var rs = st.executeQuery("SELECT COUNT(*), MIN(LENGTH(checksum)) FROM schema_version")) {
       assertThat(rs.next()).isTrue();
-      assertThat(rs.getInt(1)).isEqualTo(4);
+      assertThat(rs.getInt(1)).isEqualTo(5);
       assertThat(rs.getInt(2)).isEqualTo(64);
     }
   }
@@ -308,7 +308,7 @@ abstract class StorageContractTest {
       for (Future<Integer> f : results) {
         total += f.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
       }
-      assertThat(total).isEqualTo(4);
+      assertThat(total).isEqualTo(5);
     } finally {
       pool.shutdownNow();
     }

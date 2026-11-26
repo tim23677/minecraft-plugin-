@@ -38,10 +38,10 @@ class MigrationsTest {
   void loadsCommonBeforeDialectPerVersion() {
     assertThat(Migrations.load(Dialect.SQLITE))
         .extracting(Migrations.Script::scope)
-        .containsExactly("common", "sqlite", "common", "common");
+        .containsExactly("common", "sqlite", "common", "common", "sqlite");
     assertThat(Migrations.load(Dialect.MARIADB))
         .extracting(Migrations.Script::scope)
-        .containsExactly("common", "mariadb", "common", "common");
+        .containsExactly("common", "mariadb", "common", "common", "mariadb");
   }
 
   @Test
