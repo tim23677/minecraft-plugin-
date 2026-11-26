@@ -16,3 +16,5 @@ Alle Zeiten 2026-11-26.
 12. Skills und Agents installiert, Erkennung mit `claude -p` bestätigt.
 13. `renovate.json` mit `renovate-config-validator` geprüft (als globale Konfiguration validiert).
 14. Folia: Download und SHA-256 bestätigt, Lauf wegen fehlender EULA-Zustimmung nicht ausgeführt.
+15. Zweite Suche auf GitHub (Repository- und Code-Suche nach Minecraft, Paper, Folia, Claude-Skills, MCP). Eine Durchsuchung ganz GitHubs ist nicht möglich, die Suche ist begrenzt auf diese Begriffe. Elf Treffer, sechs davon geklont und geprüft.
+16. 13 Skills aus MJP-Paper-Skills, YueMi und Jahrome übernommen (siehe CLAUDE_SKILLS.md). Erster Kopierversuch für die zwei Jahrome-Skills schlug fehl (Verzeichnisse nicht angelegt), danach korrigiert.

@@ -21,7 +21,7 @@ Statusstufen: getestet (ausgeführt, Ergebnis geprüft), konfiguriert (in der Bu
 | Renovate | n/a | vorbereitet | `renovate.json` besteht den Validator, die GitHub-App ist nicht aktiviert |
 | Vault API (compileOnly) | 1.7.1 | konfiguriert | wird aufgelöst, noch nicht im Code benutzt |
 | Folia-Serverlauf | 1.21.11 Build 14 | vorbereitet | Download und SHA-256 geprüft, Lauf braucht EULA-Zustimmung |
-| Claude-Skills (8) und Agents (5) | siehe CLAUDE_SKILLS.md | getestet | `claude -p` listet alle 13 |
+| Claude-Skills (21) und Agents (5) | siehe CLAUDE_SKILLS.md | getestet | `claude -p` listet alle Skills, die Agents wurden bei der ersten Installation geprüft |
 
 Nicht installiert: claude-java-plugins (keine Lizenz), FoliaScheduler (keine Lizenz, siehe Entscheidung), Zavelinski-Skills außer testsmith und secret-scan, Profiler, JMH, Gitleaks, API-Kompatibilitätswerkzeuge. Begründung in GITHUB_RESEARCH.md.
 

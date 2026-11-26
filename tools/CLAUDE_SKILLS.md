@@ -8,6 +8,20 @@ Aus decebals/claude-code-java (MIT): java-code-review, concurrency-review, perfo
 
 Die Skills sind auf Maven und teilweise auf Spring ausgerichtet. Für Gradle- und Paper-Besonderheiten greifen die eigenen Agents.
 
+## Zweite Installation: Minecraft- und Paper-Skills (13)
+
+Alle MIT, Herkunft und Commits in tools/licenses/SOURCES.md.
+
+Aus MrPippi/MJP-Paper-Skills (unverändert): paper-economy-ledger, paper-sqlite-repository, paper-chest-gui, paper-menu-type-gui, paper-brigadier-command, paper-softdepend-hook, paper-service-api, paper-config-lang. Die Beschreibungen sind teilweise auf Chinesisch, die Inhalte zweisprachig.
+
+Aus YueMi-Development/Minecraft-Plugin-Templates (unverändert): minecraft-paper-folia-plugin, minecraft-plugin-manifest, minecraft-bstats.
+
+Aus Jahrome907/minecraft-agent-skills: minecraft-plugin-dev, minecraft-testing. Nur die Markdown-Dateien. Die zugehörigen Prüfskripte (`validate-plugin-layout.sh`, `validate-test-layout.sh`) wurden nicht übernommen, die SKILL.md verweist aber darauf. Diese Verweise laufen ins Leere.
+
+Überschneidungen: minecraft-plugin-dev und minecraft-paper-folia-plugin behandeln beide Scheduler und Folia. Die Skills geben teils feste Entwurfsentscheidungen vor (zum Beispiel SQLite mit einer Verbindung und Write-behind, Beträge als long). Sie sind Vorschläge. Wo sie `CLAUDE.md` oder dem Entwurf von OrderHub widersprechen, gilt `CLAUDE.md`. Alle MJP-Skills zielen auf Paper 1.21.11 und 26.x. Ob jede Codebeispiel-Zeile unter Java 21 kompiliert, wurde nicht geprüft.
+
+Nicht installiert, obwohl in der Suche gefunden: FewPz/minedocs-mcp (keine Lizenz), kenvandine/FoliaNexa (GPL 3), jedbillyb/claude-bridge (keine Lizenz, Server-Plugin), sickn33/agentic-awesome-skills (zu breit, Inhalt durch die übrigen abgedeckt), java-gradle und java-concurrency aus YueMi (Skripte mit Bash-Freigabe, Überschneidung mit vorhandenen Skills und Agents).
+
 ## Eigene Agents (5)
 
 paper-architect (nur lesend): Schichten, Scheduler-Regel, Storage-Grenzen.

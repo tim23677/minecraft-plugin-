@@ -21,3 +21,7 @@ Kommerzielles Minecraft-Plugin für Paper und Folia. Java 21, Gradle Kotlin DSL,
 - Keine Zugangsdaten ins Repository. `NVD_API_KEY` und Datenbankpasswörter nur aus der Umgebung.
 
 Dokumentation der Werkzeuge: `tools/README.md`.
+
+## Skills
+
+Die Skills in `.claude/skills` sind Vorschläge. Bei Widerspruch zu dieser Datei gilt diese Datei. Die Paper-Skills (`paper-*`, `minecraft-*`) liefern Muster für Paper 1.21.11 und 26.x, vor der Übernahme gegen das OrderHub-Design prüfen.

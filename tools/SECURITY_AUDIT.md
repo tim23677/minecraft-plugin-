@@ -19,7 +19,11 @@ Zavelinski/testsmith und Zavelinski/secret-scan: MIT, je eine SKILL.md, keine Sk
 
 ducpm2303/claude-java-plugins: keine LICENSE-Datei. Hooks vorhanden: Hinweisausgaben per `echo` und ein PreToolUse-Hook, der bei jedem Bash-Aufruf `python3` mit der Eingabe des Werkzeugaufrufs startet und nur warnt. Kein Netzwerkzugriff, kein Zugriff auf Zugangsdaten gefunden. Nicht installiert, Grund ist die fehlende Lizenz.
 
-## Zustand nach der Installation
+## Zweite Installation (Minecraft-Skills)
+
+Geklont und je Skill-Ordner geprüft: MrPippi/MJP-Paper-Skills, Jahrome907/minecraft-agent-skills, YueMi-Development/Minecraft-Plugin-Templates, zusätzlich oberflächlich FewPz/minedocs-mcp, kenvandine/FoliaNexa, sickn33/agentic-awesome-skills. Die ausgewählten Skill-Ordner bestehen aus Markdown. Ausnahmen, die nicht übernommen wurden: je ein Shell- und Node-Skript bei minecraft-plugin-dev und minecraft-testing, ein Python-Skript und `allowed-tools: Read, Write, Bash, Glob, Grep` bei java-gradle. Keine Injection-Muster, keine Netzwerkaufrufe, keine Tool-Freigaben in den installierten Dateien. Die Repositories enthalten weitere Skripte (zum Beispiel einen Server-Download in MJP/scripts), die nicht installiert und nicht ausgeführt wurden. Die Prüfung der übrigen Dateien dieser Repositories war nur eine Mustersuche, keine Zeile-für-Zeile-Lektüre.
+
+## Zustand nach der ersten Installation
 
 In `.claude/` liegen 19 Markdown-Dateien und eine JSON-Datei (`settings.json`). Keine Skripte, keine Hooks, keine ausführbaren Dateien. Die einzigen URLs stehen in Literaturlisten der Skill-READMEs. Keine Skill setzt `allowed-tools`.
 

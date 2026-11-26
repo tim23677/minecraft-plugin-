@@ -9,6 +9,11 @@ Quelle der Angaben: LICENSE-Datei im geklonten Repository oder POM-Eintrag auf M
 | decebals/claude-code-java | MIT | sechs Skills kopiert, Lizenztext in tools/licenses |
 | Zavelinski/testsmith | MIT | kopiert, Lizenztext in tools/licenses |
 | Zavelinski/secret-scan | MIT | kopiert, Lizenztext in tools/licenses |
+| MrPippi/MJP-Paper-Skills | MIT | acht Skills kopiert, Lizenztext in tools/licenses |
+| Jahrome907/minecraft-agent-skills | MIT | zwei Skills (nur Markdown) kopiert, Lizenztext in tools/licenses |
+| YueMi-Development/Minecraft-Plugin-Templates | MIT | drei Skills kopiert, Lizenztext in tools/licenses |
+| kenvandine/FoliaNexa | GPL 3.0 | nicht verwendet |
+| FewPz/minedocs-mcp | keine Lizenzangabe gefunden | nicht verwendet |
 | ducpm2303/claude-java-plugins | keine LICENSE-Datei | nicht kopiert, nicht installiert |
 | CJCrafter/FoliaScheduler | keine LICENSE-Datei im Repository gefunden | nicht verwendet |
 
