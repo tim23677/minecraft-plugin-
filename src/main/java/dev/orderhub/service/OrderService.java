@@ -28,9 +28,9 @@ import java.util.UUID;
 /**
  * Lebenszyklus der Auftraege: erstellen (mit Escrow), stornieren, pausieren, ablaufen lassen,
  * archivieren. Alle Methoden blockieren und gehoeren auf einen Worker-Thread. Economy-Aufrufe
- * stehen nie in einer DB-Transaktion. Wird nach erfolgreicher Abbuchung der Auftrag nicht
- * angelegt, geht das Geld ueber die Refund-Queue zurueck oder das Journal bleibt fuer die manuelle
- * Pruefung stehen; es geht nie Geld verloren.
+ * stehen nie in einer DB-Transaktion. Wird nach erfolgreicher Abbuchung der Auftrag nicht angelegt,
+ * geht das Geld ueber die Refund-Queue zurueck oder das Journal bleibt fuer die manuelle Pruefung
+ * stehen; es geht nie Geld verloren.
  */
 public final class OrderService {
 
@@ -100,7 +100,9 @@ public final class OrderService {
     CONFLICT
   }
 
-  /** @param refunded in die Refund-Queue gestellter Betrag */
+  /**
+   * @param refunded in die Refund-Queue gestellter Betrag
+   */
   public record ActionResult(ActionStatus status, long refunded, UUID journalId) {
     public boolean ok() {
       return status == ActionStatus.OK;
@@ -208,7 +210,8 @@ public final class OrderService {
     }
     uow.orders().lockOwner(r.owner());
     if (uow.orders().countOpenByOwner(r.owner()) >= r.maxOpenOrders()) {
-      return new Phase1(new CreateResult(CreateStatus.LIMIT_REACHED, null, null, escrow, fee), null);
+      return new Phase1(
+          new CreateResult(CreateStatus.LIMIT_REACHED, null, null, escrow, fee), null);
     }
     JournalEntry created =
         JournalEntry.created(
@@ -340,8 +343,7 @@ public final class OrderService {
    * PREPARED nach COMMITTED entscheidet exklusiv: entweder wurde der Auftrag angelegt oder die
    * Erstattung wird eingestellt, nie beides.
    */
-  private CreateResult resolveAfterFailure(
-      JournalEntry entry, long escrow, long fee, long total) {
+  private CreateResult resolveAfterFailure(JournalEntry entry, long escrow, long fee, long total) {
     for (int attempt = 1; attempt <= COMPENSATION_ATTEMPTS; attempt++) {
       try {
         return TxRunner.run(
@@ -407,7 +409,13 @@ public final class OrderService {
         storage,
         uow ->
             terminateWithRefund(
-                uow, orderId, actor, admin, OrderStatus.CANCELLED, TxType.CANCEL_REFUND, "cancel:"));
+                uow,
+                orderId,
+                actor,
+                admin,
+                OrderStatus.CANCELLED,
+                TxType.CANCEL_REFUND,
+                "cancel:"));
   }
 
   private ActionResult terminateWithRefund(
@@ -466,8 +474,7 @@ public final class OrderService {
                   refund,
                   now,
                   "order=" + orderId));
-      uow.payouts()
-          .enqueue(entry.id(), order.owner(), PayoutRepository.Kind.REFUND, refund, now);
+      uow.payouts().enqueue(entry.id(), order.owner(), PayoutRepository.Kind.REFUND, refund, now);
       JournalSteps.chain(
           uow, entry, "queued", TxState.PREPARED, TxState.COMMITTED, TxState.REFUND_PENDING);
     } else {
@@ -551,7 +558,9 @@ public final class OrderService {
             return new ActionResult(ActionStatus.INVALID_STATE, 0, null);
           }
           return uow.orders()
-                  .update(order.withVersionAndStatus(order.version() + 1, OrderStatus.ARCHIVED, uow.now()))
+                  .update(
+                      order.withVersionAndStatus(
+                          order.version() + 1, OrderStatus.ARCHIVED, uow.now()))
               ? new ActionResult(ActionStatus.OK, 0, null)
               : new ActionResult(ActionStatus.CONFLICT, 0, null);
         });
@@ -600,7 +609,8 @@ public final class OrderService {
     int expired = 0;
     int errors = 0;
     for (int round = 0; round < 1000; round++) {
-      List<Order> due = TxRunner.run(storage, uow -> uow.orders().findExpired(uow.now(), batchSize));
+      List<Order> due =
+          TxRunner.run(storage, uow -> uow.orders().findExpired(uow.now(), batchSize));
       if (due.isEmpty()) {
         break;
       }
@@ -643,7 +653,13 @@ public final class OrderService {
     }
     ActionResult result =
         terminateWithRefund(
-            uow, orderId, order.owner(), true, OrderStatus.EXPIRED, TxType.EXPIRE_REFUND, "expire:");
+            uow,
+            orderId,
+            order.owner(),
+            true,
+            OrderStatus.EXPIRED,
+            TxType.EXPIRE_REFUND,
+            "expire:");
     return result.ok() ? Expired.EXPIRED : Expired.SKIPPED;
   }
 }

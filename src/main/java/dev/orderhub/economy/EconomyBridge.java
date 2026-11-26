@@ -4,8 +4,8 @@ import java.util.UUID;
 
 /**
  * Port zur Spielerwirtschaft in Minor Units. Aufrufe duerfen nie innerhalb einer
- * Datenbanktransaktion stehen. Erwartbare Faelle liefern {@link EconomyResult}, nur ein
- * unklarer Ausgang wirft {@link EconomyOutcomeUnknownException}.
+ * Datenbanktransaktion stehen. Erwartbare Faelle liefern {@link EconomyResult}, nur ein unklarer
+ * Ausgang wirft {@link EconomyOutcomeUnknownException}.
  */
 public interface EconomyBridge {
 

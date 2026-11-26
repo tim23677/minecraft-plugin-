@@ -68,7 +68,9 @@ public abstract class ParcelTransferEngine {
     NOT_FOUND,
     INVALID_AMOUNT,
     INVALID_STATE,
-    /** Uebergabe gemeldet, obwohl die Reservierung freigegeben wurde: Fehler, wird protokolliert. */
+    /**
+     * Uebergabe gemeldet, obwohl die Reservierung freigegeben wurde: Fehler, wird protokolliert.
+     */
     CONFLICT_RELEASED,
     /** Uebergabe gemeldet, der Eintrag liegt aber in MANUAL_REVIEW: Fehler, wird protokolliert. */
     CONFLICT_UNDER_REVIEW
@@ -218,7 +220,8 @@ public abstract class ParcelTransferEngine {
       case CLAIM_PENDING:
         break;
       case COMMITTED:
-        // Uebergabe nie begonnen: nur die Freigabe (0) ist zulaessig, eine Menge waere Protokollbruch.
+        // Uebergabe nie begonnen: nur die Freigabe (0) ist zulaessig, eine Menge waere
+        // Protokollbruch.
         if (transferred != 0) {
           return SettleStatus.INVALID_STATE;
         }

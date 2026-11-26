@@ -119,12 +119,11 @@ public final class PayoutWorker {
             : TxState.REFUND_PENDING;
     if (journal.isEmpty() || journal.get().state() != expected) {
       uow.payouts().markReview(item.id(), "journal inconsistent", uow.now());
-      journal.ifPresent(
-          j -> {
-            if (j.state().canTransitionTo(TxState.MANUAL_REVIEW)) {
-              JournalSteps.to(uow, j, TxState.MANUAL_REVIEW, "queue/journal mismatch");
-            }
-          });
+      journal.ifPresent(j -> {
+        if (j.state().canTransitionTo(TxState.MANUAL_REVIEW)) {
+          JournalSteps.to(uow, j, TxState.MANUAL_REVIEW, "queue/journal mismatch");
+        }
+      });
       return Optional.empty();
     }
     if (item.kind() == PayoutRepository.Kind.PAYOUT) {
@@ -158,7 +157,9 @@ public final class PayoutWorker {
     return false;
   }
 
-  /** @return {@code true}, wenn nach MANUAL_REVIEW eskaliert wurde */
+  /**
+   * @return {@code true}, wenn nach MANUAL_REVIEW eskaliert wurde
+   */
   private boolean releaseOrEscalate(PayoutRepository.Item item, EconomyResult result) {
     boolean exhausted = item.attempts() + 1 >= maxAttempts;
     try {

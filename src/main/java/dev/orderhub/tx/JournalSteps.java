@@ -17,7 +17,8 @@ public final class JournalSteps {
   }
 
   /** Ein CAS-Uebergang. Wirft bei veraltetem Zustand {@link StaleJournalException}. */
-  public static JournalEntry to(UnitOfWork uow, JournalEntry current, TxState target, String detail) {
+  public static JournalEntry to(
+      UnitOfWork uow, JournalEntry current, TxState target, String detail) {
     if (!uow.journal().transition(current, target, detail, uow.now())) {
       throw new StaleJournalException(current, target);
     }

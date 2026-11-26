@@ -4,7 +4,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Warteschlange fuer Auszahlungen und Rueckerstattungen ({@code payout_queue}, {@code refund_queue}). */
+/**
+ * Warteschlange fuer Auszahlungen und Rueckerstattungen ({@code payout_queue}, {@code
+ * refund_queue}).
+ */
 public interface PayoutRepository {
 
   /** Art der Zahlung. */

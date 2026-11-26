@@ -7,17 +7,16 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * Stellt nach einem Absturz einen konsistenten Zustand her (siehe ARCHITECTURE.md). Grundsatz:
- * Was sicher nicht ausgefuehrt wurde, wird zurueckgerollt oder fortgesetzt. Was unklar ist
- * (Zahlung moeglicherweise ausgefuehrt), geht nach MANUAL_REVIEW und wird nie automatisch
- * wiederholt.
+ * Stellt nach einem Absturz einen konsistenten Zustand her (siehe ARCHITECTURE.md). Grundsatz: Was
+ * sicher nicht ausgefuehrt wurde, wird zurueckgerollt oder fortgesetzt. Was unklar ist (Zahlung
+ * moeglicherweise ausgefuehrt), geht nach MANUAL_REVIEW und wird nie automatisch wiederholt.
  *
  * <p>{@code staleAfter} schuetzt im Mehrserverbetrieb laufende Operationen anderer Server: nur
  * Eintraege, die mindestens so lange unveraendert sind, werden angefasst. Im Einzelserverbetrieb
@@ -102,7 +101,8 @@ public final class RecoveryService {
 
   private interface Handler {
     /** Verarbeitet einen Eintrag in einer Transaktion. @return ob sich der Zustand aenderte */
-    boolean handle(UnitOfWork uow, JournalEntry entry, Counters c, List<RecoveryReport.Escalation> out);
+    boolean handle(
+        UnitOfWork uow, JournalEntry entry, Counters c, List<RecoveryReport.Escalation> out);
   }
 
   private record Outcome(boolean ran, boolean changed) {}
@@ -152,8 +152,7 @@ public final class RecoveryService {
     } while (progress > 0);
   }
 
-  private static RecoveryReport.Escalation escalate(
-      UnitOfWork uow, JournalEntry e, String reason) {
+  private static RecoveryReport.Escalation escalate(UnitOfWork uow, JournalEntry e, String reason) {
     JournalSteps.to(uow, e, TxState.MANUAL_REVIEW, reason);
     return new RecoveryReport.Escalation(e.id(), e.type(), e.playerId(), e.amount(), reason);
   }

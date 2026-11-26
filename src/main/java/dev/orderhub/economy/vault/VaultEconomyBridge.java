@@ -50,9 +50,7 @@ public final class VaultEconomyBridge implements EconomyBridge {
       return EconomyResult.FAILED;
     }
     try {
-      return eco.has(players.apply(player), amount)
-          ? EconomyResult.OK
-          : EconomyResult.INSUFFICIENT;
+      return eco.has(players.apply(player), amount) ? EconomyResult.OK : EconomyResult.INSUFFICIENT;
     } catch (RuntimeException e) {
       return EconomyResult.UNAVAILABLE;
     }

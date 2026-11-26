@@ -61,7 +61,9 @@ public final class DeliveryEngine {
     CONFIRMED,
     ALREADY_CONFIRMED,
     NOT_FOUND,
-    /** Eintrag ist FAILED oder MANUAL_REVIEW: der Aufrufer behaelt die Items und gibt sie zurueck. */
+    /**
+     * Eintrag ist FAILED oder MANUAL_REVIEW: der Aufrufer behaelt die Items und gibt sie zurueck.
+     */
     REJECTED
   }
 
@@ -78,7 +80,9 @@ public final class DeliveryEngine {
     INVALID_STATE
   }
 
-  /** @param event nur bei COMMITTED gesetzt */
+  /**
+   * @param event nur bei COMMITTED gesetzt
+   */
   public record CommitResult(CommitStatus status, DeliveryCommitted event, String reason) {}
 
   /** Ausgang von abort. */
