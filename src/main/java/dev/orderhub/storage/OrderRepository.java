@@ -28,7 +28,16 @@ public interface OrderRepository {
 
   long count(OrderQuery query);
 
-  /** Anzahl ACTIVE und PAUSED Auftraege des Spielers. */
+  /**
+   * Serialisiert konkurrierende Erstellungen eines Spielers ueber Server hinweg. Muss vor {@link
+   * #countOpenByOwner} im selben Transaktionsverlauf aufgerufen werden. MariaDB: Zeile des Spielers
+   * in {@code escrow_accounts} per Insert-if-absent anlegen und mit {@code SELECT ... FOR UPDATE}
+   * sperren (bis Transaktionsende). SQLite: {@code BEGIN IMMEDIATE} serialisiert bereits, die
+   * Methode tut nichts.
+   */
+  void lockOwner(UUID owner);
+
+  /** Anzahl ACTIVE und PAUSED Auftraege des Spielers. Vorher {@link #lockOwner} aufrufen. */
   int countOpenByOwner(UUID owner);
 
   /** ACTIVE Auftraege mit {@code expiresAt <= now}, aelteste zuerst. */

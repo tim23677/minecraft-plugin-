@@ -49,5 +49,12 @@ public interface PayoutRepository {
   /** IN_PROGRESS nach REVIEW (unklarer Ausgang). */
   boolean markReview(UUID id, String reason, long now);
 
+  /**
+   * Wie {@link #markReview}, aber nur wenn die Zeile IN_PROGRESS ist und {@code updated_at ==
+   * expectedUpdatedAt} (Compare-and-Set). Fuer die Recovery: ein anderer Server, der die Zeile
+   * zwischenzeitlich fortgeschrieben hat, wird nicht ueberschrieben.
+   */
+  boolean markReviewIfUnchanged(UUID id, long expectedUpdatedAt, String reason, long now);
+
   List<Item> findByState(State state, int limit);
 }

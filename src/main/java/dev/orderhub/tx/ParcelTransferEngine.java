@@ -289,7 +289,13 @@ public abstract class ParcelTransferEngine {
                   storage,
                   uow -> {
                     JournalEntry cur = uow.journal().find(j.id()).orElseThrow();
+                    ParcelRepository.Parcel fresh = repo.apply(uow).find(p.id()).orElse(null);
                     if (cur.state() != TxState.COMMITTED
+                        || cur.updatedAt() > staleBefore
+                        || fresh == null
+                        || fresh.state() != ParcelRepository.State.RESERVED
+                        || !j.id().equals(fresh.reservedBy())
+                        || fresh.updatedAt() > staleBefore
                         || !repo.apply(uow).releaseReservation(p.id(), j.id(), uow.now())) {
                       return false;
                     }
@@ -307,7 +313,7 @@ public abstract class ParcelTransferEngine {
                   storage,
                   uow -> {
                     JournalEntry cur = uow.journal().find(j.id()).orElseThrow();
-                    if (cur.state() != TxState.CLAIM_PENDING) {
+                    if (cur.state() != TxState.CLAIM_PENDING || cur.updatedAt() > staleBefore) {
                       return false;
                     }
                     JournalSteps.to(

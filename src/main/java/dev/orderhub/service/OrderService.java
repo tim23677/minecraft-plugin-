@@ -206,6 +206,7 @@ public final class OrderService {
     if (existing.isPresent()) {
       return new Phase1(replay(existing.get(), escrow, fee), null);
     }
+    uow.orders().lockOwner(r.owner());
     if (uow.orders().countOpenByOwner(r.owner()) >= r.maxOpenOrders()) {
       return new Phase1(new CreateResult(CreateStatus.LIMIT_REACHED, null, null, escrow, fee), null);
     }
@@ -259,6 +260,7 @@ public final class OrderService {
     if (current.state() != TxState.PREPARED) {
       return replay(current, escrow, fee);
     }
+    uow.orders().lockOwner(r.owner());
     if (uow.orders().countOpenByOwner(r.owner()) >= r.maxOpenOrders()) {
       compensate(uow, current, total, "limit reached");
       return new CreateResult(CreateStatus.FAILED_REFUND_QUEUED, null, entry.id(), escrow, fee);

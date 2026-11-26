@@ -27,6 +27,9 @@ public final class RecoveryService {
 
   private static final int PAGE = 500;
 
+  /** Nur waehrend eines (synchronisierten) Laufs gesetzt. */
+  private long activeStaleBefore;
+
   private final Storage storage;
   private final ClaimEngine claims;
   private final ReturnEngine returns;
@@ -55,9 +58,10 @@ public final class RecoveryService {
   }
 
   /** Wie {@link #runAtStartup()}, auch periodisch nutzbar (haengende Eintraege nachziehen). */
-  public RecoveryReport sweep() {
+  public synchronized RecoveryReport sweep() {
     long now = clock.millis();
     long staleBefore = now - staleAfter.toMillis();
+    activeStaleBefore = staleBefore;
     Counters c = new Counters();
 
     // Reihenfolge: zuerst die Zustaende ohne Geldwirkung, dann Queue, dann Pakete.
@@ -123,6 +127,11 @@ public final class RecoveryService {
                   uow -> {
                     Optional<JournalEntry> fresh = uow.journal().find(listed.id());
                     if (fresh.isEmpty() || !states.contains(fresh.get().state())) {
+                      return new Outcome(false, false);
+                    }
+                    if (fresh.get().updatedAt() > staleBefore) {
+                      // zwischen Auflistung und Verarbeitung fortgeschrieben (anderer Server)
+                      c.freshIds.add(listed.id());
                       return new Outcome(false, false);
                     }
                     local.reset();
@@ -221,10 +230,20 @@ public final class RecoveryService {
 
   private boolean inProgress(
       UnitOfWork uow, JournalEntry e, Counters c, List<RecoveryReport.Escalation> out) {
-    uow.payouts()
-        .findByTx(e.id(), PayoutRepository.Kind.PAYOUT)
-        .filter(i -> i.state() == PayoutRepository.State.IN_PROGRESS)
-        .ifPresent(i -> uow.payouts().markReview(i.id(), "crash during payout", uow.now()));
+    PayoutRepository.Item row =
+        uow.payouts().findByTx(e.id(), PayoutRepository.Kind.PAYOUT).orElse(null);
+    if (row != null && row.state() == PayoutRepository.State.IN_PROGRESS) {
+      if (row.updatedAt() > activeStaleBefore) {
+        // ein anderer Server arbeitet gerade an der Zeile
+        c.freshIds.add(e.id());
+        return false;
+      }
+      if (!uow.payouts()
+          .markReviewIfUnchanged(row.id(), row.updatedAt(), "crash during payout", uow.now())) {
+        c.freshIds.add(e.id());
+        return false;
+      }
+    }
     out.add(escalate(uow, e, "payout in progress at crash, outcome unknown"));
     c.payoutsEscalated++;
     return true;
@@ -245,7 +264,19 @@ public final class RecoveryService {
             TxRunner.run(
                 storage,
                 uow -> {
-                  if (!uow.payouts().markReview(item.id(), "crash during queue work", uow.now())) {
+                  // frisch lesen: nur eine unveraenderte, veraltete IN_PROGRESS-Zeile anfassen
+                  PayoutRepository.Item row =
+                      uow.payouts().findByTx(item.txId(), item.kind()).orElse(null);
+                  if (row == null || row.state() != PayoutRepository.State.IN_PROGRESS) {
+                    return null;
+                  }
+                  if (row.updatedAt() > staleBefore) {
+                    c.freshIds.add(row.id());
+                    return null;
+                  }
+                  if (!uow.payouts()
+                      .markReviewIfUnchanged(
+                          row.id(), row.updatedAt(), "crash during queue work", uow.now())) {
                     return null;
                   }
                   JournalEntry j = uow.journal().find(item.txId()).orElse(null);
@@ -304,6 +335,7 @@ public final class RecoveryService {
     }
 
     void add(Counters o) {
+      freshIds.addAll(o.freshIds);
       failedBeforeItems += o.failedBeforeItems;
       itemsReturned += o.itemsReturned;
       committedResumed += o.committedResumed;
