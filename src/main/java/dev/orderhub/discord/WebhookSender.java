@@ -39,13 +39,18 @@ public final class WebhookSender {
     this.client = client;
   }
 
-  /** Das Ziel muss vorher ueber {@link WebhookUrl#validate} gelaufen sein (Tests duerfen davon abweichen). */
+  /**
+   * Das Ziel muss vorher ueber {@link WebhookUrl#validate} gelaufen sein (Tests duerfen davon
+   * abweichen).
+   */
   public Result send(URI target, String username, DiscordMessage message) {
     HttpRequest request =
         HttpRequest.newBuilder(target)
             .timeout(Duration.ofSeconds(10))
             .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(message.toJson(username), StandardCharsets.UTF_8))
+            .POST(
+                HttpRequest.BodyPublishers.ofString(
+                    message.toJson(username), StandardCharsets.UTF_8))
             .build();
     try {
       HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());

@@ -12,12 +12,14 @@ class MarketMathTest {
   void medianOddAndEven() {
     assertThat(MarketMath.median(List.of(5L, 1L, 3L))).isEqualTo(3);
     assertThat(MarketMath.median(List.of(1L, 2L, 3L, 4L))).isEqualTo(2);
-    assertThatThrownBy(() -> MarketMath.median(List.of())).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> MarketMath.median(List.of()))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   void tradeSummaryIgnoresOldTradesAndWeightsAverage() {
-    List<Trade> trades = List.of(new Trade(100, 1, 10), new Trade(200, 3, 20), new Trade(999, 5, 1));
+    List<Trade> trades =
+        List.of(new Trade(100, 1, 10), new Trade(200, 3, 20), new Trade(999, 5, 1));
     var s = MarketMath.summarizeTrades(trades, 10).orElseThrow();
     assertThat(s.trades()).isEqualTo(2);
     assertThat(s.volumeUnits()).isEqualTo(4);
@@ -34,7 +36,10 @@ class MarketMathTest {
   void demandSummaryOnlyCountsOpenUnits() {
     var s =
         MarketMath.summarizeDemand(
-                List.of(new OpenOrderView(800, 64), new OpenOrderView(700, 0), new OpenOrderView(900, 36)))
+                List.of(
+                    new OpenOrderView(800, 64),
+                    new OpenOrderView(700, 0),
+                    new OpenOrderView(900, 36)))
             .orElseThrow();
     assertThat(s.orders()).isEqualTo(2);
     assertThat(s.openUnits()).isEqualTo(100);
@@ -64,7 +69,8 @@ class MarketMathTest {
   @Test
   void recommendationIgnoresTradesBeforeWindow() {
     List<Trade> trades =
-        List.of(new Trade(1, 1, 1), new Trade(1, 1, 2), new Trade(500, 1, 100), new Trade(600, 1, 101));
+        List.of(
+            new Trade(1, 1, 1), new Trade(1, 1, 2), new Trade(500, 1, 100), new Trade(600, 1, 101));
     assertThat(MarketMath.recommend(trades, 50, 2).orElseThrow().low()).isEqualTo(500);
   }
 

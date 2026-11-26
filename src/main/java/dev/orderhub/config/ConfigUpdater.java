@@ -11,8 +11,9 @@ import java.nio.file.StandardCopyOption;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
- * Ergaenzt eine vorhandene YAML-Datei um neue Schluessel der mitgelieferten Standarddatei. Vorhandene
- * Werte werden nie ueberschrieben. Vor jeder Aenderung entsteht eine Sicherung {@code <datei>.bak}.
+ * Ergaenzt eine vorhandene YAML-Datei um neue Schluessel der mitgelieferten Standarddatei.
+ * Vorhandene Werte werden nie ueberschrieben. Vor jeder Aenderung entsteht eine Sicherung {@code
+ * <datei>.bak}.
  */
 public final class ConfigUpdater {
 

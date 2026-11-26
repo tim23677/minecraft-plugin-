@@ -3,6 +3,7 @@ package dev.orderhub.config;
 import dev.orderhub.money.Money;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -49,17 +50,24 @@ public record Settings(
     List<String> aliases,
     List<String> warnings) {
 
+  public Settings {
+    blockedMaterials = List.copyOf(blockedMaterials);
+    blockedTags = List.copyOf(blockedTags);
+    aliases = List.copyOf(aliases);
+    warnings = List.copyOf(warnings);
+  }
+
   private static final Pattern SERVER_ID = Pattern.compile("[a-z0-9-]{1,32}");
 
   /** Liest die Konfiguration. {@code cfg} darf unvollstaendig sein. */
   public static Settings from(ConfigurationSection cfg) {
     List<String> warnings = new ArrayList<>();
-    String serverId = cfg.getString("server-id", "main");
+    String serverId = str(cfg, "server-id", "main");
     if (!SERVER_ID.matcher(serverId).matches()) {
       warnings.add("server-id '" + serverId + "' is invalid, using 'main'");
       serverId = "main";
     }
-    String language = cfg.getString("language", "en").toLowerCase(java.util.Locale.ROOT);
+    String language = str(cfg, "language", "en").toLowerCase(java.util.Locale.ROOT);
     long minPrice = price(cfg, "orders.min-unit-price", "0.01", warnings);
     long maxPrice = price(cfg, "orders.max-unit-price", "1000000", warnings);
     if (minPrice <= 0 || maxPrice < minPrice) {
@@ -76,7 +84,7 @@ public record Settings(
         range(cfg, "orders.max-quantity", 2304, 1, 1_000_000, warnings),
         range(cfg, "orders.default-max-open-orders", 3, 1, 1000, warnings),
         range(cfg, "orders.expiry-hours", 168, 1, 24 * 365, warnings),
-        cfg.getString("orders.cancel-word", "cancel"),
+        str(cfg, "orders.cancel-word", "cancel"),
         range(cfg, "orders.input-timeout-seconds", 60, 5, 600, warnings),
         range(cfg, "orders.create-cooldown-seconds", 5, 0, 3600, warnings),
         range(cfg, "fees.create-fee-bp", 100, 0, 10_000, warnings),
@@ -100,11 +108,15 @@ public record Settings(
         range(cfg, "retention.history-days", 120, 1, 3650, warnings),
         range(cfg, "retention.cleanup-interval-minutes", 30, 1, 1440, warnings),
         cfg.getBoolean("sounds.enabled", true),
-        cfg.getString("sounds.success", "entity.experience_orb.pickup"),
-        cfg.getString("sounds.error", "block.note_block.bass"),
-        cfg.getString("sounds.click", "ui.button.click"),
+        str(cfg, "sounds.success", "entity.experience_orb.pickup"),
+        str(cfg, "sounds.error", "block.note_block.bass"),
+        str(cfg, "sounds.click", "ui.button.click"),
         List.copyOf(cfg.getStringList("commands.aliases")),
         List.copyOf(warnings));
+  }
+
+  private static String str(ConfigurationSection cfg, String path, String def) {
+    return Objects.requireNonNullElse(cfg.getString(path, def), def);
   }
 
   private static long price(ConfigurationSection cfg, String path, String def, List<String> w) {

@@ -9,7 +9,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 class MessagesTest {
 
-  private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
+  private static final PlainTextComponentSerializer PLAIN =
+      PlainTextComponentSerializer.plainText();
 
   private Messages load(String lang, Path dir) {
     Messages m = new Messages();
@@ -25,8 +26,7 @@ class MessagesTest {
   @Test
   void placeholdersAreSubstitutedAndPlayerInputIsNotParsed(@TempDir Path dir) {
     Messages m = load("en", dir);
-    String text =
-        PLAIN.serialize(m.get("create.cancelled"));
+    String text = PLAIN.serialize(m.get("create.cancelled"));
     assertThat(text).isNotBlank();
     String evil =
         PLAIN.serialize(m.get("general.invalid-number", Messages.text("input", "<red>boom")));

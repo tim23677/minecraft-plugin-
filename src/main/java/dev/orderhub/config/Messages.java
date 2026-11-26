@@ -17,8 +17,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
  * Spielertexte aus {@code lang/<sprache>.yml} (MiniMessage). Reihenfolge der Suche: Datei im
- * Plugin-Ordner, mitgelieferte Datei derselben Sprache, mitgelieferte englische Datei, der Schluessel
- * selbst. Der Wechsel beim Reload ist atomar ueber den Austausch des unveraenderlichen Schnappschusses.
+ * Plugin-Ordner, mitgelieferte Datei derselben Sprache, mitgelieferte englische Datei, der
+ * Schluessel selbst. Der Wechsel beim Reload ist atomar ueber den Austausch des unveraenderlichen
+ * Schnappschusses.
  */
 public final class Messages {
 

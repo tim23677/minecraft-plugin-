@@ -14,7 +14,11 @@ public final class MarketMath {
 
   /** Auswertung abgeschlossener Geschaefte. */
   public record TradeSummary(
-      int trades, long volumeUnits, long volumeMoney, long medianUnitPrice, long averageUnitPrice) {}
+      int trades,
+      long volumeUnits,
+      long volumeMoney,
+      long medianUnitPrice,
+      long averageUnitPrice) {}
 
   /** Auswertung der offenen Nachfrage. */
   public record DemandSummary(
@@ -67,7 +71,8 @@ public final class MarketMath {
       prices.add(o.unitPrice());
     }
     return Optional.of(
-        new DemandSummary(open.size(), units, low, high, median(prices), Math.floorDiv(money, units)));
+        new DemandSummary(
+            open.size(), units, low, high, median(prices), Math.floorDiv(money, units)));
   }
 
   /**
@@ -85,7 +90,9 @@ public final class MarketMath {
             percentile(prices, 25), percentile(prices, 50), percentile(prices, 75), prices.size()));
   }
 
-  /** Median einer nicht leeren Liste. Bei gerader Anzahl der abgerundete Mittelwert beider Mitten. */
+  /**
+   * Median einer nicht leeren Liste. Bei gerader Anzahl der abgerundete Mittelwert beider Mitten.
+   */
   public static long median(List<Long> values) {
     List<Long> sorted = values.stream().sorted().toList();
     int n = sorted.size();
