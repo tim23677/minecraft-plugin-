@@ -1,6 +1,6 @@
 # BuiltByBit listing (English)
 
-Listing text for the resource page. Replace the status line and the version before publishing and only keep claims that are true for the released version.
+Listing text for the resource page. Version 1.0.0.
 
 ## Title
 
@@ -32,11 +32,11 @@ OrderHub gives your server a player to player buy order market. A player holds a
 
 - Vault has no transaction ids. If the server crashes in the exact moment between the economy plugin paying and OrderHub saving that fact, OrderHub cannot know whether the payment happened. It does not pay twice automatically. It marks the case MANUAL_REVIEW for an administrator.
 - No software can promise zero dupes. OrderHub is designed so that item and money movements are journaled, checked and idempotent, and it ships with automated tests for these paths, but you should still test it on your server setup first.
-- Statistics, history, favorites, analytics and the admin tools are chat based in this version (no inventory menus yet).
-- Not included in this version: order templates, bulk order creation, reputation system, per group or per world orders, configurable sounds.
-- Tested with MariaDB 10.11. MySQL is not tested.
-
-(Remove or update any line above when the released version changes.)
+- Statistics, history, favorites, analytics and the admin tools are chat based in this version (no inventory menus for them).
+- Not included in this version: order templates, bulk order creation, auto renew and minimum delivery in the create menu, reputation system, per group or per world orders, configurable sounds, a cross-server cache.
+- Tested with MariaDB 11.4 (through Testcontainers). MySQL is not supported, OrderHub refuses to start against it.
+- Started on a real Paper 1.21.11 and Folia 1.21.11 server (plugin loads and recovers cleanly). A full play-through with a real economy plugin was not part of the release checks, test it on your own setup first.
+- Needs internet access to Maven Central on the first start: Paper downloads the database libraries once.
 
 ## Compatible versions
 
@@ -67,7 +67,7 @@ Does it work without Vault? The plugin starts, but orders and payouts are refuse
 
 Can I run it on a network? Yes, with MariaDB and a different `server-id` on every server.
 
-Does it send data anywhere? No telemetry and no license check. The only outgoing connection is the optional Discord webhook.
+Does it send data anywhere? No telemetry and no license check. OrderHub opens one outgoing connection by itself: the optional Discord webhook. Paper downloads the database libraries from Maven Central on the first start.
 
 ## AI disclosure
 

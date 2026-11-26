@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (development build)
+## 1.0.0 (2026-11-26)
 
 Added
 

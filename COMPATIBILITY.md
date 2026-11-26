@@ -13,16 +13,19 @@ Paper 26.x needs Java 25 and was deliberately not targeted, see tools/JAVA_TOOLC
 
 Folia: all tasks go through `PluginScheduler` (global, region, entity and async schedulers on Folia, Bukkit scheduler on Paper). The Folia code paths were reviewed but not run on a real Folia server in this build.
 
-## Bundled libraries (inside the jar)
+## Libraries loaded by Paper (not inside the jar)
 
-| Library | Version | Relocated |
-|---|---|---|
-| HikariCP | 7.1.0 | yes, `dev.orderhub.libs.hikari` |
-| SLF4J API | 2.0.17 | yes, `dev.orderhub.libs.slf4j` |
-| sqlite-jdbc | 3.54.1.0 | no (native libraries and JNI names depend on the package) |
-| mariadb-java-client | 4.0.0 | no |
+The plugin jar (about 0.5 MB) contains only OrderHub itself. `plugin.yml` lists three libraries that Paper downloads from Maven Central on the first start into its `libraries` folder and loads in an isolated class loader of this plugin:
 
-The JDBC drivers are not relocated. If another plugin bundles the same drivers in a different version, class loading conflicts are possible. This was not tested.
+| Library | Version |
+|---|---|
+| HikariCP | 7.1.0 |
+| sqlite-jdbc | 3.54.1.0 |
+| mariadb-java-client | 4.0.0 |
+
+Because the libraries live in OrderHub's own class loader, they do not conflict with drivers of other plugins. The server needs internet access to Maven Central for the first start (offline servers can copy the `libraries` folder from another server). SLF4J is provided by Paper itself, so no SLF4J warnings appear.
+
+Checked on a real server: Paper 1.21.11 and Folia 1.21.11 download the libraries, enable the plugin and show no ERROR lines (`tools/mcstage/run.sh`). Not checked: a second plugin that bundles a different JDBC driver version.
 
 ## Provided by the server, not bundled
 
@@ -34,4 +37,15 @@ JUnit Jupiter 6.0.3, MockBukkit 4.116.3, AssertJ 3.27.7, Testcontainers 2.0.5. J
 
 ## Databases
 
-SQLite (bundled driver) and MariaDB 10.11 (tested). MySQL is not tested, the migrations use `CREATE INDEX IF NOT EXISTS`, which MySQL 8 does not support.
+| Database | Status |
+|---|---|
+| SQLite | tested (unit tests, load test with 100,000 orders: p50 20 ms, p95 200 ms, maximum 1,259 ms for 480 parallel searches on 8 threads) |
+| MariaDB 11.4 | tested through Testcontainers (49 integration tests including both migrations dialects) |
+| MariaDB 10.11 | tested in an earlier build only, not repeated for 1.0.0 |
+| MySQL | not supported. OrderHub stops with `MySQL is not supported` |
+
+Schema changes are versioned migrations V1 to V4 and run once at start against SQLite and MariaDB.
+
+## Dependency vulnerability scan
+
+`./gradlew dependencyCheckAnalyze` needs an `NVD_API_KEY`. No key was available when 1.0.0 was built, so the scan was not run. The CI job `dependency-check` runs it when the repository secret exists.

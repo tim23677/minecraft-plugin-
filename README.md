@@ -4,14 +4,15 @@ OrderHub is a buy order marketplace for Paper and Folia servers. A player create
 
 This README is written for server owners. No Java knowledge is needed.
 
-## Status of this build
+## Status of this version
 
-OrderHub 0.1.0 is a development build. The core flow (create, deliver, pay out, collect, cancel, expire, recover after a crash) is implemented and tested with automated tests against SQLite and MariaDB. It has not yet been run on a real Paper or Folia server by the author, so run it on a test server first. RELEASE_REPORT.md lists exactly what was tested, what was not, and which features from the specification are missing.
+OrderHub 1.0.0 was built with automated tests (unit, MockBukkit, SQLite, MariaDB 11.4 through Testcontainers) and started on a real Paper 1.21.11 and Folia 1.21.11 server, where the plugin loads, enables and recovers cleanly. A full play-through with a real economy plugin on a real server (create, deliver, pay, collect, restart in the middle of a delivery) was not part of the release checks. Run OrderHub on a test server with your own economy plugin before you use it on a live server. COMPATIBILITY.md lists exactly what was tested.
 
 ## Requirements
 
 - Paper or Folia 1.21.x (built against Paper API 1.21.11), Java 21
 - Vault and an economy plugin that registers with Vault (required to create orders and to pay out)
+- Internet access to Maven Central on the first start: Paper downloads the database libraries (HikariCP, SQLite and MariaDB drivers) once into its `libraries` folder. The plugin jar itself is small (about 0.5 MB)
 - Optional: PlaceholderAPI
 - Optional: MariaDB 10.11 for several servers sharing one marketplace (SQLite is the default for a single server). MySQL is not supported yet.
 
@@ -41,6 +42,7 @@ Administrators (permission `orderhub.admin`):
 
 - `/orderadmin list [status]`, `statistics`, `transactions [player-uuid]`, `transaction <uuid>`, `inspect <order-id>`
 - `/orderadmin cancel <id> confirm <reason>`
+- `/orderadmin review list`, `review show <tx>`, `review resolve <tx> paid|refund|discard confirm <reason>` resolve payments that ended in MANUAL_REVIEW
 - `/orderadmin purge-expired confirm <reason>`
 - `/orderadmin recovery confirm <reason>`
 - `/orderadmin reload`, `/orderadmin debug`
@@ -73,7 +75,7 @@ Available placeholders: `%orderhub_open_orders%`, `%orderhub_completed_orders%`,
 
 Single server: nothing to do, SQLite is used (`plugins/OrderHub/orderhub.db`).
 
-Several servers: set `storage.type: mariadb` in `config.yml`, fill in `storage.mariadb.jdbc-url` and `user`, create an empty database and a user for it, and give every server its own `server-id`. The password is never stored in the file: `storage.mariadb.password-env` names the environment variable that holds it (default `ORDERHUB_DB_PASSWORD`). Tested with MariaDB 10.11. MySQL is not supported (the migrations use `CREATE INDEX IF NOT EXISTS`, which MySQL 8 does not have).
+Several servers: set `storage.type: mariadb` in `config.yml`, fill in `storage.mariadb.jdbc-url` and `user`, create an empty database and a user for it, and give every server its own `server-id`. The password is never stored in the file: `storage.mariadb.password-env` names the environment variable that holds it (default `ORDERHUB_DB_PASSWORD`). Tested with MariaDB 11.4. MySQL is not supported (the migrations use `CREATE INDEX IF NOT EXISTS`, which MySQL 8 does not have).
 
 ## Discord
 
