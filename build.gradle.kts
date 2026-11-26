@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     java
     alias(libs.plugins.shadow)
@@ -94,6 +96,28 @@ tasks.shadowJar {
     relocate("org.slf4j", "dev.orderhub.libs.slf4j")
 }
 tasks.build { dependsOn(tasks.shadowJar) }
+
+// Kopiert das fertige Plugin-Jar nach release/ und schreibt die SHA-256-Pruefsumme.
+val release by tasks.registering {
+    description = "Copies the shadow jar to release/ and writes SHA256SUMS."
+    group = "distribution"
+    dependsOn(tasks.shadowJar)
+    doLast {
+        val jar =
+            tasks.shadowJar
+                .get()
+                .archiveFile
+                .get()
+                .asFile
+        val dir = layout.projectDirectory.dir("release").asFile
+        dir.mkdirs()
+        val target = File(dir, jar.name)
+        jar.copyTo(target, overwrite = true)
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hex = digest.digest(target.readBytes()).joinToString("") { "%02x".format(it) }
+        File(dir, "SHA256SUMS").writeText("$hex  ${target.name}\n")
+    }
+}
 tasks.jar { archiveClassifier.set("plain") }
 
 spotless {
