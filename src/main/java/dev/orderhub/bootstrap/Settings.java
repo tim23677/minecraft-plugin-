@@ -48,6 +48,8 @@ public record Settings(
     String soundError,
     String soundClick,
     List<String> aliases,
+    boolean economyAsyncSafe,
+    int economyTimeoutMs,
     List<String> warnings) {
 
   public Settings {
@@ -112,6 +114,8 @@ public record Settings(
         str(cfg, "sounds.error", "block.note_block.bass"),
         str(cfg, "sounds.click", "ui.button.click"),
         List.copyOf(cfg.getStringList("commands.aliases")),
+        cfg.getBoolean("economy.async-safe", false),
+        range(cfg, "economy.timeout-ms", 10_000, 500, 120_000, warnings),
         List.copyOf(warnings));
   }
 

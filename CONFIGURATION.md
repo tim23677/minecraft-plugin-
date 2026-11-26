@@ -19,6 +19,7 @@ Files live in `plugins/OrderHub`. New options of later versions are added automa
 | items.blocked-materials, blocked-tags | empty | extra blocked items (`minecraft:elytra`, tags) |
 | delivery.click-debounce-ms | 150 | minimum time between menu clicks |
 | cache.max-entries, sync-interval-seconds | 5000, 3 | reserved for the cache synchronisation (see RELEASE_REPORT.md) |
+| economy.async-safe, timeout-ms | false, 10000 | false: all Vault calls run on the global server thread and wait up to timeout-ms; a timeout on withdraw/deposit counts as unknown outcome (MANUAL_REVIEW), never retried |
 | payouts.worker-interval-seconds, max-attempts | 2, 5 | payout worker |
 | market.min-trades-for-recommendation, recommendation-window-days | 5, 7 | price recommendation needs real trades |
 | notifications.cooldown-seconds, batch-window-seconds | 60, 10 | price alert spam protection |

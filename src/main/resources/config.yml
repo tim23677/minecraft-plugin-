@@ -76,6 +76,13 @@ cache:
   # Wie oft die Datenbank-Outbox auf Aenderungen anderer Server geprueft wird.
   sync-interval-seconds: 3
 
+economy:
+  # false (Standard): Vault-Aufrufe laufen auf dem globalen Server-Thread, wie es EssentialsX, CMI
+  # und die meisten Economy-Plugins erwarten. true nur, wenn der Provider nachweislich threadsicher ist.
+  async-safe: false
+  # Wartezeit auf eine Vault-Antwort. Danach gilt eine Zahlung als unklar (MANUAL_REVIEW).
+  timeout-ms: 10000
+
 payouts:
   # Wie oft die Auszahlungswarteschlange abgearbeitet wird.
   worker-interval-seconds: 2

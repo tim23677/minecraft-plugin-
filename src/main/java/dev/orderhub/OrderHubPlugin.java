@@ -217,6 +217,15 @@ public class OrderHubPlugin extends JavaPlugin {
       getLogger().warning("Vault is not installed: orders cannot be created or paid out.");
     }
 
+    if (!(economy instanceof UnavailableEconomy) && !st.economyAsyncSafe()) {
+      economy =
+          new dev.orderhub.economy.GlobalThreadEconomy(
+              economy,
+              scheduler,
+              Bukkit::isGlobalTickThread,
+              Duration.ofMillis(st.economyTimeoutMs()));
+    }
+
     Limits limits =
         new Limits(
             st.minUnitPrice(),

@@ -30,7 +30,7 @@ Der Snapshot-Test für das Auftragslimit (`ownerLimitHoldsWhenTheTransactionAlre
 - Der Testcontainers-Pfad ist nicht gelaufen (kein Docker-Daemon). Die MariaDB-Tests liefen gegen eine lokal installierte Instanz.
 - Die Bukkit-nahen Abläufe `DeliveryFlow`, `ParcelFlow`, `CreateFlow`, `Menus`, `InsightsFlow` haben keine eigenen automatisierten Tests. Getestet sind die Engines darunter, das GUI-Framework, die Befehle (Berechtigungen, Tab-Vervollständigung, Fehlerfälle) und die Dienste.
 - Kein manueller Testplan durchgeführt. `TESTPLAN.md` enthält 23 Szenarien mit "Tatsächliches Ergebnis: nicht ausgeführt".
-- Vault-Provider: Aufrufe laufen auf Async-Threads. Ob ein bestimmter Provider das verträgt, ist nicht geprüft.
+- Vault-Provider: Aufrufe laufen standardmäßig auf dem globalen Thread (Punkt 1 erledigt, `GlobalThreadEconomyTest`, 5 Tests). Mit einem echten Economy-Plugin nicht geprüft.
 - Mehrere-Server-Betrieb ist nur auf Datenbankebene getestet (zwei Storage-Instanzen gegen eine MariaDB), nicht mit zwei echten Servern.
 
 ## Nicht umgesetzt oder nur teilweise (Vergleich mit dem Auftrag)

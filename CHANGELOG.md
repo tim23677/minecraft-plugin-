@@ -14,4 +14,6 @@ Added
 - Admin commands with confirmation, reason and audit log
 - English and German language files
 
+- Vault calls run on the global server thread by default (`economy.async-safe: false`), with timeout treated as unknown outcome
+
 Known gaps are listed in RELEASE_REPORT.md.
