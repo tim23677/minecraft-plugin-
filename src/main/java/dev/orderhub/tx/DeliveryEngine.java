@@ -109,9 +109,15 @@ public final class DeliveryEngine {
   }
 
   private final Storage storage;
-  private final Fees fees;
+  private final java.util.function.Supplier<Fees> fees;
 
   public DeliveryEngine(Storage storage, Fees fees) {
+    this(storage, () -> fees);
+    Objects.requireNonNull(fees, "fees");
+  }
+
+  /** {@code fees} liefert den aktuellen Stand (bei reload ausgetauscht), einmal je Lieferung. */
+  public DeliveryEngine(Storage storage, java.util.function.Supplier<Fees> fees) {
     this.storage = Objects.requireNonNull(storage, "storage");
     this.fees = Objects.requireNonNull(fees, "fees");
   }
@@ -160,7 +166,7 @@ public final class DeliveryEngine {
       return new PrepareResult(PrepareStatus.BELOW_MINIMUM, null, r.quantity(), 0);
     }
     long gross = Money.multiply(order.unitPrice(), r.quantity());
-    long net = gross - fees.salesTax(gross, r.taxExempt());
+    long net = gross - fees.get().salesTax(gross, r.taxExempt());
     JournalEntry created =
         JournalEntry.created(
             key,

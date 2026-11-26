@@ -3,6 +3,7 @@ package dev.orderhub.service;
 import dev.orderhub.config.Expiry;
 import dev.orderhub.config.Fees;
 import dev.orderhub.config.Limits;
+import dev.orderhub.config.Rates;
 import dev.orderhub.domain.ItemSnapshot;
 import dev.orderhub.domain.NewOrder;
 import dev.orderhub.domain.Order;
@@ -151,17 +152,19 @@ public final class OrderService {
 
   private final Storage storage;
   private final EconomyBridge economy;
-  private final Limits limits;
-  private final Fees fees;
-  private final Expiry expiry;
+  private final java.util.function.Supplier<Rates> rates;
 
   public OrderService(
       Storage storage, EconomyBridge economy, Limits limits, Fees fees, Expiry expiry) {
+    this(storage, economy, () -> new Rates(limits, fees, expiry));
+  }
+
+  /** {@code rates} liefert den aktuellen Schnappschuss (bei reload ausgetauscht). */
+  public OrderService(
+      Storage storage, EconomyBridge economy, java.util.function.Supplier<Rates> rates) {
     this.storage = storage;
     this.economy = economy;
-    this.limits = limits;
-    this.fees = fees;
-    this.expiry = expiry;
+    this.rates = rates;
   }
 
   // ---------------------------------------------------------------- createOrder
@@ -170,7 +173,7 @@ public final class OrderService {
 
   /** Gebuehr, die diese Instanz fuer {@code escrow} abrechnet. Einzige Quelle fuer die Anzeige. */
   public long quoteCreateFee(long escrow, boolean exempt) {
-    return fees.createFee(escrow, exempt);
+    return rates.get().fees().createFee(escrow, exempt);
   }
 
   public CreateResult createOrder(CreateOrderRequest r) {
@@ -178,12 +181,13 @@ public final class OrderService {
     if (invalid != null) {
       return new CreateResult(invalid, null, null, 0, 0);
     }
+    Rates current = rates.get(); // ein Schnappschuss fuer die ganze Operation
     long escrow;
     long fee;
     long total;
     try {
       escrow = Money.multiply(r.unitPrice(), r.quantity());
-      fee = fees.createFee(escrow, r.feeExempt());
+      fee = current.fees().createFee(escrow, r.feeExempt());
       total = Money.add(escrow, fee);
     } catch (ArithmeticException e) {
       return new CreateResult(CreateStatus.INVALID_AMOUNT, null, null, 0, 0);
@@ -237,10 +241,11 @@ public final class OrderService {
             || r.lifetime().compareTo(java.time.Duration.ofDays(366)) > 0)) {
       return CreateStatus.INVALID_LIFETIME;
     }
-    if (r.unitPrice() < limits.minPrice() || r.unitPrice() > limits.maxPrice()) {
+    if (r.unitPrice() < rates.get().limits().minPrice()
+        || r.unitPrice() > rates.get().limits().maxPrice()) {
       return CreateStatus.INVALID_PRICE;
     }
-    if (r.quantity() < 1 || r.quantity() > limits.maxQuantity()) {
+    if (r.quantity() < 1 || r.quantity() > rates.get().limits().maxQuantity()) {
       return CreateStatus.INVALID_QUANTITY;
     }
     if (r.minDelivery() < 1 || r.minDelivery() > r.quantity()) {
@@ -319,7 +324,8 @@ public final class OrderService {
       return new CreateResult(CreateStatus.FAILED_REFUND_QUEUED, null, entry.id(), escrow, fee);
     }
     long now = uow.now();
-    Duration lifetime = r.lifetime() == null ? expiry.defaultLifetime() : r.lifetime();
+    Duration lifetime =
+        r.lifetime() == null ? rates.get().expiry().defaultLifetime() : r.lifetime();
     Order order =
         uow.orders()
             .insert(
@@ -331,7 +337,7 @@ public final class OrderService {
                     r.quantity(),
                     r.minDelivery(),
                     now + lifetime.toMillis(),
-                    r.autoRenew() && expiry.autoRenewEnabled(),
+                    r.autoRenew() && rates.get().expiry().autoRenewEnabled(),
                     r.category()),
                 now);
     uow.ledger()
@@ -757,6 +763,7 @@ public final class OrderService {
     Order order = found.get();
     boolean funded =
         order.escrowRemaining() > 0 && order.escrowRemaining() >= order.expectedEscrow();
+    Expiry expiry = rates.get().expiry();
     if (order.autoRenew() && expiry.autoRenewEnabled() && funded) {
       long next = now + expiry.defaultLifetime().toMillis();
       return uow.orders().update(withExpiry(order, next, now)) ? Expired.RENEWED : Expired.SKIPPED;

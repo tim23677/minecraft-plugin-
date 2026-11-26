@@ -21,7 +21,7 @@ OrderHub 0.1.0 is a development build. The core flow (create, deliver, pay out, 
 2. Put `OrderHub-<version>.jar` into the `plugins` folder.
 3. Install Vault and an economy plugin if you do not have them yet.
 4. Start the server once. OrderHub creates `plugins/OrderHub` with `config.yml`, `discord.yml`, `menus.yml` and `messages_en.yml`, `messages_de.yml`.
-5. Adjust prices, fees and limits in `config.yml`, set `language: "de"` for German, then run `/orderadmin reload` (fees, limits and database settings need a restart).
+5. Adjust prices, fees and limits in `config.yml`, set `language: "de"` for German, then run `/orderadmin reload` (database and payout worker settings need a restart).
 
 ## Commands
 

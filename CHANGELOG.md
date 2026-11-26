@@ -29,4 +29,6 @@ Added
 
 - Discord outbox rows are claimed with a conditional UPDATE (`claimed_by`, `claimed_until`, migration V3) before sending, so several servers on one database never send the same message twice; stale claims of crashed servers expire after 60 s
 
+- Fees, limits and expiry are one immutable snapshot (`Rates`) that `/orderadmin reload` swaps atomically; changed fees apply without a restart and the amount shown at confirmation is checked against the charged amount
+
 Known gaps are listed in RELEASE_REPORT.md.

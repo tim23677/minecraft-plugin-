@@ -29,7 +29,7 @@ public record Services(
     PluginScheduler scheduler,
     Messages messages,
     Supplier<Settings> settings,
-    Limits limits,
+    java.util.function.Supplier<dev.orderhub.config.Rates> rates,
     OrderService orders,
     DeliveryEngine delivery,
     ClaimEngine claims,
@@ -39,4 +39,10 @@ public record Services(
     ItemMatcher matcher,
     MenuManager menus,
     InsightsService insights,
-    DiscordService discord) {}
+    DiscordService discord) {
+
+  /** Aktuelle Limits (Teil des Schnappschusses, der bei reload ausgetauscht wird). */
+  public Limits limits() {
+    return rates.get().limits();
+  }
+}

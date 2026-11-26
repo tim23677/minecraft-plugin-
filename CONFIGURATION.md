@@ -1,6 +1,6 @@
 # Configuration
 
-Files live in `plugins/OrderHub`. New options of later versions are added automatically with their default value, existing values are never overwritten (a `.bak` copy is written before a file changes). Changes to texts, cancel word and timeouts apply with `/orderadmin reload`. Database settings, fees, price and quantity limits and the Discord worker need a restart.
+Files live in `plugins/OrderHub`. New options of later versions are added automatically with their default value, existing values are never overwritten (a `.bak` copy is written before a file changes). Changes to texts, cancel word and timeouts apply with `/orderadmin reload`. Fees, price and quantity limits and the default order lifetime apply with `/orderadmin reload` as one atomic snapshot. Database settings, payout worker settings and the Discord worker need a restart.
 
 ## config.yml
 

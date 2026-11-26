@@ -8,9 +8,6 @@ import dev.orderhub.command.BrigadierCommands;
 import dev.orderhub.command.CommandHandler;
 import dev.orderhub.command.OrderAdminCommand;
 import dev.orderhub.command.OrderCommand;
-import dev.orderhub.config.Expiry;
-import dev.orderhub.config.Fees;
-import dev.orderhub.config.Limits;
 import dev.orderhub.discord.DiscordService;
 import dev.orderhub.discord.DiscordWorker;
 import dev.orderhub.discord.WebhookSender;
@@ -70,6 +67,8 @@ public class OrderHubPlugin extends JavaPlugin {
       List.of("config.yml", "discord.yml", "menus.yml", "messages_en.yml", "messages_de.yml");
 
   private volatile Settings settings;
+  private final java.util.concurrent.atomic.AtomicReference<dev.orderhub.config.Rates> rates =
+      new java.util.concurrent.atomic.AtomicReference<>();
   private final Messages messages = new Messages();
   private PluginScheduler scheduler;
   private MenuManager menus;
@@ -178,6 +177,8 @@ public class OrderHubPlugin extends JavaPlugin {
     Settings loaded = Settings.from(cfg);
     loaded.warnings().forEach(w -> getLogger().warning("config.yml: " + w));
     messages.load(loaded.language(), getDataFolder().toPath(), getClassLoader());
+    // Erst die Raten, dann die Einstellungen: jede Operation liest einen vollstaendigen Stand.
+    this.rates.set(dev.orderhub.config.Rates.from(loaded));
     this.settings = loaded;
   }
 
@@ -226,19 +227,6 @@ public class OrderHubPlugin extends JavaPlugin {
               Duration.ofMillis(st.economyTimeoutMs()));
     }
 
-    Limits limits =
-        new Limits(
-            st.minUnitPrice(),
-            st.maxUnitPrice(),
-            st.maxQuantity(),
-            st.defaultMaxOpenOrders(),
-            List.of(
-                new Limits.Tier("orderhub.limit.5", 5),
-                new Limits.Tier("orderhub.limit.10", 10),
-                new Limits.Tier("orderhub.limit.25", 25),
-                new Limits.Tier("orderhub.limit.50", 50)));
-    Fees fees = new Fees(st.createFeeBp(), st.salesTaxBp(), true);
-    Expiry expiry = new Expiry(Duration.ofHours(st.expiryHours()), true);
     AuditSink audit =
         new ConsoleAudit(
             getLogger(),
@@ -258,8 +246,9 @@ public class OrderHubPlugin extends JavaPlugin {
                   }
                 }));
 
-    OrderService orders = new OrderService(storage, economy, limits, fees, expiry);
-    DeliveryEngine delivery = new DeliveryEngine(storage, fees);
+    java.util.function.Supplier<dev.orderhub.config.Rates> rateSource = () -> rates.get();
+    OrderService orders = new OrderService(storage, economy, rateSource);
+    DeliveryEngine delivery = new DeliveryEngine(storage, () -> rates.get().fees());
     ClaimEngine claims = new ClaimEngine(storage, audit);
     ReturnEngine returns = new ReturnEngine(storage, audit);
     PayoutWorker payouts =
@@ -304,7 +293,7 @@ public class OrderHubPlugin extends JavaPlugin {
             scheduler,
             messages,
             () -> settings,
-            limits,
+            rateSource,
             orders,
             delivery,
             claims,
@@ -521,7 +510,7 @@ public class OrderHubPlugin extends JavaPlugin {
    */
   private void reloadConfig0() {
     loadSettings();
-    getLogger().info("configuration reloaded (database, fees and limits need a restart)");
+    getLogger().info("configuration reloaded (the database and payout settings need a restart)");
   }
 
   @Override

@@ -62,4 +62,37 @@ class FeeConsistencyTest {
     h.economy.setBalance(OWNER, 1_000_000);
     assertThat(h.create(OWNER, 1_000, 10, 1).status()).isEqualTo(CreateStatus.CREATED);
   }
+
+  @Test
+  void aReloadSwapsTheWholeSnapshotAtomicallyAndTheShownFeeIsRejectedAfterwards() {
+    Harness h = new Harness();
+    java.util.concurrent.atomic.AtomicReference<dev.orderhub.config.Rates> ref =
+        new java.util.concurrent.atomic.AtomicReference<>(
+            new dev.orderhub.config.Rates(
+                Limits.defaults(),
+                new Fees(100, 0, true),
+                new dev.orderhub.config.Expiry(java.time.Duration.ofDays(7), true)));
+    OrderService orders = new OrderService(h.storage, h.economy, ref::get);
+    h.economy.setBalance(OWNER, 1_000_000);
+
+    long shown = orders.quoteCreateFee(10_000, false); // Anzeige vor dem Reload: 1 %
+    assertThat(shown).isEqualTo(100);
+    ref.set(
+        new dev.orderhub.config.Rates(
+            Limits.defaults(),
+            new Fees(500, 0, true),
+            new dev.orderhub.config.Expiry(java.time.Duration.ofDays(7), true)));
+
+    CreateOrderRequest base = h.request(OWNER, 1_000, 10, 1);
+    var afterReload = orders.createOrder(withExpectedFee(h, shown));
+    assertThat(afterReload.status()).isEqualTo(CreateStatus.FEE_CHANGED);
+    assertThat(h.economy.mutationCount()).isZero();
+
+    long fresh = orders.quoteCreateFee(10_000, false);
+    assertThat(fresh).isEqualTo(500);
+    var ok = orders.createOrder(withExpectedFee(h, fresh));
+    assertThat(ok.status()).isEqualTo(CreateStatus.CREATED);
+    assertThat(ok.fee()).isEqualTo(500);
+    assertThat(base.expectedFee()).isEqualTo(CreateOrderRequest.FEE_UNCHECKED);
+  }
 }
