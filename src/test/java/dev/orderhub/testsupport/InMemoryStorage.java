@@ -646,6 +646,11 @@ public final class InMemoryStorage implements Storage {
       }
 
       @Override
+      public List<Entry> findAll(int offset, int limit) {
+        return s.ledger.stream().skip(offset).limit(limit).toList();
+      }
+
+      @Override
       public List<Entry> findByPlayer(UUID player, int offset, int limit) {
         return s.ledger.stream()
             .filter(e -> player.equals(e.player()))

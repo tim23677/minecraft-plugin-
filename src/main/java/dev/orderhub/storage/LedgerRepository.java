@@ -29,5 +29,8 @@ public interface LedgerRepository {
 
   List<Entry> findByTx(UUID txId);
 
+  /** Alle Buchungen in Einfuegereihenfolge (fuer den Export), seitenweise. */
+  List<Entry> findAll(int offset, int limit);
+
   List<Entry> findByPlayer(UUID player, int offset, int limit);
 }

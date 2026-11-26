@@ -42,6 +42,15 @@ final class JdbcLedgerRepository implements LedgerRepository {
   }
 
   @Override
+  public List<Entry> findAll(int offset, int limit) {
+    return jdbc.list(
+        SELECT + "ORDER BY seq ASC LIMIT ? OFFSET ?",
+        JdbcLedgerRepository::map,
+        Math.max(1, limit),
+        Math.max(0, offset));
+  }
+
+  @Override
   public List<Entry> findByPlayer(UUID player, int offset, int limit) {
     return jdbc.list(
         SELECT + "WHERE player_uuid = ? ORDER BY seq DESC LIMIT ? OFFSET ?",

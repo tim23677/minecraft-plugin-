@@ -49,6 +49,9 @@ permissions:
   orderhub.admin.recovery:
     description: Run recovery and purge expired orders
     default: op
+  orderhub.admin.backup:
+    description: Back up the SQLite database and export orders or the ledger as CSV
+    default: op
   orderhub.admin.view:
     description: List orders, statistics and debug info
     default: op
@@ -64,3 +67,4 @@ permissions:
       orderhub.admin.reload: true
       orderhub.admin.transactions: true
       orderhub.admin.recovery: true
+      orderhub.admin.backup: true

@@ -258,6 +258,91 @@ public final class AdminService {
         });
   }
 
+  /** Zustand des Betriebs fuer {@code /orderadmin health}. */
+  public record Health(
+      Storage.Health storage,
+      int openPayments,
+      int paymentsInProgress,
+      int manualReview,
+      long lastRecoveryAt,
+      String lastRecovery) {}
+
+  public Health health() {
+    int[] counts =
+        storage
+            .transact(uow ->
+                new int[] {
+                  uow.payouts().findByState(PayoutRepository.State.PENDING, 10_000).size(),
+                  uow.payouts().findByState(PayoutRepository.State.IN_PROGRESS, 10_000).size(),
+                  uow.journal().findByStates(EnumSet.of(TxState.MANUAL_REVIEW), 10_000).size()
+                })
+            .join();
+    RecoveryReport last = recovery.lastReport();
+    return new Health(
+        storage.health(),
+        counts[0],
+        counts[1],
+        counts[2],
+        recovery.lastRunAt(),
+        last == null ? null : last.summary());
+  }
+
+  /** Ergebnis von Sicherung oder Export. */
+  public record FileResult(java.nio.file.Path file, long rows) {}
+
+  private static final java.time.format.DateTimeFormatter STAMP =
+      java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
+          .withZone(java.time.ZoneOffset.UTC);
+
+  /**
+   * Sichert die SQLite-Datenbank nach {@code <dataDir>/backups}. Audit-Eintrag nach der Sicherung.
+   *
+   * @throws IllegalStateException bei MariaDB (dort mysqldump oder Server-Snapshot nutzen)
+   */
+  public FileResult backup(java.nio.file.Path dataDir, String actor, String reason) {
+    requireReason(reason);
+    if (!(storage instanceof dev.orderhub.storage.JdbcStorage jdbc)
+        || storage.dialect() != dev.orderhub.storage.Dialect.SQLITE) {
+      throw new IllegalStateException(
+          "backup is only available for SQLite, use mysqldump for MariaDB");
+    }
+    try {
+      java.nio.file.Path file =
+          dev.orderhub.storage.Backups.sqliteBackup(
+              jdbc.dataSource(), dataDir.resolve("backups"), "manual", 10);
+      audit(actor, "backup.sqlite", file.getFileName().toString(), reason, "ok");
+      return new FileResult(file, 0);
+    } catch (java.sql.SQLException | java.io.IOException e) {
+      throw new IllegalStateException("backup failed: " + e.getMessage(), e);
+    }
+  }
+
+  /** Exportiert {@code orders} oder {@code ledger} als CSV nach {@code <dataDir>/exports}. */
+  public FileResult export(String what, java.nio.file.Path dataDir, String actor, String reason) {
+    requireReason(reason);
+    if (!what.equals("orders") && !what.equals("ledger")) {
+      throw new IllegalArgumentException("export orders or ledger");
+    }
+    try {
+      java.nio.file.Path dir = dataDir.resolve("exports");
+      java.nio.file.Files.createDirectories(dir);
+      java.nio.file.Path file =
+          dir.resolve(what + "-" + STAMP.format(java.time.Instant.now()) + ".csv");
+      long rows;
+      try (java.io.Writer out =
+          java.nio.file.Files.newBufferedWriter(file, java.nio.charset.StandardCharsets.UTF_8)) {
+        rows =
+            what.equals("orders")
+                ? dev.orderhub.storage.CsvExport.writeOrders(storage, out)
+                : dev.orderhub.storage.CsvExport.writeLedger(storage, out);
+      }
+      audit(actor, "export." + what, file.getFileName().toString(), reason, "rows=" + rows);
+      return new FileResult(file, rows);
+    } catch (java.io.IOException e) {
+      throw new IllegalStateException("export failed: " + e.getMessage(), e);
+    }
+  }
+
   public Statistics statistics() {
     return storage
         .transact(uow ->

@@ -16,6 +16,15 @@ public interface Storage extends AutoCloseable {
    */
   <T> CompletableFuture<T> transact(Function<UnitOfWork, T> work);
 
+  /** Auslastung von Verbindungspool und Datenbank-Executor, fuer {@code /orderadmin health}. */
+  record Health(
+      int poolActive, int poolIdle, int poolWaiting, int poolTotal, int queued, int running) {}
+
+  /** Momentaufnahme der Auslastung. Standard: leer (z. B. In-Memory-Test-Storage). */
+  default Health health() {
+    return new Health(0, 0, 0, 0, 0, 0);
+  }
+
   /** Dialekt der verbundenen Datenbank. */
   Dialect dialect();
 

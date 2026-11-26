@@ -61,6 +61,20 @@ public final class RecoveryService {
   }
 
   /** Wie {@link #runAtStartup()}, auch periodisch nutzbar (haengende Eintraege nachziehen). */
+  private volatile RecoveryReport lastReport;
+
+  private volatile long lastRunAt;
+
+  /** Ergebnis des letzten Laufs oder {@code null}, wenn noch keiner lief. */
+  public RecoveryReport lastReport() {
+    return lastReport;
+  }
+
+  /** Zeitpunkt des letzten Laufs in Millisekunden, 0 wenn noch keiner lief. */
+  public long lastRunAt() {
+    return lastRunAt;
+  }
+
   public synchronized RecoveryReport sweep() {
     long now = clock.millis();
     long staleBefore = now - staleAfter.toMillis();
@@ -89,6 +103,8 @@ public final class RecoveryService {
             .size();
 
     RecoveryReport report = c.toReport();
+    lastReport = report;
+    lastRunAt = now;
     audit.recoveryReport(report, now);
     if (report.hasEscalations() || report.errors() > 0) {
       audit.adminWarning(

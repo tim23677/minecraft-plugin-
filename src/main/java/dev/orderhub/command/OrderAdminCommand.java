@@ -35,16 +35,22 @@ public final class OrderAdminCommand implements CommandHandler {
           "statistics",
           "inspect",
           "review",
+          "health",
+          "backup",
+          "export",
           "debug");
 
   private final Services s;
   private final AdminService admin;
   private final Runnable reload;
+  private final java.nio.file.Path dataDir;
 
-  public OrderAdminCommand(Services services, AdminService admin, Runnable reload) {
+  public OrderAdminCommand(
+      Services services, AdminService admin, Runnable reload, java.nio.file.Path dataDir) {
     this.s = services;
     this.admin = admin;
     this.reload = reload;
+    this.dataDir = dataDir;
   }
 
   @Override
@@ -144,6 +150,73 @@ public final class OrderAdminCommand implements CommandHandler {
         async(sender, () -> inspect(sender, sub, args));
       }
       case "review" -> review(sender, args, actor);
+      case "health" -> {
+        if (need(sender, "orderhub.admin.view")) {
+          async(sender, () -> health(sender));
+        }
+      }
+      case "backup" -> {
+        if (!need(sender, "orderhub.admin.backup")) {
+          return true;
+        }
+        String reason = confirmedReason(sender, args, 1);
+        if (reason == null) {
+          return true;
+        }
+        async(
+            sender,
+            () -> {
+              try {
+                var r = admin.backup(dataDir, actor, reason);
+                reply(
+                    sender,
+                    s.messages()
+                        .prefixed("admin.backup-done", Messages.text("file", r.file().toString())));
+              } catch (IllegalStateException e) {
+                reply(
+                    sender,
+                    s.messages()
+                        .prefixed(
+                            "admin.backup-failed",
+                            Messages.text("reason", String.valueOf(e.getMessage()))));
+              }
+            });
+      }
+      case "export" -> {
+        if (!need(sender, "orderhub.admin.backup")) {
+          return true;
+        }
+        if (args.length < 2 || !(args[1].equals("orders") || args[1].equals("ledger"))) {
+          sender.sendMessage(s.messages().prefixed("admin.export-usage"));
+          return true;
+        }
+        String reason = confirmedReason(sender, args, 2);
+        if (reason == null) {
+          return true;
+        }
+        String what = args[1];
+        async(
+            sender,
+            () -> {
+              try {
+                var r = admin.export(what, dataDir, actor, reason);
+                reply(
+                    sender,
+                    s.messages()
+                        .prefixed(
+                            "admin.export-done",
+                            Messages.text("file", r.file().toString()),
+                            Messages.number("rows", r.rows())));
+              } catch (IllegalStateException e) {
+                reply(
+                    sender,
+                    s.messages()
+                        .prefixed(
+                            "admin.backup-failed",
+                            Messages.text("reason", String.valueOf(e.getMessage()))));
+              }
+            });
+      }
       case "recovery" -> {
         if (!need(sender, "orderhub.admin.recovery")) {
           return true;
@@ -279,6 +352,41 @@ public final class OrderAdminCommand implements CommandHandler {
     }
   }
 
+  private void health(CommandSender sender) {
+    var h = admin.health();
+    var st = h.storage();
+    reply(sender, s.messages().get("admin.header"));
+    reply(
+        sender,
+        s.messages()
+            .get(
+                "admin.health-db",
+                Messages.number("active", st.poolActive()),
+                Messages.number("idle", st.poolIdle()),
+                Messages.number("waiting", st.poolWaiting()),
+                Messages.number("total", st.poolTotal()),
+                Messages.number("queued", st.queued()),
+                Messages.number("running", st.running())));
+    reply(
+        sender,
+        s.messages()
+            .get(
+                "admin.health-payments",
+                Messages.number("open", h.openPayments()),
+                Messages.number("progress", h.paymentsInProgress()),
+                Messages.number("review", h.manualReview())));
+    reply(
+        sender,
+        h.lastRecovery() == null
+            ? s.messages().get("admin.health-recovery-none")
+            : s.messages()
+                .get(
+                    "admin.health-recovery",
+                    Messages.text(
+                        "at", java.time.Instant.ofEpochMilli(h.lastRecoveryAt()).toString()),
+                    Messages.text("summary", h.lastRecovery())));
+  }
+
   private String confirmedReason(CommandSender sender, String[] args, int from) {
     if (args.length <= from || !args[from].equalsIgnoreCase("confirm")) {
       sender.sendMessage(s.messages().prefixed("admin.confirm-required"));
@@ -300,7 +408,8 @@ public final class OrderAdminCommand implements CommandHandler {
             "orderhub.admin.cancel",
             "orderhub.admin.reload",
             "orderhub.admin.transactions",
-            "orderhub.admin.recovery")) {
+            "orderhub.admin.recovery",
+            "orderhub.admin.backup")) {
       if (sender.hasPermission(permission)) {
         return true;
       }
@@ -438,6 +547,9 @@ public final class OrderAdminCommand implements CommandHandler {
     }
     if (args.length == 1) {
       return OrderCommand.filter(SUBCOMMANDS, args[0]);
+    }
+    if (args.length == 2 && args[0].equalsIgnoreCase("export")) {
+      return OrderCommand.filter(List.of("orders", "ledger"), args[1]);
     }
     if (args.length == 2 && args[0].equalsIgnoreCase("review")) {
       return OrderCommand.filter(List.of("list", "show", "resolve"), args[1]);

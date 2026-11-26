@@ -1,6 +1,7 @@
 package dev.orderhub.bootstrap;
 
 import com.zaxxer.hikari.HikariDataSource;
+import dev.orderhub.storage.Backups;
 import dev.orderhub.storage.DataSourceFactory;
 import dev.orderhub.storage.Dialect;
 import dev.orderhub.storage.JdbcStorage;
@@ -52,6 +53,14 @@ public final class DatabaseSetup {
                 "config.yml: storage.sqlite.file must be a plain file name, got '" + file + "'");
           }
           pool = DataSourceFactory.sqlite(dataDir.resolve(file));
+          // Vor einer Schema-Migration eine Kopie der bestehenden Daten ablegen.
+          try {
+            Backups.beforeMigration(pool, Dialect.SQLITE, dataDir.resolve("backups"))
+                .ifPresent(b -> LOG.info("Database backup before migration: " + b));
+          } catch (java.io.IOException e) {
+            throw new IllegalStateException(
+                "backup before migration failed, refusing to migrate: " + e.getMessage(), e);
+          }
           return JdbcStorage.open(pool, Dialect.SQLITE, config);
         }
         case "mariadb" -> {

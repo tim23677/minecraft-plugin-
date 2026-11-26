@@ -64,6 +64,24 @@ public final class JdbcStorage implements Storage {
     return dataSource;
   }
 
+  @Override
+  public Health health() {
+    int active = 0;
+    int idle = 0;
+    int waiting = 0;
+    int total = 0;
+    if (dataSource instanceof com.zaxxer.hikari.HikariDataSource hikari
+        && hikari.getHikariPoolMXBean() != null) {
+      var pool = hikari.getHikariPoolMXBean();
+      active = pool.getActiveConnections();
+      idle = pool.getIdleConnections();
+      waiting = pool.getThreadsAwaitingConnection();
+      total = pool.getTotalConnections();
+    }
+    return new Health(
+        active, idle, waiting, total, executor.getQueue().size(), executor.getActiveCount());
+  }
+
   public static JdbcStorage open(DataSource dataSource, Dialect dialect, StorageConfig config)
       throws SQLException {
     Migrations.apply(dataSource, dialect);
