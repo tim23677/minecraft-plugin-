@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "dev.orderhub"
-version = "1.0.0"
+version = "1.1.0"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))

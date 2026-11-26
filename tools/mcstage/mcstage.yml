@@ -8,7 +8,7 @@ versions: ["1.21.11"]
 memory: 1G
 
 plugins:
-  - build/libs/OrderHub-1.0.0.jar
+  - build/libs/OrderHub-1.1.0.jar
 
 properties:
   online-mode: "false"
@@ -36,5 +36,22 @@ steps:
   # Die Konsole darf das Menue nicht oeffnen.
   - send: "orderhub"
   - expect: "This command can only be used by players."
+
+  # Betriebswerkzeuge ueber die Konsole: Zustand, Sicherung, Export, manuelle Pruefung.
+  - send: "orderadmin health"
+  - expect: "Database pool"
+    timeout: 20s
+  - send: "orderadmin backup confirm release check"
+  - expect: "Backup written"
+    timeout: 30s
+  - send: "orderadmin export orders confirm release check"
+  - expect: "Exported"
+    timeout: 30s
+  - send: "orderadmin export ledger confirm release check"
+  - expect: "Exported"
+    timeout: 30s
+  - send: "orderadmin review list"
+  - expect: "(0)"
+    timeout: 20s
 
   - wait: 5s

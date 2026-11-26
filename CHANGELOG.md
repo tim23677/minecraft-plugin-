@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.1.0 (2026-11-26)
+
+Added
+
+- `/orderadmin health`: database pool, executor queue, open and running payments, manual review count, last recovery
+- `/orderadmin backup confirm <reason>`: consistent SQLite snapshot (`VACUUM INTO`) in `plugins/OrderHub/backups`, keeps the newest 10
+- `/orderadmin export orders|ledger confirm <reason>`: CSV in `plugins/OrderHub/exports`, cells that start with `= + - @` are protected against spreadsheet formulas. New permission `orderhub.admin.backup`
+- Automatic SQLite backup before a schema migration on an existing database (`backups/pre-migration-v*.db`, newest 5 kept); migration is refused if the backup fails
+- `config-version` 2 with a migration path: version 1 files lose the options that never had an effect, the original is kept as `config.yml.bak`, user values and comments stay, a file from a newer plugin is left untouched with a warning
+- Optional update check against GitHub releases (`updates.check`, off by default, only the version number is requested)
+- Tag-triggered release workflow with provenance attestation and `tools/release/package.sh`
+
+Changed
+
+- Surplus items of a delivery are shown through a persistent return that the player picks up right away (see 1.0.0 return reservation)
+- Item names in messages fall back to the material name if the runtime cannot provide an effective name
+
+Tests
+
+- MockBukkit tests for `DeliveryFlow` (10), `CreateFlow` (9) and `ParcelFlow` (4): normal case, cancel, close, disconnect, double click, full inventory, database outage, lost commit acknowledgement, economy failure
+- Player scenario on a real Paper 1.21.11 server with VaultUnlocked and EssentialsX played by two bots, including a hard kill in the middle of a delivery (`tools/e2e/e2e.js`, 17 of 17 checks)
+
 ## 1.0.0 (2026-11-26)
 
 Added

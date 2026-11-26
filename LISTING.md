@@ -1,6 +1,6 @@
 # BuiltByBit listing (English)
 
-Listing text for the resource page. Version 1.0.0.
+Listing text for the resource page. Version 1.1.0.
 
 ## Title
 
@@ -19,6 +19,7 @@ OrderHub gives your server a player to player buy order market. A player holds a
 - Buy orders with escrow, creation fee, sales tax, expiry and refunds of the remaining amount
 - Partial and full deliveries, minimum delivery size per order in the engine
 - Server side item checks: named, enchanted, damaged, lore items and containers are rejected by default, shulker boxes, bundles, spawn eggs, command blocks, bedrock and barrier are blocked, everything is configurable
+- Admin tools: health overview, SQLite backup (also automatic before a schema migration), CSV export of orders and ledger
 - Delivery, claim and return menus built on a hardened inventory framework that cancels shift clicks, number keys, offhand swaps, double clicks, drags and drops
 - Transaction journal with idempotency keys and a state machine, crash recovery at startup, a MANUAL_REVIEW state for cases that cannot be decided safely
 - Marketplace and my orders menus, statistics, trade history, favorites with price alerts, market analytics from real completed trades (median, average, volume, price range once enough trades exist)
@@ -35,7 +36,7 @@ OrderHub gives your server a player to player buy order market. A player holds a
 - Statistics, history, favorites, analytics and the admin tools are chat based in this version (no inventory menus for them).
 - Not included in this version: order templates, bulk order creation, auto renew and minimum delivery in the create menu, reputation system, per group or per world orders, configurable sounds, a cross-server cache.
 - Tested with MariaDB 11.4 (through Testcontainers). MySQL is not supported, OrderHub refuses to start against it.
-- Started on a real Paper 1.21.11 and Folia 1.21.11 server (plugin loads and recovers cleanly). A full play-through with a real economy plugin was not part of the release checks, test it on your own setup first.
+- Played through on a real Paper 1.21.11 server with VaultUnlocked and EssentialsX by two bot players (create, deliver, pay, collect, refund, hard kill during a delivery, recovery). On Folia 1.21.11 the plugin loads and recovers cleanly, a play-through there was not done because EssentialsX does not run on Folia. Other economy plugins are untested, test it on your own setup first.
 - Needs internet access to Maven Central on the first start: Paper downloads the database libraries once.
 
 ## Compatible versions
@@ -67,7 +68,7 @@ Does it work without Vault? The plugin starts, but orders and payouts are refuse
 
 Can I run it on a network? Yes, with MariaDB and a different `server-id` on every server.
 
-Does it send data anywhere? No telemetry and no license check. OrderHub opens one outgoing connection by itself: the optional Discord webhook. Paper downloads the database libraries from Maven Central on the first start.
+Does it send data anywhere? No telemetry and no license check. The only connections OrderHub opens by itself are the optional Discord webhook and the optional update check (off by default, it requests only the latest version number from GitHub). Paper downloads the database libraries from Maven Central on the first start.
 
 ## AI disclosure
 

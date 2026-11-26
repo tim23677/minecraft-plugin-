@@ -6,7 +6,7 @@ This README is written for server owners. No Java knowledge is needed.
 
 ## Status of this version
 
-OrderHub 1.0.0 was built with automated tests (unit, MockBukkit, SQLite, MariaDB 11.4 through Testcontainers) and started on a real Paper 1.21.11 and Folia 1.21.11 server, where the plugin loads, enables and recovers cleanly. A full play-through with a real economy plugin on a real server (create, deliver, pay, collect, restart in the middle of a delivery) was not part of the release checks. Run OrderHub on a test server with your own economy plugin before you use it on a live server. COMPATIBILITY.md lists exactly what was tested.
+OrderHub 1.1.0 was built with automated tests (unit, MockBukkit, SQLite, MariaDB 11.4 through Testcontainers) and started on a real Paper 1.21.11 and Folia 1.21.11 server, where the plugin loads, enables and recovers cleanly. A full play-through with two bot players on a real Paper 1.21.11 server with VaultUnlocked and EssentialsX (create, deliver, pay, collect, cancel with refund, hard kill in the middle of a delivery, recovery) passed. Other economy plugins and Folia with an economy were not part of the release checks, so run OrderHub on a test server with your own setup before you use it on a live server. COMPATIBILITY.md lists exactly what was tested.
 
 ## Requirements
 
@@ -14,7 +14,7 @@ OrderHub 1.0.0 was built with automated tests (unit, MockBukkit, SQLite, MariaDB
 - Vault and an economy plugin that registers with Vault (required to create orders and to pay out)
 - Internet access to Maven Central on the first start: Paper downloads the database libraries (HikariCP, SQLite and MariaDB drivers) once into its `libraries` folder. The plugin jar itself is small (about 0.5 MB)
 - Optional: PlaceholderAPI
-- Optional: MariaDB 10.11 for several servers sharing one marketplace (SQLite is the default for a single server). MySQL is not supported yet.
+- Optional: MariaDB 11.4 for several servers sharing one marketplace (SQLite is the default for a single server). MySQL is not supported.
 
 ## Installation
 
@@ -45,6 +45,9 @@ Administrators (permission `orderhub.admin`):
 - `/orderadmin review list`, `review show <tx>`, `review resolve <tx> paid|refund|discard confirm <reason>` resolve payments that ended in MANUAL_REVIEW
 - `/orderadmin purge-expired confirm <reason>`
 - `/orderadmin recovery confirm <reason>`
+- `/orderadmin health` shows database pool, queue, open payments, manual review count and the last recovery
+- `/orderadmin backup confirm <reason>` writes a consistent SQLite snapshot to `plugins/OrderHub/backups` (MariaDB: use mysqldump or a server snapshot)
+- `/orderadmin export orders|ledger confirm <reason>` writes a CSV file to `plugins/OrderHub/exports`
 - `/orderadmin reload`, `/orderadmin debug`
 
 Every changing admin command needs `confirm` and a reason and is written to the audit log.
@@ -61,7 +64,7 @@ Every changing admin command needs `confirm` and a reason and is written to the 
 | orderhub.bypass.fee | nobody | no creation fee |
 | orderhub.limit.5, .10, .25, .50 | nobody | open order limit, the highest one a player has applies |
 | orderhub.admin | operators | all admin commands |
-| orderhub.admin.reload, .transactions, .recovery | operators | single admin areas |
+| orderhub.admin.reload, .transactions, .recovery, .backup, .view, .cancel | operators | single admin areas (`.backup` covers backup and CSV export) |
 
 ## Vault
 

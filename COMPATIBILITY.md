@@ -27,6 +27,15 @@ Because the libraries live in OrderHub's own class loader, they do not conflict 
 
 Checked on a real server: Paper 1.21.11 and Folia 1.21.11 download the libraries, enable the plugin and show no ERROR lines (`tools/mcstage/run.sh`). Not checked: a second plugin that bundles a different JDBC driver version.
 
+## Economy plugins
+
+| Plugin | Status |
+|---|---|
+| EssentialsX 2.22.0 with VaultUnlocked 2.20.3 on Paper 1.21.11 | full player scenario with two bots passed (`tools/e2e/e2e.js`) |
+| any other Vault economy (CMI and others), Folia with an economy | not tested |
+
+Vault calls run on the global server thread (`economy.async-safe: false`).
+
 ## Provided by the server, not bundled
 
 Paper API, Adventure and MiniMessage (part of Paper), Vault API 1.7.1 (soft dependency), PlaceholderAPI 2.12.3 (soft dependency).
@@ -44,7 +53,7 @@ JUnit Jupiter 6.0.3, MockBukkit 4.116.3, AssertJ 3.27.7, Testcontainers 2.0.5. J
 | MariaDB 10.11 | tested in an earlier build only, not repeated for 1.0.0 |
 | MySQL | not supported. OrderHub stops with `MySQL is not supported` |
 
-Schema changes are versioned migrations V1 to V4 and run once at start against SQLite and MariaDB.
+Schema changes are versioned migrations V1 to V4 and run once at start against SQLite and MariaDB. Before a migration on an existing SQLite database OrderHub copies the database to `backups/`.
 
 ## Dependency vulnerability scan
 
