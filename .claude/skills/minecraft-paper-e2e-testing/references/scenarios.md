@@ -1,0 +1,73 @@
+# Writing Scenarios
+
+A scenario turns one planned operation into code that creates the condition, performs the action, and records evidence. The harness provides `defineScenario`, `E2eEnv` (server + bots + helper wrappers) and `Recorder`. See `paper-e2e/harness/examples` for a runnable example.
+
+## 1. Mapping from TESTING.md
+
+The planned operations are usually `OP-xxx`, but a repository's `TESTING.md` may use another prefix (for example `BT-xxx` for baseline smoke tests). Use its IDs unchanged in `id` and `covers`, and write down in the report that they correspond to `OP-xxx` here.
+
+| TESTING.md | Scenario |
+| --- | --- |
+| `OP-xxx` Setup | `setupCommands` and the bots in `bots`, plus setup at the start of `run` |
+| `OP-xxx` Operation | The actions in `run` (bot chat/commands, console commands, teleports) |
+| `OP-xxx` Verify / PASS criteria | `recorder.check(...)` calls with evidence |
+| `Covers` (`VP`, `CB`, `DP`) | The `covers` list, copied as-is |
+
+One scenario per operation keeps the traceability simple. Merge several observations into one scenario when the operation does, as planned.
+
+## 2. Shape of a scenario
+
+```ts
+export default defineScenario({
+  id: "OP-001",
+  title: "…",
+  covers: ["VP-001", "CB-001"],
+  bots: ["Admin", "A", "B"],
+  setupCommands: ["gamerule spawn_mobs false", "op Admin"],
+  async run(env, recorder) {
+    // 1. create the condition (regions, teams, entities, permissions)
+    // 2. perform the action
+    // 3. record what was observed, with evidence
+  },
+});
+```
+
+`recorder.check(id, title, ok, evidence, covers, { executed, expected })` requires non-empty evidence. `executed` and `expected` fill the report's Executed and Expected columns (a dash when omitted); fill them so the report table needs no rewriting. Use `recorder.unverified(...)` for anything the scenario cannot establish.
+
+## 3. Rules for good scenarios
+
+- **Assert on observations.** Use `bot.messages` (text and translation key), `bot.packets`, helper output (`env.position`, `env.helper`), and server log lines. Do not assert that a command "ran".
+- **Wait for the answer, not for time.** Prefer `env.sayUntil`, `bot.waitFor` and `server.runUntil` over `sleep`. Use a fixed window only for a negative check, and size it from the plugin's timing, not from habit.
+- **Pair every negative with a control.** For "player A must not receive X", also assert that player B does, in the same run. For "action denied", also assert it succeeds for an allowed actor or outside the protected area.
+- **When the control itself depends on the plugin, build another one.** If the plugin is what makes the positive case happen (for example the effect you want to compare against is the plugin's own), a plain "without the plugin" control is not available. Then use a control that does not need the plugin's logic: a second target that the plugin must treat differently (excluded vs. included), a run with the plugin's feature switched off by configuration, or the same scenario with the vanilla process only (for example random ticks) and the observation window fixed in advance. Say in the report which control you used and why.
+- **Count, do not just detect.** Count deliveries to catch duplicates.
+- **Use fixed, deterministic setups.** Teleport players to known coordinates, spawn entities with fixed names, set difficulty and gamerules, and clear bot buffers (`env.clearAll()`) right before the action.
+- **Reset between actions.** Put players and entities back (or spawn fresh ones) so one step does not change the next step's starting state. Players who die respawn automatically; re-teleport them.
+- **Check the whole matrix when the plugin has rules.** For allow/deny/unset flags or modes, enumerate the cases (member, non-member, bypass, outside) instead of a single happy path.
+- **Compare with the platform when the plugin reproduces platform behavior.** Run the same scenario without the plugin and compare, instead of relying on remembered expectations.
+- **Test persistence through a graceful restart.** Stop the server, check the file, start again with `fresh: false`, and observe behavior, not only the file.
+- **Test permissions through the real path.** Grant or deny the node with `env.permission(...)` (LuckPerms), then run the command as a non-operator bot and assert on the server's answer and on the unchanged behavior. Check the default, granted, and denied states.
+- **Record the exact observation.** Put the received text, packet name, coordinates, or counts in the evidence string.
+
+## 4. Useful recipes
+
+| Need | How |
+| --- | --- |
+| Operator-only setup through real commands | `op <name>` from the console, then the bot sends the command (for WorldEdit/WorldGuard: `//pos1`, `//pos2`, `/rg define`, `/rg flag`) |
+| Kill a player and observe the death message | console `kill <name>`; read `messages` whose `translate` starts with `death.` and the death screen packet (`death_combat_event`) |
+| Entity interaction | `e2espawn`, then `bot.useEntity(id, { sneaking })` / `bot.raw.attack(...)`; read health with `e2ehealth`. Do not use `bot.raw.activateEntity`: it always sends `sneaking: false`, so a plugin that reacts to sneak + click looks like it does nothing, and the check passes for the wrong reason. Test both sneaking states. |
+| Particles, sounds, chat packets | Declare `recordPackets` for the bot. Through ViaVersion the packet names are `world_particles`, `sound_effect` and `system_chat`. `sound_effect` carries a numeric `soundId`; map it to a name with the registry of the client version (`minecraft-data`), or compare against a control run instead of naming it. |
+| Equipment changes | `e2eequip <player> <slot> <material>` |
+| Teams | console `team add/join/modify` |
+| Another dimension | `env.teleport(name, x, y, z, { world })`, `env.inWorld(world, command)`; `forceload add` the chunks you use |
+| Place or remove blocks | `env.setBlock(...)` / `env.fill(...)`. These console commands, including `destroy` mode, do **not** fire `BlockBreakEvent` or other player events. To exercise a plugin's break handler, let a bot dig (if the protocol allows it without moving), or fire the event from a helper command; if neither is possible, mark the check `UNVERIFIED` instead of testing a different path. |
+| Per-scenario configuration | `files: { "plugins/<Plugin>/config.yml": "..." }` in the scenario (written before the server starts); for another jar, put it into `plugins/` before `run` |
+| Observe an event's final state | `e2elisten <fully.qualified.EventClass>` (logs after all listeners ran) |
+| Vehicles | place a rideable entity, drive it with repeated velocity from a helper or command, and sample the passenger's position |
+
+## 5. Common causes of wrong results
+
+- The control channel is broken (the bot died, was disconnected, or missed messages), so a "not received" result is meaningless. Always include the control.
+- A previous step left state behind (dead players, leftover entities, active effects).
+- Timing: the observation window is too short for scheduled work, or the check ran before the server applied a teleport.
+- The scenario, not the plugin, is wrong. Before reporting a plugin defect, look at the server log and reproduce once more with extra logging.

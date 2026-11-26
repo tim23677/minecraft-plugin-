@@ -18,3 +18,7 @@ Alle Zeiten 2026-11-26.
 14. Folia: Download und SHA-256 bestätigt, Lauf wegen fehlender EULA-Zustimmung nicht ausgeführt.
 15. Zweite Suche auf GitHub (Repository- und Code-Suche nach Minecraft, Paper, Folia, Claude-Skills, MCP). Eine Durchsuchung ganz GitHubs ist nicht möglich, die Suche ist begrenzt auf diese Begriffe. Elf Treffer, sechs davon geklont und geprüft.
 16. 13 Skills aus MJP-Paper-Skills, YueMi und Jahrome übernommen (siehe CLAUDE_SKILLS.md). Erster Kopierversuch für die zwei Jahrome-Skills schlug fehl (Verzeichnisse nicht angelegt), danach korrigiert.
+17. Dritte Suche (Testen, Simulieren, Coding-Hilfen). 40 Treffer gesichtet, sechs geklont. GitHub-API für Fremd-Repositories blockiert (HTTP 403), `git clone` funktioniert.
+18. okocraft-Skills und Richtlinien, bot-qa (nur Markdown) kopiert. Acht offizielle Plugins per `claude plugin install --scope project` eingetragen.
+19. mcstage: erster Build scheiterte mit HTTP 429 von Maven Central, Wiederholung erfolgreich, Wiederholungsschleife in setup.sh ergänzt.
+20. Erster mcstage-Lauf (Paper und Folia, EULA vom Nutzer erteilt): 2 von 2 fehlgeschlagen. Ursache war der Schritt `enabled:`, der bei Plugins vor "Done" nicht greift. Szenario auf `plugins`-Abfrage umgestellt, `level-type: flat` entfernt. Zweiter Lauf: 2 von 2 bestanden in 35,3 s.

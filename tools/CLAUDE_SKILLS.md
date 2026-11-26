@@ -22,6 +22,16 @@ Aus Jahrome907/minecraft-agent-skills: minecraft-plugin-dev, minecraft-testing. 
 
 Nicht installiert, obwohl in der Suche gefunden: FewPz/minedocs-mcp (keine Lizenz), kenvandine/FoliaNexa (GPL 3), jedbillyb/claude-bridge (keine Lizenz, Server-Plugin), sickn33/agentic-awesome-skills (zu breit, Inhalt durch die übrigen abgedeckt), java-gradle und java-concurrency aus YueMi (Skripte mit Bash-Freigabe, Überschneidung mit vorhandenen Skills und Agents).
 
+## Dritte Installation: Test, Simulation und Coding-Hilfen
+
+Skills (MIT/Apache 2.0, unverändert kopiert): minecraft-paper-e2e-testing und minecraft-paper-test-planning (okocraft/docs), dazu sechs Richtlinien in `.claude/guidelines` (Paper/Folia-Scheduling, Java-Tests, Plugin-Lebenszyklus, Gradle und CI, Konfiguration und Reload, E2E-Tests). minecraft-bot-qa (AIKUSAN), nur als Markdown.
+
+Einschränkungen, die ich vor dem Nutzen kennen muss: Der E2E-Skill setzt ein TypeScript-Testgerüst aus einem anderen Repository voraus (`okocraft/public-ops`, Ordner `paper-e2e`), das nicht installiert ist. Er beschreibt also das Vorgehen, führt aber ohne dieses Gerüst nichts aus. minecraft-bot-qa ist ohne seine Skripte unvollständig und bezieht sich auf einen fremden Quest-Server. Beide dienen bis auf Weiteres als Anleitung, nicht als fertiges Werkzeug.
+
+Plugins (offizieller Anthropic-Marketplace, projektlokal in `.claude/settings.json` eingetragen): jdtls-lsp, code-review, pr-review-toolkit, code-simplifier, security-guidance, feature-dev, commit-commands, claude-md-management. `claude plugin install` meldete für alle Erfolg. Ob sie bei der Arbeit richtig greifen, wurde nicht geprüft. security-guidance bringt Python-Hooks mit (`hooks/*.py`), die ich nicht Zeile für Zeile gelesen habe; die Quelle ist Anthropic selbst. jdtls-lsp braucht zusätzlich einen lokal installierten Eclipse-JDT-Language-Server, der hier nicht vorhanden ist.
+
+Nicht installiert: SalyyS1/minecraftkit (keine Lizenzdatei, Hosting-Zugriff mit Zugangsdaten), die Mineflayer-MCP-Server, spark, Fake-Player-Plugins, hatlas (keine Lizenz). Nicht geprüft und nicht installiert: itzg/docker-minecraft-server, jpenilla/run-task, PrismarineJS/mineflayer.
+
 ## Eigene Agents (5)
 
 paper-architect (nur lesend): Schichten, Scheduler-Regel, Storage-Grenzen.

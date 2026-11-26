@@ -20,8 +20,11 @@ Statusstufen: getestet (ausgeführt, Ergebnis geprüft), konfiguriert (in der Bu
 | OWASP Dependency-Check | 13.0.0 | konfiguriert | Analyse bricht ohne `NVD_API_KEY` ab |
 | Renovate | n/a | vorbereitet | `renovate.json` besteht den Validator, die GitHub-App ist nicht aktiviert |
 | Vault API (compileOnly) | 1.7.1 | konfiguriert | wird aufgelöst, noch nicht im Code benutzt |
-| Folia-Serverlauf | 1.21.11 Build 14 | vorbereitet | Download und SHA-256 geprüft, Lauf braucht EULA-Zustimmung |
-| Claude-Skills (21) und Agents (5) | siehe CLAUDE_SKILLS.md | getestet | `claude -p` listet alle Skills, die Agents wurden bei der ersten Installation geprüft |
+| mcstage | 0.56.0 (Commit 9df11b0) | getestet | echter Lauf auf Paper 1.21.11 und Folia 1.21.11, 2 von 2 bestanden |
+| Folia-Smoke-Skript (alt) | 1.21.11 Build 14 | ersetzt durch mcstage | nie ausgeführt |
+| Offizielle Plugins (8) | Marketplace claude-plugins-official | installiert | `claude plugin install` erfolgreich, Funktion nicht geprüft |
+| Test-Skills (okocraft, bot-qa) und 6 Richtlinien | siehe CLAUDE_SKILLS.md | installiert, nur Anleitung | ihnen fehlt das jeweilige Testgerüst |
+| Claude-Skills (24) und Agents (5) | siehe CLAUDE_SKILLS.md | getestet | `claude -p` listet alle Skills, die Agents wurden bei der ersten Installation geprüft |
 
 Nicht installiert: claude-java-plugins (keine Lizenz), FoliaScheduler (keine Lizenz, siehe Entscheidung), Zavelinski-Skills außer testsmith und secret-scan, Profiler, JMH, Gitleaks, API-Kompatibilitätswerkzeuge. Begründung in GITHUB_RESEARCH.md.
 

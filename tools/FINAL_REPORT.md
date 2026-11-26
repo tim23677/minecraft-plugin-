@@ -14,6 +14,10 @@ Acht Skills (java-code-review, concurrency-review, performance-smell-detection, 
 
 Gradle 9.9.2, Spotless 8.12.0, SpotBugs 4.10.5 (Plugin 6.5.13), Shadow 9.6.1, Dependency-Check 13.0.0, PIT 1.20.0 (Plugin 1.19.0), Testcontainers 2.0.5, MockBukkit 4.116.3, JUnit 6.0.3, AssertJ 3.27.7.
 
+Nachtrag: Später kamen 11 Skills (okocraft, bot-qa, Paper-Skills, siehe CLAUDE_SKILLS.md), sechs Richtlinien und acht offizielle Plugins hinzu. Gesamt 24 Skills, 5 Agents, 8 Plugins.
+
+Nachtrag Serverlauf: Der Folia-Punkt unter "Fehlgeschlagen oder nicht ausgeführt" ist überholt. Paper und Folia 1.21.11 wurden mit mcstage real gestartet und bestanden (PAPER_FOLIA_TESTING.md). Offen bleibt, dass das Gerüst keine Tasks startet und Spielerinteraktion nicht getestet wurde. Dependency-Check und Testcontainers sind weiterhin nicht ausgeführt.
+
 ## Verwendete Bibliotheken
 
 Paper API 1.21.11, Vault API 1.7.1 (nur Compile-Zeit), HikariCP 7.1.0, SLF4J 2.0.17, sqlite-jdbc 3.54.1.0, MariaDB Connector/J 4.0.0.

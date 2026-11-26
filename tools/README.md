@@ -19,3 +19,5 @@ Dateien
 - decisions/0001-scheduler.md: Entscheidung zur Scheduler-Abstraktion.
 - folia-test/: Skript für den echten Folia-Lauf.
 - licenses/: Lizenztexte der kopierten Skills und deren Herkunft.
+- mcstage/: Szenario und Skripte für echte Paper- und Folia-Läufe.
+- ../.claude/guidelines/: Richtlinien aus okocraft/docs für die Skills.

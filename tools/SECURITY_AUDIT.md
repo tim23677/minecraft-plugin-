@@ -23,6 +23,12 @@ ducpm2303/claude-java-plugins: keine LICENSE-Datei. Hooks vorhanden: Hinweisausg
 
 Geklont und je Skill-Ordner geprüft: MrPippi/MJP-Paper-Skills, Jahrome907/minecraft-agent-skills, YueMi-Development/Minecraft-Plugin-Templates, zusätzlich oberflächlich FewPz/minedocs-mcp, kenvandine/FoliaNexa, sickn33/agentic-awesome-skills. Die ausgewählten Skill-Ordner bestehen aus Markdown. Ausnahmen, die nicht übernommen wurden: je ein Shell- und Node-Skript bei minecraft-plugin-dev und minecraft-testing, ein Python-Skript und `allowed-tools: Read, Write, Bash, Glob, Grep` bei java-gradle. Keine Injection-Muster, keine Netzwerkaufrufe, keine Tool-Freigaben in den installierten Dateien. Die Repositories enthalten weitere Skripte (zum Beispiel einen Server-Download in MJP/scripts), die nicht installiert und nicht ausgeführt wurden. Die Prüfung der übrigen Dateien dieser Repositories war nur eine Mustersuche, keine Zeile-für-Zeile-Lektüre.
 
+## Dritte Installation (Test und Coding-Hilfen)
+
+okocraft-Skills, Richtlinien und bot-qa-Markdown: Mustersuche ohne Treffer auf Injection, Tool-Freigaben oder Netzwerkaufrufe; externe Hosts nur Dokumentationslinks (github.com, docs.papermc.io, docs.gradle.org, nodejs.org, adoptium.net). Bei bot-qa wurden die Skripte nicht übernommen, weil sie ein 100-KB-Paket mit Abhängigkeiten sind und zu einem fremden Server gehören. mcstage: Quellcode durchsucht, Netzwerkziele nur PaperMC und Purpur (Serverdownloads mit SHA-256-Prüfung) und lokale Adressen, Prozesse nur für den Testserver, Lesezugriff auf Umgebungsvariablen nur `MCSTAGE_HOME`, `MCSTAGE_JAVA`, `JAVA_HOME`. Die Quelle wird selbst gebaut statt ein Binary zu laden. Das ist eine Stichprobe über den Code, keine vollständige Prüfung. Offizielle Plugins: Quelle Anthropic. Hooks gefunden nur bei security-guidance (Python), nicht gelesen.
+
+Veränderung außerhalb des Projektordners: `claude plugin marketplace add` und `claude plugin install` haben den Marketplace und die Plugins in den Claude-Cache unter `~/.claude` geladen. Das ist der vorgesehene Ablauf dieser Befehle; die Konfiguration selbst liegt im Projekt. mcstage legt Serverjars unter `~/.mcstage/jars` ab.
+
 ## Zustand nach der ersten Installation
 
 In `.claude/` liegen 19 Markdown-Dateien und eine JSON-Datei (`settings.json`). Keine Skripte, keine Hooks, keine ausführbaren Dateien. Die einzigen URLs stehen in Literaturlisten der Skill-READMEs. Keine Skill setzt `allowed-tools`.

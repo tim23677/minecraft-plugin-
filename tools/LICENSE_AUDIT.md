@@ -14,6 +14,11 @@ Quelle der Angaben: LICENSE-Datei im geklonten Repository oder POM-Eintrag auf M
 | YueMi-Development/Minecraft-Plugin-Templates | MIT | drei Skills kopiert, Lizenztext in tools/licenses |
 | kenvandine/FoliaNexa | GPL 3.0 | nicht verwendet |
 | FewPz/minedocs-mcp | keine Lizenzangabe gefunden | nicht verwendet |
+| okocraft/docs | Apache 2.0 | zwei Skills und sechs Richtlinien kopiert |
+| AIKUSAN/minecraft-agent-skills-bundle | MIT | ein Skill (nur Markdown) kopiert |
+| SalyyS1/mcstage | Apache 2.0 | wird gebaut, nicht kopiert |
+| anthropics/claude-plugins-official | Apache 2.0 | nur deklariert |
+| SalyyS1/minecraftkit | keine Lizenzdatei gefunden | nicht verwendet |
 | ducpm2303/claude-java-plugins | keine LICENSE-Datei | nicht kopiert, nicht installiert |
 | CJCrafter/FoliaScheduler | keine LICENSE-Datei im Repository gefunden | nicht verwendet |
 

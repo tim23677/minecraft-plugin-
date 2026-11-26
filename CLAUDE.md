@@ -10,7 +10,7 @@ Kommerzielles Minecraft-Plugin für Paper und Folia. Java 21, Gradle Kotlin DSL,
 - `./gradlew integrationTest` startet Tests mit `@Tag("integration")` gegen Testcontainers. Braucht einen Docker-Daemon, sonst werden sie übersprungen.
 - `./gradlew pitest` misst die Mutationsabdeckung.
 - `./gradlew dependencyCheckAnalyze` prüft Abhängigkeiten auf bekannte Schwachstellen. Braucht die Umgebungsvariable `NVD_API_KEY`.
-- `ACCEPT_MINECRAFT_EULA=true tools/folia-test/run-folia-smoke.sh` startet einen echten Folia-Server. Die EULA-Zustimmung liegt beim Nutzer.
+- `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` startet echte Paper- und Folia-Server mit dem Jar (mcstage). Die EULA-Zustimmung liegt beim Nutzer.
 
 ## Regeln
 
