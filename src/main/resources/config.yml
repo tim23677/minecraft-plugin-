@@ -1,0 +1,114 @@
+# OrderHub: Hauptkonfiguration / main configuration
+# config-version wird vom Plugin verwaltet. Nicht aendern. / Managed by the plugin, do not edit.
+config-version: 1
+
+# Eindeutige Kennung dieses Servers. Bei mehreren Servern an einer gemeinsamen Datenbank
+# muss jeder Server eine andere Kennung haben. Erlaubt: a-z, 0-9, Bindestrich, max. 32 Zeichen.
+# Unique id of this server. Every server sharing a database needs its own id.
+server-id: "main"
+
+# Sprache der Spielertexte: en oder de (Dateien in plugins/OrderHub/lang). / Message language.
+language: "en"
+
+# Debug-Ausgaben in der Konsole (keine vertraulichen Daten). / Extra console output.
+debug: false
+
+storage:
+  # sqlite (ein Server, Standard) oder mariadb (mehrere Server, MariaDB). Aenderungen brauchen einen Neustart.
+  type: "sqlite"
+  sqlite:
+    # Dateiname im Plugin-Ordner, ohne Pfadteile.
+    file: "orderhub.db"
+  mariadb:
+    # Vollstaendige JDBC-URL. Fuer nicht lokale Server sslMode=verify-full oder verify-ca anhaengen.
+    jdbc-url: "jdbc:mariadb://localhost:3306/orderhub?sslMode=disable"
+    user: "orderhub"
+    # NAME der Umgebungsvariable, die das Passwort enthaelt. Das Passwort selbst steht nie in dieser Datei.
+    password-env: "ORDERHUB_DB_PASSWORD"
+    pool-size: 10
+  # Wiederholungen bei Deadlock oder Lock-Konflikt.
+  retry:
+    max-attempts: 5
+    initial-backoff-ms: 25
+    max-backoff-ms: 500
+
+orders:
+  # Preisgrenzen pro Stueck, Schreibweise wie im Spiel (z. B. 0.01, 1k, 2.5m).
+  min-unit-price: "0.01"
+  max-unit-price: "1000000"
+  # Maximale Menge pro Auftrag.
+  max-quantity: 2304
+  # Standard-Limit offener Auftraege. Permissions orderhub.limit.5/10/25/50 erhoehen es,
+  # es gilt das hoechste zutreffende Limit.
+  default-max-open-orders: 3
+  # Laufzeit in Stunden, danach laeuft der Auftrag ab und der Restbetrag wird erstattet.
+  expiry-hours: 168
+  # Eigener Abbruchbegriff bei Chat-Eingaben.
+  cancel-word: "cancel"
+  # Sekunden, die eine Chat-Eingabe wartet.
+  input-timeout-seconds: 60
+  # Aufträge pro Spieler und Minute (Rate Limit fuer Erstellung).
+  create-cooldown-seconds: 5
+
+fees:
+  # Gebuehren in Basispunkten (100 = 1 %). Permission orderhub.bypass.fee befreit von der Erstellgebuehr.
+  create-fee-bp: 100
+  sales-tax-bp: 200
+
+items:
+  # Standardmaessig abgelehnt. Mit true zulassen.
+  allow-custom-name: false
+  allow-lore: false
+  allow-enchanted: false
+  allow-damaged: false
+  # Zusaetzlich gesperrte Items (Material-Keys wie minecraft:elytra).
+  blocked-materials: []
+  # Zusaetzlich gesperrte Item-Tags (z. B. minecraft:banners).
+  blocked-tags: []
+
+delivery:
+  # Sekunden Ruhezeit zwischen zwei Klicks im Menue (Schutz vor Doppelklicks).
+  click-debounce-ms: 150
+
+cache:
+  # Maximale Eintraege je Cache. Der Cache ist nie die Wahrheit, nur Beschleunigung.
+  max-entries: 5000
+  # Wie oft die Datenbank-Outbox auf Aenderungen anderer Server geprueft wird.
+  sync-interval-seconds: 3
+
+payouts:
+  # Wie oft die Auszahlungswarteschlange abgearbeitet wird.
+  worker-interval-seconds: 2
+  # Maximale Wiederholungen bei sicher nicht ausgefuehrten Zahlungen.
+  max-attempts: 5
+
+market:
+  # Mindestanzahl abgeschlossener Handelsgeschaefte fuer eine Preisempfehlung.
+  min-trades-for-recommendation: 5
+  # Zeitraum der Empfehlung in Tagen.
+  recommendation-window-days: 7
+
+notifications:
+  # Mindestabstand zwischen zwei Benachrichtigungen gleicher Art an einen Spieler.
+  cooldown-seconds: 60
+  # Mehrere Benachrichtigungen innerhalb dieses Fensters werden zusammengefasst.
+  batch-window-seconds: 10
+
+reputation:
+  enabled: false
+
+retention:
+  # Aufbewahrung von Preisverlauf und Markt-Snapshots in Tagen.
+  history-days: 120
+  # Hintergrundbereinigung, Minuten zwischen zwei Laeufen.
+  cleanup-interval-minutes: 30
+
+sounds:
+  enabled: true
+  success: "entity.experience_orb.pickup"
+  error: "block.note_block.bass"
+  click: "ui.button.click"
+
+commands:
+  # Zusaetzliche Aliase fuer /order.
+  aliases: []

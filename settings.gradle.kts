@@ -11,6 +11,9 @@ dependencyResolutionManagement {
                 includeGroup("net.md-5")
             }
         }
+        maven("https://repo.helpch.at/releases/") {
+            content { includeGroup("me.clip") }
+        }
         maven("https://jitpack.io") {
             content { includeGroup("com.github.MilkBowl") }
         }
