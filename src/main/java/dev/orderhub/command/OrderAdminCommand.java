@@ -91,6 +91,11 @@ public final class OrderAdminCommand implements org.bukkit.command.TabExecutor {
             sender,
             () -> {
               var r = admin.cancel(id, actor, reason);
+              if (r.ok()) {
+                dev.orderhub.integration.Events.fire(
+                    new dev.orderhub.api.event.OrderCancelEvent(
+                        id, dev.orderhub.service.AdminService.SYSTEM, r.refunded()));
+              }
               reply(
                   sender,
                   r.ok()

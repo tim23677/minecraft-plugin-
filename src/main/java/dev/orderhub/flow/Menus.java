@@ -172,20 +172,34 @@ public final class Menus {
         s.logger(),
         player,
         () -> s.orders().cancelOrder(orderId, player.getUniqueId(), false),
-        r ->
-            player.sendMessage(
-                switch (r.status()) {
-                  case OK ->
-                      s.messages()
-                          .prefixed(
-                              "order.cancelled",
-                              Messages.number("id", orderId),
-                              Messages.text("refund", Money.format(r.refunded())));
-                  case NOT_FOUND ->
-                      s.messages().prefixed("order.not-found", Messages.number("id", orderId));
-                  case NOT_OWNER -> s.messages().prefixed("order.not-yours");
-                  default -> s.messages().prefixed("order.not-active");
-                }),
+        r -> {
+          if (r.ok()) {
+            s.scheduler()
+                .runAsync(() -> {
+                  dev.orderhub.integration.Events.fire(
+                      new dev.orderhub.api.event.OrderCancelEvent(
+                          orderId, player.getUniqueId(), r.refunded()));
+                  s.discord()
+                      .publish(
+                          dev.orderhub.discord.DiscordService.Event.ORDER_CANCELLED,
+                          "Order #" + orderId + " cancelled",
+                          "Cancelled by its owner, remaining escrow refunded");
+                });
+          }
+          player.sendMessage(
+              switch (r.status()) {
+                case OK ->
+                    s.messages()
+                        .prefixed(
+                            "order.cancelled",
+                            Messages.number("id", orderId),
+                            Messages.text("refund", Money.format(r.refunded())));
+                case NOT_FOUND ->
+                    s.messages().prefixed("order.not-found", Messages.number("id", orderId));
+                case NOT_OWNER -> s.messages().prefixed("order.not-yours");
+                default -> s.messages().prefixed("order.not-active");
+              });
+        },
         orphan -> {});
   }
 

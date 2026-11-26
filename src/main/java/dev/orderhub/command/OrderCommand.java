@@ -34,7 +34,8 @@ public final class OrderCommand implements org.bukkit.command.TabExecutor {
           "cancel",
           "stats",
           "history",
-          "favorites");
+          "favorites",
+          "analytics");
 
   private final Services s;
   private final CreateFlow create;
@@ -42,6 +43,7 @@ public final class OrderCommand implements org.bukkit.command.TabExecutor {
   private final Menus menus;
   private final ParcelFlow claims;
   private final ParcelFlow returns;
+  private final dev.orderhub.flow.InsightsFlow insights;
 
   public OrderCommand(
       Services services,
@@ -49,13 +51,15 @@ public final class OrderCommand implements org.bukkit.command.TabExecutor {
       DeliveryFlow delivery,
       Menus menus,
       ParcelFlow claims,
-      ParcelFlow returns) {
+      ParcelFlow returns,
+      dev.orderhub.flow.InsightsFlow insights) {
     this.s = services;
     this.create = create;
     this.delivery = delivery;
     this.menus = menus;
     this.claims = claims;
     this.returns = returns;
+    this.insights = insights;
   }
 
   @Override
@@ -113,10 +117,24 @@ public final class OrderCommand implements org.bukkit.command.TabExecutor {
           withId(player, args, menus::cancel);
         }
       }
-      case "stats", "history", "favorites" -> {
-        String perm = sub.equals("favorites") ? "orderhub.favorites" : "orderhub.stats";
-        if (need(player, perm)) {
-          player.sendMessage(s.messages().prefixed("general.not-available"));
+      case "stats" -> {
+        if (need(player, "orderhub.stats")) {
+          insights.showStats(player);
+        }
+      }
+      case "history" -> {
+        if (need(player, "orderhub.stats")) {
+          insights.showHistory(player);
+        }
+      }
+      case "favorites" -> {
+        if (need(player, "orderhub.favorites")) {
+          insights.favorites(player, args);
+        }
+      }
+      case "analytics" -> {
+        if (need(player, "orderhub.market")) {
+          insights.analytics(player, args.length > 1 ? args[1] : null);
         }
       }
       default -> player.sendMessage(s.messages().prefixed("general.unknown-subcommand"));

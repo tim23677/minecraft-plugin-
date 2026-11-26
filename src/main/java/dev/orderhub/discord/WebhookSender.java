@@ -44,13 +44,16 @@ public final class WebhookSender {
    * abweichen).
    */
   public Result send(URI target, String username, DiscordMessage message) {
+    return sendRaw(target, message.toJson(username));
+  }
+
+  /** Sendet einen fertigen JSON-Body (aus der Outbox). */
+  public Result sendRaw(URI target, String json) {
     HttpRequest request =
         HttpRequest.newBuilder(target)
             .timeout(Duration.ofSeconds(10))
             .header("Content-Type", "application/json")
-            .POST(
-                HttpRequest.BodyPublishers.ofString(
-                    message.toJson(username), StandardCharsets.UTF_8))
+            .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
             .build();
     try {
       HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());

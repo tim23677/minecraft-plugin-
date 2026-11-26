@@ -605,6 +605,14 @@ public final class OrderService {
    * erstattet.
    */
   public ExpiryReport expireDue(int batchSize) {
+    return expireDue(batchSize, id -> {});
+  }
+
+  /**
+   * Wie {@link #expireDue(int)}. {@code onExpired} wird je abgelaufenem Auftrag aufgerufen, nachdem
+   * die Transaktion festgeschrieben ist (nie innerhalb der Transaktion).
+   */
+  public ExpiryReport expireDue(int batchSize, java.util.function.LongConsumer onExpired) {
     int renewed = 0;
     int expired = 0;
     int errors = 0;
@@ -624,6 +632,11 @@ public final class OrderService {
           } else if (result == Expired.EXPIRED) {
             expired++;
             progress++;
+            try {
+              onExpired.accept(o.id());
+            } catch (RuntimeException ignored) {
+              // Ein fehlerhafter Listener darf den Ablauf nicht stoppen.
+            }
           }
         } catch (RuntimeException e) {
           errors++;

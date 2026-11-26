@@ -9,12 +9,17 @@ import dev.orderhub.command.OrderCommand;
 import dev.orderhub.config.Expiry;
 import dev.orderhub.config.Fees;
 import dev.orderhub.config.Limits;
+import dev.orderhub.discord.DiscordService;
+import dev.orderhub.discord.DiscordWorker;
+import dev.orderhub.discord.WebhookSender;
+import dev.orderhub.discord.WebhookUrl;
 import dev.orderhub.economy.EconomyBridge;
 import dev.orderhub.economy.UnavailableEconomy;
 import dev.orderhub.economy.vault.VaultHook;
 import dev.orderhub.flow.ChatInput;
 import dev.orderhub.flow.CreateFlow;
 import dev.orderhub.flow.DeliveryFlow;
+import dev.orderhub.flow.InsightsFlow;
 import dev.orderhub.flow.JoinListener;
 import dev.orderhub.flow.Menus;
 import dev.orderhub.flow.ParcelFlow;
@@ -31,6 +36,7 @@ import dev.orderhub.item.MatchPolicy;
 import dev.orderhub.item.RejectionReason;
 import dev.orderhub.scheduler.PluginScheduler;
 import dev.orderhub.service.AdminService;
+import dev.orderhub.service.InsightsService;
 import dev.orderhub.service.OrderService;
 import dev.orderhub.storage.JdbcStorage;
 import dev.orderhub.tx.AuditSink;
@@ -205,6 +211,13 @@ public class OrderHubPlugin extends JavaPlugin {
             (playerId, items) -> returnQueue.persist(playerId, items, !isEnabled()),
             new MenuConfig(st.clickDebounceMs()));
 
+    DiscordService discord = new DiscordService(storage, this::discordConfig, getLogger());
+    InsightsService insights =
+        new InsightsService(
+            storage,
+            discord,
+            () -> settings.notificationCooldownSeconds(),
+            () -> settings.minTradesForRecommendation());
     services =
         new Services(
             getLogger(),
@@ -220,7 +233,10 @@ public class OrderHubPlugin extends JavaPlugin {
             payouts,
             codec,
             matcher,
-            menus);
+            menus,
+            insights,
+            discord);
+    InsightsFlow insightsFlow = new InsightsFlow(services);
     ChatInput chat =
         new ChatInput(scheduler, () -> settings.cancelWord(), System::currentTimeMillis);
     CreateFlow create = new CreateFlow(services, chat);
@@ -233,10 +249,18 @@ public class OrderHubPlugin extends JavaPlugin {
     AdminService admin = new AdminService(storage, orders, recovery);
     register(
         "order",
-        new OrderCommand(services, create, deliveryFlow, menuViews, claimFlow, returnFlow));
+        new OrderCommand(
+            services, create, deliveryFlow, menuViews, claimFlow, returnFlow, insightsFlow));
     OrderAdminCommand adminCommand = new OrderAdminCommand(services, admin, this::reloadConfig0);
     register("orderadmin", adminCommand);
 
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.orderhub.api.OrderHubApi.class,
+            new dev.orderhub.integration.ApiImpl(services),
+            this,
+            org.bukkit.plugin.ServicePriority.Normal);
     var pm = getServer().getPluginManager();
     pm.registerEvents(new MenuListener(menus, getLogger()), this);
     pm.registerEvents(chat, this);
@@ -255,10 +279,93 @@ public class OrderHubPlugin extends JavaPlugin {
         5_000,
         st.payoutWorkerIntervalSeconds() * 1000L);
     scheduler.runAsyncRepeating(
-        () -> guarded("expiry sweep", () -> orders.expireDue(100)), 15_000, 60_000);
+        () ->
+            guarded(
+                "expiry sweep",
+                () ->
+                    orders.expireDue(
+                        100,
+                        id ->
+                            dev.orderhub.integration.Events.fire(
+                                new dev.orderhub.api.event.OrderExpireEvent(id)))),
+        15_000,
+        60_000);
     scheduler.runAsyncRepeating(() -> guarded("recovery sweep", recovery::sweep), 300_000, 300_000);
+    DiscordWorker discordWorker =
+        new DiscordWorker(storage, new WebhookSender(), discordWorkerConfig(), getLogger());
+    scheduler.runAsyncRepeating(
+        () -> guarded("discord worker", () -> discordWorker.runOnce(System.currentTimeMillis())),
+        10_000,
+        5_000);
+    scheduler.runAsyncRepeating(
+        () ->
+            guarded(
+                "history cleanup",
+                () -> insights.purge(settings.historyRetentionDays(), System.currentTimeMillis())),
+        120_000,
+        settings.cleanupIntervalMinutes() * 60_000L);
+    if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+      new dev.orderhub.placeholder.OrderHubExpansion(
+              services,
+              getPluginMeta().getVersion(),
+              new dev.orderhub.placeholder.PlaceholderCache(
+                  st.cacheMaxEntries(),
+                  15_000,
+                  System::currentTimeMillis,
+                  task -> scheduler.runAsync(task)))
+          .register();
+    }
     getLogger()
         .info("OrderHub enabled (server-id " + st.serverId() + ", " + storage.dialect() + ")");
+  }
+
+  private YamlConfiguration discordYml() {
+    return YamlConfiguration.loadConfiguration(new File(getDataFolder(), "discord.yml"));
+  }
+
+  private java.util.Optional<java.net.URI> webhookUri() {
+    YamlConfiguration yml = discordYml();
+    String env = System.getenv("ORDERHUB_DISCORD_WEBHOOK");
+    String raw = env != null && !env.isBlank() ? env : yml.getString("webhook-url", "");
+    var uri = WebhookUrl.validate(raw);
+    if (uri.isEmpty() && raw != null && !raw.isBlank()) {
+      getLogger().warning("discord.yml: webhook-url is not a valid Discord https URL, ignoring it");
+    }
+    return uri;
+  }
+
+  private DiscordService.Config discordConfig() {
+    YamlConfiguration yml = discordYml();
+    if (!yml.getBoolean("enabled", false)) {
+      return DiscordService.Config.disabled();
+    }
+    java.util.Set<DiscordService.Event> events = new java.util.HashSet<>();
+    for (DiscordService.Event e : DiscordService.Event.values()) {
+      if (yml.getBoolean("events." + e.key(), false)) {
+        events.add(e);
+      }
+    }
+    long threshold;
+    try {
+      threshold =
+          dev.orderhub.money.Money.parse(
+              String.valueOf(yml.get("large-order-threshold", "100000")));
+    } catch (NumberFormatException ex) {
+      threshold = dev.orderhub.money.Money.parse("100000");
+    }
+    return new DiscordService.Config(
+        true,
+        java.util.Objects.requireNonNullElse(yml.getString("username"), "OrderHub"),
+        events,
+        threshold);
+  }
+
+  private DiscordWorker.Config discordWorkerConfig() {
+    return new DiscordWorker.Config(
+        () -> discordYml().getBoolean("enabled", false) ? webhookUri() : java.util.Optional.empty(),
+        Math.max(1, discordYml().getInt("delivery.max-attempts", 6)),
+        Math.max(1, discordYml().getLong("delivery.initial-backoff-seconds", 5)),
+        Math.max(5, discordYml().getLong("delivery.max-backoff-seconds", 300)));
   }
 
   private List<Integer> deliverySlots() {

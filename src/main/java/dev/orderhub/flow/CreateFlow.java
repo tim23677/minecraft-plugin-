@@ -187,23 +187,32 @@ public final class CreateFlow {
         s.logger(),
         player,
         () -> s.orders().createOrder(request),
-        result -> report(player, template, quantity, result),
+        result -> report(player, template, snapshot, quantity, unit, result),
         orphan -> {});
   }
 
   private void report(
-      Player player, ItemStack template, int quantity, OrderService.CreateResult result) {
+      Player player,
+      ItemStack template,
+      ItemSnapshot snapshot,
+      int quantity,
+      long unit,
+      OrderService.CreateResult result) {
     var item = Messages.component("item", template.effectiveName());
     switch (result.status()) {
-      case CREATED, ALREADY_CREATED ->
-          player.sendMessage(
-              s.messages()
-                  .prefixed(
-                      "create.success",
-                      Messages.number("id", result.orderId() == null ? 0 : result.orderId()),
-                      Messages.number("quantity", quantity),
-                      item,
-                      Messages.text("total", Money.format(result.escrow()))));
+      case CREATED, ALREADY_CREATED -> {
+        if (result.status() == OrderService.CreateStatus.CREATED && result.orderId() != null) {
+          afterCreated(player, template, snapshot, quantity, unit, result);
+        }
+        player.sendMessage(
+            s.messages()
+                .prefixed(
+                    "create.success",
+                    Messages.number("id", result.orderId() == null ? 0 : result.orderId()),
+                    Messages.number("quantity", quantity),
+                    item,
+                    Messages.text("total", Money.format(result.escrow()))));
+      }
       case INSUFFICIENT_FUNDS ->
           player.sendMessage(
               s.messages()
@@ -225,6 +234,52 @@ public final class CreateFlow {
           player.sendMessage(s.messages().prefixed("general.database-error"));
       default -> player.sendMessage(s.messages().prefixed("general.busy"));
     }
+  }
+
+  /** Statistik, Preisalarme und Discord nach erfolgreicher Erstellung (asynchron). */
+  private void afterCreated(
+      Player player,
+      ItemStack template,
+      ItemSnapshot snapshot,
+      int quantity,
+      long unit,
+      OrderService.CreateResult result) {
+    long orderId = result.orderId();
+    UUID owner = player.getUniqueId();
+    s.scheduler()
+        .runAsync(() -> {
+          try {
+            dev.orderhub.integration.Events.fire(
+                new dev.orderhub.api.event.OrderCreateEvent(
+                    orderId, owner, snapshot.itemKey(), quantity, unit));
+            if (result.journalId() != null) {
+              dev.orderhub.integration.Events.fire(
+                  new dev.orderhub.api.event.TransactionStateChangeEvent(
+                      result.journalId(), "ESCROW_CREATE", "COMMITTED", result.escrow()));
+            }
+            List<UUID> notified =
+                s.insights().orderCreated(orderId, owner, snapshot.itemKey(), unit, quantity);
+            for (UUID target : notified) {
+              Player online = org.bukkit.Bukkit.getPlayer(target);
+              if (online != null) {
+                s.scheduler()
+                    .tryRunOn(
+                        online,
+                        () ->
+                            online.sendMessage(
+                                s.messages()
+                                    .prefixed(
+                                        "notify.price-alert",
+                                        Messages.number("quantity", quantity),
+                                        Messages.component("item", template.effectiveName()),
+                                        Messages.text("unit", Money.format(unit)),
+                                        Messages.number("id", orderId))));
+              }
+            }
+          } catch (RuntimeException e) {
+            s.logger().log(java.util.logging.Level.WARNING, "insights after create failed", e);
+          }
+        });
   }
 
   /** Grobe Kategorie fuer Filter, abgeleitet vom Material-Namen. */

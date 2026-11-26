@@ -26,6 +26,7 @@ public final class JoinListener implements Listener {
             player,
             () -> {
               returns.claimAll(player);
+              notes(player);
               claims.list(
                   player,
                   0,
@@ -40,5 +41,38 @@ public final class JoinListener implements Listener {
                     }
                   });
             });
+  }
+
+  /** Zeigt offene Benachrichtigungen gesammelt: wenige einzeln, viele als Zusammenfassung. */
+  private void notes(org.bukkit.entity.Player player) {
+    Async.supply(
+        s.scheduler(),
+        s.logger(),
+        player,
+        () -> s.insights().takeNotes(player.getUniqueId(), 50),
+        notes -> {
+          if (notes.isEmpty()) {
+            return;
+          }
+          if (notes.size() > 3) {
+            player.sendMessage(
+                s.messages().prefixed("notify.summary", Messages.number("count", notes.size())));
+            return;
+          }
+          for (var note : notes) {
+            String[] parts = note.payload().split("\\|");
+            if (note.kind().equals("price-alert") && parts.length == 4) {
+              player.sendMessage(
+                  s.messages()
+                      .prefixed(
+                          "notify.price-alert",
+                          Messages.text("item", parts[0]),
+                          Messages.text("quantity", parts[1]),
+                          Messages.text("unit", parts[2]),
+                          Messages.text("id", parts[3])));
+            }
+          }
+        },
+        orphan -> {});
   }
 }

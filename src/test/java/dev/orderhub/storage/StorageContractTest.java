@@ -1387,6 +1387,216 @@ abstract class StorageContractTest {
     }
   }
 
+  // ------------------------------------------------------------ Insights und Outbox
+
+  @Test
+  void statisticsAccumulateAndAreCreatedOnFirstUse() {
+    UUID supplier = UUID.randomUUID();
+    UUID buyer = UUID.randomUUID();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.insights().recordOrderCreated(buyer, TestData.T0);
+          u.insights().recordDelivery(supplier, buyer, 10, 1000, 980, TestData.T0 + 1);
+          u.insights().recordDelivery(supplier, buyer, 5, 500, 490, TestData.T0 + 2);
+          u.insights().recordOrderCompleted(buyer, TestData.T0 + 3);
+          return null;
+        });
+    var s = tx(storage(), (UnitOfWork u) -> u.insights().stats(supplier)).orElseThrow();
+    assertThat(s.itemsDelivered()).isEqualTo(15);
+    assertThat(s.moneyEarned()).isEqualTo(1470);
+    var b = tx(storage(), (UnitOfWork u) -> u.insights().stats(buyer)).orElseThrow();
+    assertThat(b.itemsReceived()).isEqualTo(15);
+    assertThat(b.moneySpent()).isEqualTo(1500);
+    assertThat(b.ordersCreated()).isEqualTo(1);
+    assertThat(b.ordersCompleted()).isEqualTo(1);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.insights().stats(UUID.randomUUID()))).isEmpty();
+  }
+
+  @Test
+  void tradesAreRecordedOnceAndFilteredByItemAndTime() {
+    UUID journal = UUID.randomUUID();
+    boolean first =
+        txBool(
+            storage(),
+            (UnitOfWork u) ->
+                u.insights()
+                    .recordTrade(journal, 1, "minecraft:diamond", 800, 4, TestData.T0 + 10));
+    boolean again =
+        txBool(
+            storage(),
+            (UnitOfWork u) ->
+                u.insights()
+                    .recordTrade(journal, 1, "minecraft:diamond", 800, 4, TestData.T0 + 10));
+    assertThat(first).isTrue();
+    assertThat(again).isFalse();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.insights()
+              .recordTrade(UUID.randomUUID(), 2, "minecraft:diamond", 900, 1, TestData.T0 + 5);
+          u.insights().recordTrade(UUID.randomUUID(), 3, "minecraft:coal", 5, 64, TestData.T0 + 20);
+          return null;
+        });
+    var rows =
+        tx(
+            storage(),
+            (UnitOfWork u) -> u.insights().tradesSince("minecraft:diamond", TestData.T0 + 6, 100));
+    assertThat(rows).hasSize(1);
+    assertThat(rows.get(0).unitPrice()).isEqualTo(800);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.insights().purgeTradesBefore(TestData.T0 + 15)))
+        .isGreaterThanOrEqualTo(2);
+  }
+
+  @Test
+  void openDemandCountsOnlyActiveOrdersOfTheItem() {
+    String key = "minecraft:demand-" + UUID.randomUUID();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.orders().insert(TestData.order(UUID.randomUUID(), key, 700, 10), TestData.T0);
+          u.orders().insert(TestData.order(UUID.randomUUID(), key, 900, 5), TestData.T0);
+          u.orders()
+              .insert(TestData.order(UUID.randomUUID(), "minecraft:other", 1, 1), TestData.T0);
+          return null;
+        });
+    var demand = tx(storage(), (UnitOfWork u) -> u.insights().openDemand(key, 50));
+    assertThat(demand).hasSize(2);
+    assertThat(demand.stream().mapToInt(d -> d.remaining()).sum()).isEqualTo(15);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.insights().activeItemKeys(500))).contains(key);
+  }
+
+  @Test
+  void favoritesAlertsAndCooldown() {
+    UUID p = UUID.randomUUID();
+    assertThat(
+            txBool(
+                storage(),
+                (UnitOfWork u) -> u.insights().addFavorite(p, "minecraft:gold_ingot", TestData.T0)))
+        .isTrue();
+    assertThat(
+            txBool(
+                storage(),
+                (UnitOfWork u) -> u.insights().addFavorite(p, "minecraft:gold_ingot", TestData.T0)))
+        .isFalse();
+    assertThat(
+            txBool(
+                storage(), (UnitOfWork u) -> u.insights().setAlert(p, "minecraft:gold_ingot", 50L)))
+        .isTrue();
+    assertThat(txBool(storage(), (UnitOfWork u) -> u.insights().setAlert(p, "minecraft:none", 50L)))
+        .isFalse();
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) -> u.insights().alertsFor("minecraft:gold_ingot", 49, TestData.T0)))
+        .isEmpty();
+    var hits =
+        tx(
+            storage(),
+            (UnitOfWork u) -> u.insights().alertsFor("minecraft:gold_ingot", 60, TestData.T0));
+    assertThat(hits).extracting(f -> f.player()).contains(p);
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.insights().touchAlert(p, "minecraft:gold_ingot", TestData.T0 + 100);
+          return null;
+        });
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.insights().alertsFor("minecraft:gold_ingot", 60, TestData.T0 + 50)))
+        .extracting(f -> f.player())
+        .doesNotContain(p);
+    assertThat(
+            txBool(
+                storage(),
+                (UnitOfWork u) -> u.insights().removeFavorite(p, "minecraft:gold_ingot")))
+        .isTrue();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.insights().favorites(p))).isEmpty();
+  }
+
+  @Test
+  void notificationsAreDeduplicatedAndMarkedDelivered() {
+    UUID p = UUID.randomUUID();
+    assertThat(
+            txBool(
+                storage(),
+                (UnitOfWork u) -> u.insights().addNote(p, "order", "a", "k1", TestData.T0)))
+        .isTrue();
+    assertThat(
+            txBool(
+                storage(),
+                (UnitOfWork u) -> u.insights().addNote(p, "order", "a", "k1", TestData.T0)))
+        .isFalse();
+    var pending = tx(storage(), (UnitOfWork u) -> u.insights().pendingNotes(p, 10));
+    assertThat(pending).hasSize(1);
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.insights()
+              .markNotesDelivered(pending.stream().map(n -> n.id()).toList(), TestData.T0 + 1);
+          return null;
+        });
+    assertThat(tx(storage(), (UnitOfWork u) -> u.insights().pendingNotes(p, 10))).isEmpty();
+  }
+
+  @Test
+  void discordOutboxLifecycleWithBackoff() {
+    String payload = "{\"x\":\"" + UUID.randomUUID() + "\"}";
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.outbox().enqueueDiscord(payload, TestData.T0);
+          return null;
+        });
+    var due = tx(storage(), (UnitOfWork u) -> u.outbox().dueDiscord(TestData.T0, 50));
+    var mine = due.stream().filter(i -> i.payload().equals(payload)).findFirst().orElseThrow();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.outbox().discordRetry(mine.id(), 1, TestData.T0 + 5000, "http 503", TestData.T0 + 1);
+          return null;
+        });
+    assertThat(
+            tx(storage(), (UnitOfWork u) -> u.outbox().dueDiscord(TestData.T0 + 1000, 50)).stream()
+                .anyMatch(i -> i.id() == mine.id()))
+        .isFalse();
+    assertThat(
+            tx(storage(), (UnitOfWork u) -> u.outbox().dueDiscord(TestData.T0 + 6000, 50)).stream()
+                .anyMatch(i -> i.id() == mine.id() && i.attempts() == 1))
+        .isTrue();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.outbox().discordSent(mine.id(), TestData.T0 + 7000);
+          return null;
+        });
+    assertThat(
+            tx(storage(), (UnitOfWork u) -> u.outbox().dueDiscord(TestData.T0 + 99_000, 50))
+                .stream()
+                .anyMatch(i -> i.id() == mine.id()))
+        .isFalse();
+  }
+
+  @Test
+  void cacheEventsAreVisibleToOtherServersOnly() {
+    long before = tx(storage(), (UnitOfWork u) -> u.outbox().latestCacheEventId());
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.outbox().publishCacheEvent("orders", "1", "server-a", TestData.T0);
+          u.outbox().publishCacheEvent("orders", "2", "server-b", TestData.T0 + 1);
+          return null;
+        });
+    var seenByA =
+        tx(storage(), (UnitOfWork u) -> u.outbox().cacheEventsAfter(before, "server-a", 50));
+    assertThat(seenByA).extracting(e -> e.payload()).containsExactly("2");
+    var seenByB =
+        tx(storage(), (UnitOfWork u) -> u.outbox().cacheEventsAfter(before, "server-b", 50));
+    assertThat(seenByB).extracting(e -> e.payload()).containsExactly("1");
+  }
+
   @FunctionalInterface
   interface ThrowingIntConsumer {
     void accept(int i) throws Exception;

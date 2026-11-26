@@ -237,6 +237,34 @@ public final class DeliveryFlow {
                     Messages.number("id", order.id()),
                     Messages.text("amount", Money.format(net))));
         s.scheduler().runAsync(() -> s.payouts().runOnce(10));
+        if (event != null) {
+          s.scheduler()
+              .runAsync(() -> {
+                dev.orderhub.integration.Events.fire(
+                    new dev.orderhub.api.event.OrderDeliveryEvent(
+                        event.orderId(),
+                        event.supplier(),
+                        event.owner(),
+                        event.itemKey(),
+                        event.quantity(),
+                        event.gross(),
+                        event.netPayout()));
+                dev.orderhub.integration.Events.fire(
+                    new dev.orderhub.api.event.TransactionStateChangeEvent(
+                        event.journalId(), "DELIVERY", "COMMITTED", event.gross()));
+                if (event.orderCompleted()) {
+                  dev.orderhub.integration.Events.fire(
+                      new dev.orderhub.api.event.OrderCompleteEvent(
+                          event.orderId(), event.owner(), event.itemKey()));
+                }
+                try {
+                  s.insights().deliveryCommitted(event);
+                } catch (RuntimeException e) {
+                  s.logger()
+                      .log(java.util.logging.Level.WARNING, "insights after delivery failed", e);
+                }
+              });
+        }
         notifyOwner(order, template, quantity, event != null && event.orderCompleted());
       }
       case REJECTED_ITEMS_RETURNED -> {

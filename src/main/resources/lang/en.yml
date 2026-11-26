@@ -71,17 +71,25 @@ market:
   recommendation: "<gray>Recommended price range for <item>: <white><low></white> to <white><high></white> (based on <trades> trades in <days> days)."
 
 favorites:
+  header: "<gradient:#4ea8de:#7b6cf6>Your favorites</gradient>"
+  empty: "<gray>No favorites. Hold an item and use <white>/order favorites add</white>."
+  line: "<gray><item> <dark_gray>|</dark_gray> alert from <white><alert></white>"
+  alert-off: "<yellow>Price alert for <item> removed."
+  unchanged: "<gray>Nothing changed for <item>."
+  not-a-favorite: "<red><item> is not one of your favorites yet. Add it first."
   added: "<green><item> added to favorites."
   removed: "<yellow><item> removed from favorites."
   alert-set: "<green>Price alert set for <item> at <price>."
 
 notify:
+  price-alert: "<aqua>Price alert: <quantity>x <item> wanted at <unit> each (order #<id>)."
   claims-waiting: "<aqua>You have <count> item packages waiting. Use <white>/order claims</white>."
   delivered: "<aqua>Order #<id>: <quantity>x <item> delivered."
   new-order: "<aqua>New order for <item>: <quantity>x at <unit> each."
   summary: "<aqua>You have <count> new notifications."
 
 admin:
+  warning: "<red>[OrderHub] <message>"
   help: "<gray>reload | list [status] | cancel <id> confirm <reason> | purge-expired confirm <reason> | transactions [player-uuid] | transaction <uuid> | inspect <id> | recovery confirm <reason> | statistics | debug"
   confirm-required: "<yellow>Repeat the command with <white>confirm</white> and a reason to proceed."
   reason-required: "<red>A reason is required."
@@ -151,3 +159,21 @@ lore:
   order-escrow: "<gray>Held in escrow: <white><escrow>"
   order-expires: "<gray>Expires in: <white><time>"
   order-min: "<gray>Minimum delivery: <white><min>"
+
+stats:
+  header: "<gradient:#4ea8de:#7b6cf6>Your statistics</gradient>"
+  empty: "<gray>No trades yet."
+  line: "<gray>Orders created <white><created></white>, completed <white><completed></white> (<rate>%). Delivered <white><delivered></white> items for <white><earned></white>. Received <white><received></white> items for <white><spent></white>."
+
+history:
+  header: "<gradient:#4ea8de:#7b6cf6>Your recent deliveries</gradient>"
+  empty: "<gray>No deliveries yet."
+  line: "<gray>Order #<order>: <white><quantity></white> items, <white><amount></white> gross (<state>)"
+
+analytics:
+  header: "<gradient:#4ea8de:#7b6cf6>Market: <item></gradient> <gray>(based on completed OrderHub trades and open orders)"
+  top-header: "<gray>Items with the most open orders:"
+  demand: "<gray>Open demand: <white><orders></white> orders, <white><units></white> items. Price low <white><low></white>, high <white><high></white>, median <white><median></white>, average <white><avg></white>."
+  no-demand: "<gray>No open orders for this item."
+  trades: "<gray><days> day(s): <white><trades></white> trades, <white><units></white> items, volume <white><volume></white>, median <white><median></white>, average <white><avg></white>."
+  no-trades: "<gray><days> day(s): no completed trades."

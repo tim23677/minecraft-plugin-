@@ -71,17 +71,25 @@ market:
   recommendation: "<gray>Empfohlener Preisbereich für <item>: <white><low></white> bis <white><high></white> (basierend auf <trades> Geschäften in <days> Tagen)."
 
 favorites:
+  header: "<gradient:#4ea8de:#7b6cf6>Deine Favoriten</gradient>"
+  empty: "<gray>Keine Favoriten. Halte ein Item und nutze <white>/order favorites add</white>."
+  line: "<gray><item> <dark_gray>|</dark_gray> Alarm ab <white><alert></white>"
+  alert-off: "<yellow>Preisalarm für <item> entfernt."
+  unchanged: "<gray>Für <item> hat sich nichts geändert."
+  not-a-favorite: "<red><item> ist noch kein Favorit. Füge es zuerst hinzu."
   added: "<green><item> zu den Favoriten hinzugefügt."
   removed: "<yellow><item> aus den Favoriten entfernt."
   alert-set: "<green>Preisalarm für <item> bei <price> gesetzt."
 
 notify:
+  price-alert: "<aqua>Preisalarm: <quantity>x <item> gesucht zu je <unit> (Auftrag #<id>)."
   claims-waiting: "<aqua>Es warten <count> Itempakete auf dich. Nutze <white>/order claims</white>."
   delivered: "<aqua>Auftrag #<id>: <quantity>x <item> geliefert."
   new-order: "<aqua>Neuer Auftrag für <item>: <quantity>x zu je <unit>."
   summary: "<aqua>Du hast <count> neue Benachrichtigungen."
 
 admin:
+  warning: "<red>[OrderHub] <message>"
   help: "<gray>reload | list [Status] | cancel <id> confirm <Grund> | purge-expired confirm <Grund> | transactions [Spieler-UUID] | transaction <uuid> | inspect <id> | recovery confirm <Grund> | statistics | debug"
   confirm-required: "<yellow>Wiederhole den Befehl mit <white>confirm</white> und einer Begründung."
   reason-required: "<red>Eine Begründung ist erforderlich."
@@ -151,3 +159,21 @@ lore:
   order-escrow: "<gray>Im Escrow: <white><escrow>"
   order-expires: "<gray>Läuft ab in: <white><time>"
   order-min: "<gray>Mindestlieferung: <white><min>"
+
+stats:
+  header: "<gradient:#4ea8de:#7b6cf6>Deine Statistik</gradient>"
+  empty: "<gray>Noch keine Geschäfte."
+  line: "<gray>Aufträge erstellt <white><created></white>, abgeschlossen <white><completed></white> (<rate>%). Geliefert <white><delivered></white> Items für <white><earned></white>. Erhalten <white><received></white> Items für <white><spent></white>."
+
+history:
+  header: "<gradient:#4ea8de:#7b6cf6>Deine letzten Lieferungen</gradient>"
+  empty: "<gray>Noch keine Lieferungen."
+  line: "<gray>Auftrag #<order>: <white><quantity></white> Items, <white><amount></white> brutto (<state>)"
+
+analytics:
+  header: "<gradient:#4ea8de:#7b6cf6>Markt: <item></gradient> <gray>(Basis: abgeschlossene OrderHub-Geschäfte und offene Aufträge)"
+  top-header: "<gray>Items mit den meisten offenen Aufträgen:"
+  demand: "<gray>Offene Nachfrage: <white><orders></white> Aufträge, <white><units></white> Items. Preis niedrigster <white><low></white>, höchster <white><high></white>, Median <white><median></white>, Durchschnitt <white><avg></white>."
+  no-demand: "<gray>Keine offenen Aufträge für dieses Item."
+  trades: "<gray><days> Tag(e): <white><trades></white> Geschäfte, <white><units></white> Items, Volumen <white><volume></white>, Median <white><median></white>, Durchschnitt <white><avg></white>."
+  no-trades: "<gray><days> Tag(e): keine abgeschlossenen Geschäfte."

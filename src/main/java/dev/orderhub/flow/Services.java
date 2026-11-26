@@ -3,10 +3,12 @@ package dev.orderhub.flow;
 import dev.orderhub.bootstrap.Messages;
 import dev.orderhub.bootstrap.Settings;
 import dev.orderhub.config.Limits;
+import dev.orderhub.discord.DiscordService;
 import dev.orderhub.gui.MenuManager;
 import dev.orderhub.item.ItemCodec;
 import dev.orderhub.item.ItemMatcher;
 import dev.orderhub.scheduler.PluginScheduler;
+import dev.orderhub.service.InsightsService;
 import dev.orderhub.service.OrderService;
 import dev.orderhub.storage.Storage;
 import dev.orderhub.tx.ClaimEngine;
@@ -35,4 +37,6 @@ public record Services(
     PayoutWorker payouts,
     ItemCodec codec,
     ItemMatcher matcher,
-    MenuManager menus) {}
+    MenuManager menus,
+    InsightsService insights,
+    DiscordService discord) {}
