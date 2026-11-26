@@ -1,0 +1,4 @@
+# Reihenfolge ist die Anwendungsreihenfolge innerhalb einer Version: common vor Dialekt.
+common/V1__core_schema.sql
+sqlite/V1__append_only_triggers.sql
+mariadb/V1__append_only_triggers.sql
