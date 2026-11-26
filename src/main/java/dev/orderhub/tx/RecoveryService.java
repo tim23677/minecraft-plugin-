@@ -67,8 +67,14 @@ public final class RecoveryService {
     handleStates(EnumSet.of(TxState.PAYOUT_PENDING), staleBefore, c, this::payoutPending);
     handleStates(EnumSet.of(TxState.PAYOUT_IN_PROGRESS), staleBefore, c, this::inProgress);
     escalateQueueInProgress(staleBefore, c);
-    c.claimsReleased += claims.releaseHanging(staleBefore);
-    c.returnsReleased += returns.releaseHanging(staleBefore);
+    var hangingClaims = claims.releaseHanging(staleBefore);
+    c.claimsReleased += hangingClaims.released();
+    c.claimsEscalated += hangingClaims.escalations().size();
+    c.escalations.addAll(hangingClaims.escalations());
+    var hangingReturns = returns.releaseHanging(staleBefore);
+    c.returnsReleased += hangingReturns.released();
+    c.returnsEscalated += hangingReturns.escalations().size();
+    c.escalations.addAll(hangingReturns.escalations());
     c.existingManualReview =
         TxRunner.run(
                 storage,
@@ -280,6 +286,8 @@ public final class RecoveryService {
     int createsEscalated;
     int claimsReleased;
     int returnsReleased;
+    int claimsEscalated;
+    int returnsEscalated;
     final Set<UUID> freshIds = new HashSet<>();
     int errors;
     int existingManualReview;
@@ -316,6 +324,8 @@ public final class RecoveryService {
           createsEscalated,
           claimsReleased,
           returnsReleased,
+          claimsEscalated,
+          returnsEscalated,
           freshIds.size(),
           errors,
           existingManualReview,

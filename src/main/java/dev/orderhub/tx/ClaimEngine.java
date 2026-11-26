@@ -7,6 +7,10 @@ import dev.orderhub.storage.UnitOfWork;
 public final class ClaimEngine extends ParcelTransferEngine {
 
   public ClaimEngine(Storage storage) {
-    super(storage, UnitOfWork::claims, TxType.CLAIM, "claim:");
+    this(storage, AuditSink.NOOP);
+  }
+
+  public ClaimEngine(Storage storage, AuditSink audit) {
+    super(storage, UnitOfWork::claims, TxType.CLAIM, "claim:", audit);
   }
 }

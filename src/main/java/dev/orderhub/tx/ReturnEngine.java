@@ -7,6 +7,10 @@ import dev.orderhub.storage.UnitOfWork;
 public final class ReturnEngine extends ParcelTransferEngine {
 
   public ReturnEngine(Storage storage) {
-    super(storage, UnitOfWork::returns, TxType.ITEM_RETURN, "return:");
+    this(storage, AuditSink.NOOP);
+  }
+
+  public ReturnEngine(Storage storage, AuditSink audit) {
+    super(storage, UnitOfWork::returns, TxType.ITEM_RETURN, "return:", audit);
   }
 }

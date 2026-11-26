@@ -14,6 +14,8 @@ public record RecoveryReport(
     int createsEscalated,
     int claimsReleased,
     int returnsReleased,
+    int claimsEscalated,
+    int returnsEscalated,
     int skippedFresh,
     int errors,
     int existingManualReview,
@@ -50,6 +52,10 @@ public record RecoveryReport(
         + claimsReleased
         + " returnsReleased="
         + returnsReleased
+        + " claimsEscalated="
+        + claimsEscalated
+        + " returnsEscalated="
+        + returnsEscalated
         + " skippedFresh="
         + skippedFresh
         + " errors="

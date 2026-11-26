@@ -4,16 +4,27 @@ import dev.orderhub.domain.ItemSnapshot;
 import dev.orderhub.storage.ParcelRepository;
 import dev.orderhub.storage.Storage;
 import dev.orderhub.storage.UnitOfWork;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
 /**
  * Gemeinsame Mechanik fuer Claims (Items an den Auftraggeber) und Returns (Items an Lieferanten).
- * Ablauf: {@link #reserve} reserviert das Paket und merkt die Menge vor, die in das Inventar passt;
- * der Aufrufer legt die Items ins Inventar und meldet die tatsaechlich uebergebene Menge mit
- * {@link #settle}. Journal: CLAIM_PENDING, dann CLAIM_COMPLETED oder DELIVERY_STORED.
+ *
+ * <p>Ablauf: {@link #reserve} reserviert das Paket und merkt die Menge vor, die ins Inventar passt
+ * (Journal COMMITTED, "Uebergabe nicht begonnen"). {@link #beginHandover} persistiert den Marker
+ * "Uebergabe begonnen" (CLAIM_PENDING) und MUSS vor dem Ablegen der Items im Inventar erfolgreich
+ * sein. Danach meldet der Aufrufer die tatsaechlich uebergebene Menge mit {@link #settle}
+ * (CLAIM_COMPLETED) oder 0 (DELIVERY_STORED).
+ *
+ * <p>Recovery: Reservierungen ohne Marker gibt die Recovery frei, weil belegbar nie etwas
+ * uebergeben wurde. Haengende Reservierungen mit Marker haben unbekannten Ausgang (die Items
+ * koennen schon beim Spieler sein) und gehen nach MANUAL_REVIEW, das Paket bleibt RESERVED. Eine
+ * automatische Freigabe wuerde sonst ein zweites Abholen erlauben (Item-Dupe).
  */
 public abstract class ParcelTransferEngine {
 
@@ -29,7 +40,7 @@ public abstract class ParcelTransferEngine {
   }
 
   /**
-   * @param journalId Kennung der Reservierung, wird an settle uebergeben
+   * @param journalId Kennung der Reservierung, wird an beginHandover und settle uebergeben
    * @param quantity Menge, die der Aufrufer ins Inventar legen darf
    */
   public record Reservation(
@@ -37,6 +48,15 @@ public abstract class ParcelTransferEngine {
     public boolean reserved() {
       return status == ReserveStatus.RESERVED;
     }
+  }
+
+  /** Ausgang von beginHandover. */
+  public enum HandoverStatus {
+    STARTED,
+    ALREADY_STARTED,
+    NOT_FOUND,
+    /** Reservierung wurde freigegeben oder liegt in MANUAL_REVIEW: nichts uebergeben! */
+    NOT_ALLOWED
   }
 
   /** Ausgang von settle. */
@@ -47,20 +67,33 @@ public abstract class ParcelTransferEngine {
     ALREADY_RELEASED,
     NOT_FOUND,
     INVALID_AMOUNT,
-    INVALID_STATE
+    INVALID_STATE,
+    /** Uebergabe gemeldet, obwohl die Reservierung freigegeben wurde: Fehler, wird protokolliert. */
+    CONFLICT_RELEASED,
+    /** Uebergabe gemeldet, der Eintrag liegt aber in MANUAL_REVIEW: Fehler, wird protokolliert. */
+    CONFLICT_UNDER_REVIEW
   }
+
+  /** Ergebnis von {@link #releaseHanging}. */
+  public record HangingResult(int released, List<RecoveryReport.Escalation> escalations) {}
 
   private final Storage storage;
   private final Function<UnitOfWork, ParcelRepository> repo;
   private final TxType type;
   private final String prefix;
+  private final AuditSink audit;
 
   protected ParcelTransferEngine(
-      Storage storage, Function<UnitOfWork, ParcelRepository> repo, TxType type, String prefix) {
+      Storage storage,
+      Function<UnitOfWork, ParcelRepository> repo,
+      TxType type,
+      String prefix,
+      AuditSink audit) {
     this.storage = storage;
     this.repo = repo;
     this.type = type;
     this.prefix = prefix;
+    this.audit = audit;
   }
 
   /**
@@ -81,7 +114,7 @@ public abstract class ParcelTransferEngine {
       JournalEntry e = existing.get();
       ReserveStatus status =
           switch (e.state()) {
-            case CLAIM_PENDING -> ReserveStatus.RESERVED;
+            case COMMITTED, CLAIM_PENDING -> ReserveStatus.RESERVED;
             case CLAIM_COMPLETED -> ReserveStatus.ALREADY_SETTLED;
             default -> ReserveStatus.ALREADY_RELEASED;
           };
@@ -122,13 +155,33 @@ public abstract class ParcelTransferEngine {
       throw new JournalSteps.StaleJournalException(inserted.entry(), TxState.CREATED);
     }
     JournalSteps.chain(
-        uow,
-        inserted.entry(),
-        "parcel=" + parcelId,
-        TxState.PREPARED,
-        TxState.COMMITTED,
-        TxState.CLAIM_PENDING);
+        uow, inserted.entry(), "parcel=" + parcelId, TxState.PREPARED, TxState.COMMITTED);
     return new Reservation(ReserveStatus.RESERVED, created.id(), parcelId, parcel.item(), quantity);
+  }
+
+  /**
+   * Persistiert den Marker "Uebergabe begonnen" (COMMITTED nach CLAIM_PENDING). Aufruf VOR dem
+   * Ablegen der Items im Inventar; nur bei {@code STARTED} oder {@code ALREADY_STARTED} darf
+   * uebergeben werden.
+   */
+  public HandoverStatus beginHandover(UUID journalId) {
+    return TxRunner.run(
+        storage,
+        uow -> {
+          Optional<JournalEntry> found = uow.journal().find(journalId);
+          if (found.isEmpty() || found.get().type() != type) {
+            return HandoverStatus.NOT_FOUND;
+          }
+          JournalEntry e = found.get();
+          return switch (e.state()) {
+            case COMMITTED -> {
+              JournalSteps.to(uow, e, TxState.CLAIM_PENDING, e.detail() + ";handover-started");
+              yield HandoverStatus.STARTED;
+            }
+            case CLAIM_PENDING -> HandoverStatus.ALREADY_STARTED;
+            default -> HandoverStatus.NOT_ALLOWED;
+          };
+        });
   }
 
   /**
@@ -137,7 +190,22 @@ public abstract class ParcelTransferEngine {
    * @param transferred tatsaechlich ins Inventar gelegte Menge; 0 gibt das Paket wieder frei
    */
   public SettleStatus settle(UUID journalId, int transferred) {
-    return TxRunner.run(storage, uow -> settleTx(uow, journalId, transferred));
+    SettleStatus status = TxRunner.run(storage, uow -> settleTx(uow, journalId, transferred));
+    if (status == SettleStatus.CONFLICT_RELEASED
+        || status == SettleStatus.CONFLICT_UNDER_REVIEW
+        || status == SettleStatus.INVALID_STATE) {
+      audit.adminWarning(
+          "OrderHub "
+              + type
+              + ": settle("
+              + transferred
+              + ") fuer "
+              + journalId
+              + " abgelehnt: "
+              + status
+              + ". Moegliche Inkonsistenz, manuell pruefen.");
+    }
+    return status;
   }
 
   private SettleStatus settleTx(UnitOfWork uow, UUID journalId, int transferred) {
@@ -149,17 +217,25 @@ public abstract class ParcelTransferEngine {
     switch (e.state()) {
       case CLAIM_PENDING:
         break;
+      case COMMITTED:
+        // Uebergabe nie begonnen: nur die Freigabe (0) ist zulaessig, eine Menge waere Protokollbruch.
+        if (transferred != 0) {
+          return SettleStatus.INVALID_STATE;
+        }
+        break;
       case CLAIM_COMPLETED:
         return SettleStatus.ALREADY_SETTLED;
       case DELIVERY_STORED:
-        return SettleStatus.ALREADY_RELEASED;
+        return transferred == 0 ? SettleStatus.ALREADY_RELEASED : SettleStatus.CONFLICT_RELEASED;
+      case MANUAL_REVIEW:
+        return transferred == 0 ? SettleStatus.INVALID_STATE : SettleStatus.CONFLICT_UNDER_REVIEW;
       default:
         return SettleStatus.INVALID_STATE;
     }
     if (transferred < 0 || transferred > e.quantity()) {
       return SettleStatus.INVALID_AMOUNT;
     }
-    Long parcelId = parcelIdOf(uow, e);
+    Long parcelId = JournalSteps.numberFromDetail(e.detail(), "parcel");
     if (parcelId == null) {
       return SettleStatus.INVALID_STATE;
     }
@@ -177,19 +253,16 @@ public abstract class ParcelTransferEngine {
     return SettleStatus.SETTLED;
   }
 
-  /** Das Paket steht in der Detailnotiz des Eintrags (das Journal hat kein eigenes Feld). */
-  private static Long parcelIdOf(UnitOfWork uow, JournalEntry e) {
-    return JournalSteps.numberFromDetail(e.detail(), "parcel");
-  }
-
   /**
-   * Gibt haengende Reservierungen frei, die seit mindestens {@code staleBefore} (Millis) nicht
-   * veraendert wurden. Fuer die Recovery.
-   *
-   * @return Anzahl freigegebener Reservierungen
+   * Behandelt seit {@code staleBefore} (Millis) unveraenderte Reservierungen. Nur Eintraege im
+   * Zustand COMMITTED (belegbar keine Uebergabe) werden freigegeben. CLAIM_PENDING (Uebergabe
+   * begonnen, Ausgang unbekannt) geht nach MANUAL_REVIEW, das Paket bleibt RESERVED. Reservierungen
+   * ohne Journal werden nur gemeldet. Nie automatisch freigeben: sonst Item-Dupe.
    */
-  public int releaseHanging(long staleBefore) {
+  public HangingResult releaseHanging(long staleBefore) {
     int released = 0;
+    List<RecoveryReport.Escalation> escalations = new ArrayList<>();
+    Set<UUID> reported = new HashSet<>();
     int progress;
     do {
       progress = 0;
@@ -199,28 +272,65 @@ public abstract class ParcelTransferEngine {
         if (p.updatedAt() > staleBefore || p.reservedBy() == null) {
           continue;
         }
-        Boolean done =
-            TxRunner.run(
-                storage,
-                uow -> {
-                  if (!repo.apply(uow).releaseReservation(p.id(), p.reservedBy(), uow.now())) {
-                    return false;
-                  }
-                  uow.journal()
-                      .find(p.reservedBy())
-                      .filter(j -> j.state().canTransitionTo(TxState.DELIVERY_STORED))
-                      .ifPresent(
-                          j ->
-                              JournalSteps.to(
-                                  uow, j, TxState.DELIVERY_STORED, "parcel=" + p.id() + ";recovered"));
-                  return true;
-                });
-        if (done) {
-          progress++;
+        Optional<JournalEntry> journal =
+            TxRunner.run(storage, uow -> uow.journal().find(p.reservedBy()));
+        if (journal.isEmpty()) {
+          if (reported.add(p.reservedBy())) {
+            escalations.add(
+                new RecoveryReport.Escalation(
+                    p.reservedBy(), type, p.owner(), p.quantity(), "reservation without journal"));
+          }
+          continue;
         }
+        JournalEntry j = journal.get();
+        if (j.state() == TxState.COMMITTED) {
+          boolean done =
+              TxRunner.run(
+                  storage,
+                  uow -> {
+                    JournalEntry cur = uow.journal().find(j.id()).orElseThrow();
+                    if (cur.state() != TxState.COMMITTED
+                        || !repo.apply(uow).releaseReservation(p.id(), j.id(), uow.now())) {
+                      return false;
+                    }
+                    JournalSteps.to(
+                        uow, cur, TxState.DELIVERY_STORED, "parcel=" + p.id() + ";recovered");
+                    return true;
+                  });
+          if (done) {
+            released++;
+            progress++;
+          }
+        } else if (j.state() == TxState.CLAIM_PENDING) {
+          boolean escalated =
+              TxRunner.run(
+                  storage,
+                  uow -> {
+                    JournalEntry cur = uow.journal().find(j.id()).orElseThrow();
+                    if (cur.state() != TxState.CLAIM_PENDING) {
+                      return false;
+                    }
+                    JournalSteps.to(
+                        uow,
+                        cur,
+                        TxState.MANUAL_REVIEW,
+                        "parcel=" + p.id() + ";handover outcome unknown");
+                    return true;
+                  });
+          if (escalated) {
+            escalations.add(
+                new RecoveryReport.Escalation(
+                    j.id(),
+                    type,
+                    p.owner(),
+                    j.quantity(),
+                    "handover started, outcome unknown; parcel " + p.id() + " stays RESERVED"));
+            progress++;
+          }
+        }
+        // MANUAL_REVIEW: bereits eskaliert, Paket bleibt RESERVED, keine erneute Meldung.
       }
-      released += progress;
     } while (progress > 0);
-    return released;
+    return new HangingResult(released, escalations);
   }
 }
