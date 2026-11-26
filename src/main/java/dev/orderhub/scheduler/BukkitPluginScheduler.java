@@ -24,6 +24,19 @@ final class BukkitPluginScheduler implements PluginScheduler {
   }
 
   @Override
+  public boolean tryRunOn(Entity entity, Runnable task) {
+    if (!plugin.isEnabled()) {
+      return false;
+    }
+    try {
+      plugin.getServer().getScheduler().runTask(plugin, task);
+      return true;
+    } catch (RuntimeException e) {
+      return false;
+    }
+  }
+
+  @Override
   public void runGlobal(Runnable task) {
     plugin.getServer().getScheduler().runTask(plugin, task);
   }

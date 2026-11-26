@@ -24,6 +24,15 @@ final class FoliaPluginScheduler implements PluginScheduler {
   }
 
   @Override
+  public boolean tryRunOn(Entity entity, Runnable task) {
+    try {
+      return entity.getScheduler().run(plugin, t -> task.run(), null) != null;
+    } catch (RuntimeException e) {
+      return false;
+    }
+  }
+
+  @Override
   public void runGlobal(Runnable task) {
     plugin.getServer().getGlobalRegionScheduler().run(plugin, t -> task.run());
   }

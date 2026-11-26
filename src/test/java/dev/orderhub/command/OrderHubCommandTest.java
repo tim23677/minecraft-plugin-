@@ -3,7 +3,7 @@ package dev.orderhub.command;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.orderhub.OrderHubPlugin;
-import dev.orderhub.gui.OrderHubMenu;
+import dev.orderhub.gui.MainMenu;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +31,7 @@ class OrderHubCommandTest {
     PlayerMock player = server.addPlayer();
     player.performCommand("orderhub");
     assertThat(player.getOpenInventory().getTopInventory().getHolder())
-        .isInstanceOf(OrderHubMenu.class);
+        .isInstanceOf(MainMenu.class);
   }
 
   @Test
