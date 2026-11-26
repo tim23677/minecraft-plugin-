@@ -44,4 +44,77 @@ class ConfigUpdaterTest {
     assertThat(ConfigUpdater.mergeDefaults(file, yaml("a: 2\n"))).isZero();
     assertThat(dir.resolve("c.yml.bak")).doesNotExist();
   }
+
+  private static final String BUNDLED_V2 =
+      "# Kopf\nconfig-version: 2\nfees:\n  # Gebuehr in Basispunkten\n  create-fee-bp: 100\nnew-option: 7\n";
+
+  @Test
+  void migratesVersionOneRemovesObsoleteOptionsAndKeepsUserValues(@TempDir Path dir)
+      throws Exception {
+    Path file = dir.resolve("config.yml");
+    Files.writeString(
+        file,
+        "config-version: 1\nfees:\n  # eigene Notiz\n  create-fee-bp: 250\n"
+            + "sounds:\n  enabled: true\ncommands:\n  aliases: []\nreputation:\n  enabled: false\n"
+            + "cache:\n  sync-interval-seconds: 3\n  max-entries: 99\n");
+    var migrations = ConfigUpdater.migrationsFor("config.yml");
+    var result = ConfigUpdater.update(file, yaml(BUNDLED_V2), "config-version", migrations);
+
+    assertThat(result.fromVersion()).isEqualTo(1);
+    assertThat(result.toVersion()).isEqualTo(2);
+    assertThat(result.removed()).isPositive();
+    YamlConfiguration migrated = YamlConfiguration.loadConfiguration(file.toFile());
+    assertThat(migrated.getInt("config-version")).isEqualTo(2);
+    assertThat(migrated.getInt("fees.create-fee-bp")).isEqualTo(250); // Wert der Benutzerin bleibt
+    assertThat(migrated.getInt("cache.max-entries")).isEqualTo(99);
+    assertThat(migrated.contains("sounds")).isFalse();
+    assertThat(migrated.contains("commands")).isFalse();
+    assertThat(migrated.contains("reputation")).isFalse();
+    assertThat(migrated.contains("cache.sync-interval-seconds")).isFalse();
+    assertThat(migrated.getInt("new-option")).isEqualTo(7); // neue Option ergaenzt
+    assertThat(dir.resolve("config.yml.bak")).exists();
+    assertThat(Files.readString(dir.resolve("config.yml.bak"))).contains("sounds:");
+    assertThat(Files.readString(file)).contains("# eigene Notiz"); // Kommentar bleibt erhalten
+  }
+
+  @Test
+  void aSecondRunChangesNothing(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("config.yml");
+    Files.writeString(
+        file, "config-version: 1\nfees:\n  create-fee-bp: 100\nsounds:\n  enabled: true\n");
+    var migrations = ConfigUpdater.migrationsFor("config.yml");
+    ConfigUpdater.update(file, yaml(BUNDLED_V2), "config-version", migrations);
+    String after = Files.readString(file);
+    Files.delete(dir.resolve("config.yml.bak"));
+    var again = ConfigUpdater.update(file, yaml(BUNDLED_V2), "config-version", migrations);
+    assertThat(again.added()).isZero();
+    assertThat(again.removed()).isZero();
+    assertThat(Files.readString(file)).isEqualTo(after);
+    assertThat(dir.resolve("config.yml.bak")).doesNotExist();
+  }
+
+  @Test
+  void aFileFromANewerPluginIsLeftUntouched(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("config.yml");
+    String original = "config-version: 5\nsounds:\n  enabled: true\n";
+    Files.writeString(file, original);
+    var result =
+        ConfigUpdater.update(
+            file, yaml(BUNDLED_V2), "config-version", ConfigUpdater.migrationsFor("config.yml"));
+    assertThat(result.newerThanPlugin()).isTrue();
+    assertThat(Files.readString(file)).isEqualTo(original);
+    assertThat(dir.resolve("config.yml.bak")).doesNotExist();
+  }
+
+  @Test
+  void theBundledConfigVersionHasAMigrationPath() throws Exception {
+    YamlConfiguration bundled = new YamlConfiguration();
+    try (var in = getClass().getClassLoader().getResourceAsStream("config.yml")) {
+      bundled.load(new java.io.InputStreamReader(in, StandardCharsets.UTF_8));
+    }
+    int version = bundled.getInt("config-version");
+    assertThat(ConfigUpdater.migrationsFor("config.yml"))
+        .extracting(ConfigUpdater.Migration::toVersion)
+        .contains(version);
+  }
 }

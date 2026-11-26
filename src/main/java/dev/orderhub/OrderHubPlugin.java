@@ -163,9 +163,38 @@ public class OrderHubPlugin extends JavaPlugin {
         if (in == null) {
           throw new IOException("bundled resource missing: " + name);
         }
-        int added = ConfigUpdater.mergeDefaults(target.toPath(), in);
-        if (added > 0) {
-          getLogger().info(name + ": " + added + " new option(s) added with default values");
+        ConfigUpdater.Result result =
+            ConfigUpdater.update(
+                target.toPath(),
+                in,
+                ConfigUpdater.versionKeyFor(name),
+                ConfigUpdater.migrationsFor(name));
+        if (result.newerThanPlugin()) {
+          getLogger()
+              .warning(
+                  name
+                      + " has version "
+                      + result.fromVersion()
+                      + ", newer than this plugin knows ("
+                      + result.toVersion()
+                      + "). It is left unchanged, was it written by a newer OrderHub?");
+        } else if (result.fromVersion() != result.toVersion()) {
+          getLogger()
+              .info(
+                  name
+                      + ": migrated from version "
+                      + result.fromVersion()
+                      + " to "
+                      + result.toVersion()
+                      + " ("
+                      + result.removed()
+                      + " obsolete option(s) removed, backup in "
+                      + name
+                      + ".bak)");
+        }
+        if (result.added() > 0) {
+          getLogger()
+              .info(name + ": " + result.added() + " new option(s) added with default values");
         }
       }
     }

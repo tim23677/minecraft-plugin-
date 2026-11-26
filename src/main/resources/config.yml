@@ -1,6 +1,6 @@
 # OrderHub: Hauptkonfiguration / main configuration
 # config-version wird vom Plugin verwaltet. Nicht aendern. / Managed by the plugin, do not edit.
-config-version: 1
+config-version: 2
 
 # Eindeutige Kennung dieses Servers. Bei mehreren Servern an einer gemeinsamen Datenbank
 # muss jeder Server eine andere Kennung haben. Erlaubt: a-z, 0-9, Bindestrich, max. 32 Zeichen.
