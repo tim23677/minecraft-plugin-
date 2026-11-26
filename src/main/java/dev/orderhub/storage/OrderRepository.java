@@ -28,6 +28,14 @@ public interface OrderRepository {
 
   long count(OrderQuery query);
 
+  /**
+   * Serialisiert Transaktionen desselben Spielers bis Transaktionsende (z. B. "zaehle offene
+   * Auftraege, dann lege an" ueber mehrere Server). MariaDB legt bei Bedarf eine Zeile in {@code
+   * escrow_accounts} an und sperrt sie per {@code FOR UPDATE}; SQLite braucht nichts, {@code BEGIN
+   * IMMEDIATE} serialisiert bereits.
+   */
+  void lockOwner(UUID owner);
+
   /** Anzahl ACTIVE und PAUSED Auftraege des Spielers. */
   int countOpenByOwner(UUID owner);
 
