@@ -17,6 +17,7 @@ java {
 dependencies {
     compileOnly(libs.paper.api)
     compileOnly(libs.vault.api) { exclude(group = "org.bukkit") }
+    compileOnly(libs.placeholderapi)
     compileOnly(libs.spotbugs.annotations)
 
     implementation(libs.hikaricp)
