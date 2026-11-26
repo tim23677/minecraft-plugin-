@@ -139,7 +139,7 @@ abstract class StorageContractTest {
         Statement st = c.createStatement();
         var rs = st.executeQuery("SELECT COUNT(*), MIN(LENGTH(checksum)) FROM schema_version")) {
       assertThat(rs.next()).isTrue();
-      assertThat(rs.getInt(1)).isEqualTo(3);
+      assertThat(rs.getInt(1)).isEqualTo(4);
       assertThat(rs.getInt(2)).isEqualTo(64);
     }
   }
@@ -308,7 +308,7 @@ abstract class StorageContractTest {
       for (Future<Integer> f : results) {
         total += f.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
       }
-      assertThat(total).isEqualTo(3);
+      assertThat(total).isEqualTo(4);
     } finally {
       pool.shutdownNow();
     }
@@ -1802,5 +1802,36 @@ abstract class StorageContractTest {
         .isFalse();
     assertThat(tx(storage(), (UnitOfWork u) -> u.holds().find(tx)).orElseThrow().state())
         .isEqualTo(HoldRepository.State.RELEASED);
+  }
+
+  @Test
+  void discordClaimIsExclusiveUntilItExpiresAndReleasedByRetry() throws Exception {
+    long now = TestData.T0;
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.outbox().enqueueDiscord("{}", now);
+          return null;
+        });
+    long id = tx(storage(), (UnitOfWork u) -> u.outbox().dueDiscord(now, 10)).get(0).id();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.outbox().claimDiscord(id, "a", now, now + 1000)))
+        .isTrue();
+    assertThat(
+            tx(storage(), (UnitOfWork u) -> u.outbox().claimDiscord(id, "b", now + 10, now + 1010)))
+        .isFalse();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.outbox().dueDiscord(now + 10, 10))).isEmpty();
+    // abgelaufener Claim (Absturz des ersten Servers): der zweite darf uebernehmen
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) -> u.outbox().claimDiscord(id, "b", now + 2000, now + 3000)))
+        .isTrue();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.outbox().discordRetry(id, 1, now + 2500, "x", now + 2100);
+          return null;
+        });
+    assertThat(tx(storage(), (UnitOfWork u) -> u.outbox().dueDiscord(now + 2600, 10))).hasSize(1);
   }
 }

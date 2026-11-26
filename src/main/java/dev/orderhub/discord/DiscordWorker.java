@@ -30,6 +30,9 @@ public final class DiscordWorker {
   private final WebhookSender sender;
   private final Config config;
   private final Logger logger;
+  private static final long CLAIM_MILLIS = 60_000L;
+
+  private final String instanceId = java.util.UUID.randomUUID().toString();
   private volatile long pausedUntilMillis;
 
   public DiscordWorker(Storage storage, WebhookSender sender, Config config, Logger logger) {
@@ -48,10 +51,20 @@ public final class DiscordWorker {
     if (target.isEmpty()) {
       return 0;
     }
+    String claimant = storage.serverId() + ":" + instanceId;
     List<OutboxRepository.DiscordItem> due =
         storage.transact(uow -> uow.outbox().dueDiscord(nowMillis, 10)).join();
     int sent = 0;
     for (OutboxRepository.DiscordItem item : due) {
+      boolean mine =
+          storage
+              .transact(uow ->
+                  uow.outbox()
+                      .claimDiscord(item.id(), claimant, nowMillis, nowMillis + CLAIM_MILLIS))
+              .join();
+      if (!mine) {
+        continue; // ein anderer Server sendet diese Nachricht
+      }
       WebhookSender.Result result = sender.sendRaw(target.get(), item.payload());
       if (result instanceof WebhookSender.Result.Sent) {
         storage

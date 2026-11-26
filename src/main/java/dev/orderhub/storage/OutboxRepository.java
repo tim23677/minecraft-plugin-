@@ -14,6 +14,14 @@ public interface OutboxRepository {
   /** PENDING-Eintraege mit faelligem Versuch, aelteste zuerst. */
   List<DiscordItem> dueDiscord(long now, int limit);
 
+  /**
+   * Beansprucht eine PENDING-Nachricht bedingt per UPDATE. Nur ein Aufrufer gewinnt, solange der
+   * Claim gilt (oder bis er ablaeuft).
+   *
+   * @return {@code true}, wenn dieser Aufrufer die Nachricht senden darf
+   */
+  boolean claimDiscord(long id, String claimant, long now, long claimedUntil);
+
   void discordSent(long id, long now);
 
   /** Naechster Versuch (Backoff) nach einem Fehler. */

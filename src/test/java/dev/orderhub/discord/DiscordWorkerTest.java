@@ -149,4 +149,44 @@ class DiscordWorkerTest {
     assertThat(items).hasSize(1);
     assertThat(items.get(0).payload()).contains("\"allowed_mentions\"");
   }
+
+  @Test
+  void twoWorkersOnOneDatabaseSendEachMessageOnce() throws Exception {
+    // zweite Instanz = zweiter Server, gleiche Datenbankdatei
+    JdbcStorage second =
+        JdbcStorage.open(
+            DataSourceFactory.sqlite(dir.resolve("t.db")),
+            Dialect.SQLITE,
+            StorageConfig.defaults("other"));
+    try {
+      URI target = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/hook");
+      DiscordWorker other =
+          new DiscordWorker(
+              second,
+              new WebhookSender(),
+              new DiscordWorker.Config(() -> Optional.of(target), 3, 5, 300),
+              Logger.getLogger("test2"));
+      long now = System.currentTimeMillis();
+      for (int i = 0; i < 8; i++) {
+        storage
+            .transact(uow -> {
+              uow.outbox().enqueueDiscord("{\"content\":\"m\"}", now);
+              return null;
+            })
+            .join();
+      }
+      var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+      try {
+        var a = pool.submit(() -> worker.runOnce(now + 1));
+        var b = pool.submit(() -> other.runOnce(now + 1));
+        int sent = a.get() + b.get();
+        assertThat(sent).isEqualTo(8);
+      } finally {
+        pool.shutdownNow();
+      }
+      assertThat(hits.get()).isEqualTo(8);
+    } finally {
+      second.close();
+    }
+  }
 }

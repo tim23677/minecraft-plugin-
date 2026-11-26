@@ -55,6 +55,12 @@ class ApiCreateOrderTest {
     while (!f.isDone() && System.nanoTime() < end) {
       server.getScheduler().waitAsyncTasksFinished();
       server.getScheduler().performOneTick();
+      try {
+        Thread.sleep(20);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        break;
+      }
     }
     return f.orTimeout(1, TimeUnit.SECONDS).join().status();
   }

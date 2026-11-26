@@ -29,10 +29,24 @@ final class JdbcOutboxRepository implements OutboxRepository {
   public List<DiscordItem> dueDiscord(long now, int limit) {
     return jdbc.list(
         "SELECT id, payload, attempts FROM discord_outbox WHERE state = 'PENDING' "
-            + "AND next_attempt_at <= ? ORDER BY id ASC LIMIT ?",
+            + "AND next_attempt_at <= ? AND (claimed_until IS NULL OR claimed_until < ?) "
+            + "ORDER BY id ASC LIMIT ?",
         rs -> new DiscordItem(rs.getLong("id"), rs.getString("payload"), rs.getInt("attempts")),
         now,
+        now,
         Math.max(1, Math.min(limit, 50)));
+  }
+
+  @Override
+  public boolean claimDiscord(long id, String claimant, long now, long claimedUntil) {
+    return jdbc.update(
+            "UPDATE discord_outbox SET claimed_by = ?, claimed_until = ? "
+                + "WHERE id = ? AND state = 'PENDING' AND (claimed_until IS NULL OR claimed_until < ?)",
+            cut(claimant, 80),
+            claimedUntil,
+            id,
+            now)
+        == 1;
   }
 
   @Override
@@ -46,7 +60,8 @@ final class JdbcOutboxRepository implements OutboxRepository {
   @Override
   public void discordRetry(long id, int attempts, long nextAttemptAt, String error, long now) {
     jdbc.update(
-        "UPDATE discord_outbox SET attempts = ?, next_attempt_at = ?, last_error = ?, updated_at = ? "
+        "UPDATE discord_outbox SET attempts = ?, next_attempt_at = ?, last_error = ?, updated_at = ?, "
+            + "claimed_by = NULL, claimed_until = NULL "
             + "WHERE id = ? AND state = 'PENDING'",
         attempts,
         nextAttemptAt,
