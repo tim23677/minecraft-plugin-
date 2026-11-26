@@ -156,6 +156,8 @@ public final class CreateFlow {
     return OptionalInt.of(Integer.parseInt(raw));
   }
 
+  private final CreateCooldown cooldown = new CreateCooldown(System::currentTimeMillis);
+
   private void submit(
       Player player,
       ItemSnapshot snapshot,
@@ -165,6 +167,13 @@ public final class CreateFlow {
       boolean feeExempt,
       long shownFee) {
     Settings settings = s.settings().get();
+    long waitMillis = cooldown.tryAcquire(player.getUniqueId(), settings.createCooldownSeconds());
+    if (waitMillis > 0) {
+      player.sendMessage(
+          s.messages()
+              .prefixed("create.cooldown", Messages.number("seconds", (waitMillis + 999) / 1000)));
+      return;
+    }
     int maxOpen = s.limits().maxOpenOrders(player::hasPermission);
     UUID requestId = UUID.randomUUID();
     OrderService.CreateOrderRequest request =

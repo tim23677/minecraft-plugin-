@@ -45,4 +45,20 @@ class SettingsTest {
     assertThat(s.minUnitPrice()).isEqualTo(1);
     assertThat(s.warnings()).anyMatch(w -> w.contains("price limits"));
   }
+
+  @Test
+  void unknownAndRemovedOptionsAreReported() throws Exception {
+    YamlConfiguration defaults = new YamlConfiguration();
+    try (var in = getClass().getClassLoader().getResourceAsStream("config.yml")) {
+      defaults.load(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+    }
+    YamlConfiguration user = new YamlConfiguration();
+    user.set("server-id", "main");
+    user.set("fees.create-fee-bp", 50);
+    user.set("sounds.enabled", true); // entfernte Option
+    user.set("fees.craete-fee-bp", 5); // Tippfehler
+    assertThat(Settings.unknownKeys(user, defaults))
+        .containsExactlyInAnyOrder("sounds.enabled", "fees.craete-fee-bp");
+    assertThat(Settings.unknownKeys(defaults, defaults)).isEmpty();
+  }
 }

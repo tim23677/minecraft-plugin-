@@ -47,7 +47,7 @@ orders:
   cancel-word: "cancel"
   # Sekunden, die eine Chat-Eingabe wartet.
   input-timeout-seconds: 60
-  # Aufträge pro Spieler und Minute (Rate Limit fuer Erstellung).
+  # Mindestabstand in Sekunden zwischen zwei Auftragserstellungen eines Spielers (0 = aus).
   create-cooldown-seconds: 5
 
 fees:
@@ -71,10 +71,8 @@ delivery:
   click-debounce-ms: 150
 
 cache:
-  # Maximale Eintraege je Cache. Der Cache ist nie die Wahrheit, nur Beschleunigung.
+  # Maximale Eintraege des Platzhalter-Caches (PlaceholderAPI). Die Datenbank ist immer die Wahrheit.
   max-entries: 5000
-  # Wie oft die Datenbank-Outbox auf Aenderungen anderer Server geprueft wird.
-  sync-interval-seconds: 3
 
 economy:
   # false (Standard): Vault-Aufrufe laufen auf dem globalen Server-Thread, wie es EssentialsX, CMI
@@ -92,30 +90,13 @@ payouts:
 market:
   # Mindestanzahl abgeschlossener Handelsgeschaefte fuer eine Preisempfehlung.
   min-trades-for-recommendation: 5
-  # Zeitraum der Empfehlung in Tagen.
-  recommendation-window-days: 7
 
 notifications:
   # Mindestabstand zwischen zwei Benachrichtigungen gleicher Art an einen Spieler.
   cooldown-seconds: 60
-  # Mehrere Benachrichtigungen innerhalb dieses Fensters werden zusammengefasst.
-  batch-window-seconds: 10
-
-reputation:
-  enabled: false
 
 retention:
   # Aufbewahrung von Preisverlauf und Markt-Snapshots in Tagen.
   history-days: 120
   # Hintergrundbereinigung, Minuten zwischen zwei Laeufen.
   cleanup-interval-minutes: 30
-
-sounds:
-  enabled: true
-  success: "entity.experience_orb.pickup"
-  error: "block.note_block.bass"
-  click: "ui.button.click"
-
-commands:
-  # Zusaetzliche Aliase fuer /order.
-  aliases: []

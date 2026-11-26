@@ -33,21 +33,12 @@ public record Settings(
     List<String> blockedTags,
     int clickDebounceMs,
     int cacheMaxEntries,
-    int syncIntervalSeconds,
     int payoutWorkerIntervalSeconds,
     int payoutMaxAttempts,
     int minTradesForRecommendation,
-    int recommendationWindowDays,
     int notificationCooldownSeconds,
-    int notificationBatchWindowSeconds,
-    boolean reputationEnabled,
     int historyRetentionDays,
     int cleanupIntervalMinutes,
-    boolean soundsEnabled,
-    String soundSuccess,
-    String soundError,
-    String soundClick,
-    List<String> aliases,
     boolean economyAsyncSafe,
     int economyTimeoutMs,
     List<String> warnings) {
@@ -55,7 +46,6 @@ public record Settings(
   public Settings {
     blockedMaterials = List.copyOf(blockedMaterials);
     blockedTags = List.copyOf(blockedTags);
-    aliases = List.copyOf(aliases);
     warnings = List.copyOf(warnings);
   }
 
@@ -99,24 +89,32 @@ public record Settings(
         List.copyOf(cfg.getStringList("items.blocked-tags")),
         range(cfg, "delivery.click-debounce-ms", 150, 0, 5000, warnings),
         range(cfg, "cache.max-entries", 5000, 100, 1_000_000, warnings),
-        range(cfg, "cache.sync-interval-seconds", 3, 1, 600, warnings),
         range(cfg, "payouts.worker-interval-seconds", 2, 1, 600, warnings),
         range(cfg, "payouts.max-attempts", 5, 1, 100, warnings),
         range(cfg, "market.min-trades-for-recommendation", 5, 1, 10_000, warnings),
-        range(cfg, "market.recommendation-window-days", 7, 1, 90, warnings),
         range(cfg, "notifications.cooldown-seconds", 60, 0, 86_400, warnings),
-        range(cfg, "notifications.batch-window-seconds", 10, 0, 3600, warnings),
-        cfg.getBoolean("reputation.enabled", false),
         range(cfg, "retention.history-days", 120, 1, 3650, warnings),
         range(cfg, "retention.cleanup-interval-minutes", 30, 1, 1440, warnings),
-        cfg.getBoolean("sounds.enabled", true),
-        str(cfg, "sounds.success", "entity.experience_orb.pickup"),
-        str(cfg, "sounds.error", "block.note_block.bass"),
-        str(cfg, "sounds.click", "ui.button.click"),
-        List.copyOf(cfg.getStringList("commands.aliases")),
         cfg.getBoolean("economy.async-safe", false),
         range(cfg, "economy.timeout-ms", 10_000, 500, 120_000, warnings),
         List.copyOf(warnings));
+  }
+
+  /**
+   * Schluessel der Benutzerkonfiguration, die es in den mitgelieferten Standardwerten nicht gibt
+   * (Tippfehler oder entfernte Optionen). Listenwerte zaehlen als ein Schluessel.
+   */
+  public static List<String> unknownKeys(ConfigurationSection user, ConfigurationSection defaults) {
+    List<String> unknown = new ArrayList<>();
+    for (String key : user.getKeys(true)) {
+      if (user.isConfigurationSection(key)) {
+        continue;
+      }
+      if (!defaults.contains(key)) {
+        unknown.add(key);
+      }
+    }
+    return unknown;
   }
 
   private static String str(ConfigurationSection cfg, String path, String def) {

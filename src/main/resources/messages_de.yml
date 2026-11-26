@@ -26,6 +26,7 @@ create:
   insufficient-funds: "<red>Du brauchst <total> (inklusive Gebühr), hast aber nur <balance>."
   success: "<green>Auftrag #<id> für <quantity>x <item> erstellt. <total> sind im Escrow reserviert."
   limit-reached: "<red>Du hast bereits <count> offene Aufträge (Limit <limit>)."
+  cooldown: "<red>Bitte warte <seconds> s, bevor du einen weiteren Auftrag erstellst."
   fee-changed: "<red>Die Gebühr hat sich vor deiner Bestätigung auf <fee> geändert. Es wurde nichts abgebucht, bitte starte neu."
   price-out-of-range: "<red>Der Preis muss zwischen <min> und <max> liegen."
   quantity-out-of-range: "<red>Die Menge muss zwischen 1 und <max> liegen."

@@ -26,6 +26,7 @@ create:
   insufficient-funds: "<red>You need <total> (including fee) but only have <balance>."
   success: "<green>Order #<id> created for <quantity>x <item>. <total> is held in escrow."
   limit-reached: "<red>You already have <count> open orders (limit <limit>)."
+  cooldown: "<red>Please wait <seconds>s before creating another order."
   fee-changed: "<red>The fee changed to <fee> before you confirmed. Nothing was charged, please start again."
   price-out-of-range: "<red>The price must be between <min> and <max>."
   quantity-out-of-range: "<red>The quantity must be between 1 and <max>."

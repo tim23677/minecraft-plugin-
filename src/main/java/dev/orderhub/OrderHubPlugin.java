@@ -176,6 +176,18 @@ public class OrderHubPlugin extends JavaPlugin {
         YamlConfiguration.loadConfiguration(new File(getDataFolder(), "config.yml"));
     Settings loaded = Settings.from(cfg);
     loaded.warnings().forEach(w -> getLogger().warning("config.yml: " + w));
+    try (java.io.InputStream in = getResource("config.yml")) {
+      if (in != null) {
+        YamlConfiguration defaults =
+            YamlConfiguration.loadConfiguration(
+                new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+        Settings.unknownKeys(cfg, defaults)
+            .forEach(k ->
+                getLogger().warning("config.yml: unknown or unused option '" + k + "' is ignored"));
+      }
+    } catch (java.io.IOException e) {
+      getLogger().log(Level.FINE, "could not read bundled config.yml", e);
+    }
     messages.load(loaded.language(), getDataFolder().toPath(), getClassLoader());
     // Erst die Raten, dann die Einstellungen: jede Operation liest einen vollstaendigen Stand.
     this.rates.set(dev.orderhub.config.Rates.from(loaded));

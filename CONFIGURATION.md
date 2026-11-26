@@ -18,14 +18,14 @@ Files live in `plugins/OrderHub`. New options of later versions are added automa
 | items.allow-custom-name / lore / enchanted / damaged | false | relax the default item rejection |
 | items.blocked-materials, blocked-tags | empty | extra blocked items (`minecraft:elytra`, tags) |
 | delivery.click-debounce-ms | 150 | minimum time between menu clicks |
-| cache.max-entries, sync-interval-seconds | 5000, 3 | reserved for the cache synchronisation (see RELEASE_REPORT.md) |
+| cache.max-entries | 5000 | size of the PlaceholderAPI value cache (the database is always the truth, there is no cross-server cache) |
 | economy.async-safe, timeout-ms | false, 10000 | false: all Vault calls run on the global server thread and wait up to timeout-ms; a timeout on withdraw/deposit counts as unknown outcome (MANUAL_REVIEW), never retried |
 | payouts.worker-interval-seconds, max-attempts | 2, 5 | payout worker |
-| market.min-trades-for-recommendation, recommendation-window-days | 5, 7 | price recommendation needs real trades |
-| notifications.cooldown-seconds, batch-window-seconds | 60, 10 | price alert spam protection |
+| market.min-trades-for-recommendation | 5 | price recommendation needs real trades |
+| notifications.cooldown-seconds | 60 | price alert spam protection |
 | retention.history-days, cleanup-interval-minutes | 120, 30 | trade history cleanup |
 
-Options present in the file but not yet used by the code: `reputation.enabled`, `sounds.*`, `commands.aliases`, `cache.*`, `notifications.batch-window-seconds`. They are reserved and have no effect in this build.
+Options that existed in earlier builds without any effect (`reputation.enabled`, `sounds.*`, `commands.aliases`, `cache.sync-interval-seconds`, `market.recommendation-window-days`, `notifications.batch-window-seconds`) were removed. If an old `config.yml` still contains them, or any misspelled key, OrderHub logs `unknown or unused option '<key>' is ignored` at start.
 
 ## storage (in config.yml)
 

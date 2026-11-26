@@ -53,10 +53,9 @@ class ApiCreateOrderTest {
   private CreateStatus await(CompletableFuture<dev.orderhub.api.OrderService.CreateResult> f) {
     long end = System.nanoTime() + 15_000_000_000L;
     while (!f.isDone() && System.nanoTime() < end) {
-      server.getScheduler().waitAsyncTasksFinished();
       server.getScheduler().performOneTick();
       try {
-        Thread.sleep(250);
+        Thread.sleep(100);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         break;
