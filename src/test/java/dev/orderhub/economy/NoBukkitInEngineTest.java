@@ -16,7 +16,10 @@ class NoBukkitInEngineTest {
 
   @Test
   void enginePackagesAreFreeOfBukkitAndVault() throws IOException {
-    for (String pkg : List.of("economy", "tx", "service", "config", "domain", "money", "storage")) {
+    for (String pkg :
+        List.of(
+            "economy", "tx", "service", "config", "domain", "money", "storage", "market",
+            "discord")) {
       Path dir = ROOT.resolve(pkg);
       try (Stream<Path> files = Files.walk(dir)) {
         for (Path file : files.filter(f -> f.toString().endsWith(".java")).toList()) {

@@ -63,6 +63,6 @@ Gemeinsame MariaDB/MySQL. Jede Instanz hat `server-id`. Cache-Invalidierung übe
 
 ## API
 
-`dev.orderhub.api` enthält nur JDK-Typen und Records. Zugriff über Bukkit `ServicesManager`. Events (`OrderCreateEvent` usw.) liegen in `dev.orderhub.api.event`.
+`dev.orderhub.api` enthält Interfaces und Records. Einziger Bukkit-Typ ist `org.bukkit.inventory.ItemStack` in `OrderService.CreateRequest` (wird beim Aufruf kopiert und serverseitig geprüft). Zugriff über Bukkit `ServicesManager`. Events (`OrderCreateEvent` usw.) liegen in `dev.orderhub.api.event`.
 
 Details zu Datenbank: DATABASE.md. Sicherheit: SECURITY.md. Entscheidungen: `docs/adr/`.

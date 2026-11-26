@@ -198,10 +198,26 @@ public class OrderHubPlugin extends JavaPlugin {
     DeliveryEngine delivery = new DeliveryEngine(storage, fees);
     ClaimEngine claims = new ClaimEngine(storage, audit);
     ReturnEngine returns = new ReturnEngine(storage, audit);
-    PayoutWorker payouts = PayoutWorker.withDefaults(storage, economy);
+    PayoutWorker payouts =
+        new PayoutWorker(
+            storage,
+            economy,
+            Clock.systemUTC(),
+            st.payoutMaxAttempts(),
+            Duration.ofSeconds(5),
+            Duration.ofMinutes(5));
     RecoveryService recovery =
         new RecoveryService(
-            storage, claims, returns, audit, Clock.systemUTC(), Duration.ofMinutes(2));
+            storage,
+            claims,
+            returns,
+            audit,
+            Clock.systemUTC(),
+            // Ein einzelner Server darf frische Eintraege sofort aufraeumen, bei mehreren Servern
+            // muss ein laufender Vorgang eines anderen Servers unangetastet bleiben.
+            storage.dialect() == dev.orderhub.storage.Dialect.SQLITE
+                ? Duration.ZERO
+                : Duration.ofMinutes(2));
 
     returnQueue = new ReturnQueue(storage, scheduler, codec, getLogger());
     menus =
@@ -266,44 +282,55 @@ public class OrderHubPlugin extends JavaPlugin {
     pm.registerEvents(chat, this);
     pm.registerEvents(new JoinListener(services, returnFlow, claimFlow), this);
 
-    // Recovery vor den Workern, danach periodische Arbeit.
+    // Recovery zuerst, die periodischen Worker starten erst danach (auch wenn Recovery
+    // fehlschlaegt).
+    Runnable startWorkers =
+        () -> {
+          scheduler.runAsyncRepeating(
+              () -> guarded("payout worker", () -> payouts.runOnce(25)),
+              5_000,
+              st.payoutWorkerIntervalSeconds() * 1000L);
+          scheduler.runAsyncRepeating(
+              () ->
+                  guarded(
+                      "expiry sweep",
+                      () ->
+                          orders.expireDue(
+                              100,
+                              id ->
+                                  dev.orderhub.integration.Events.fire(
+                                      new dev.orderhub.api.event.OrderExpireEvent(id)))),
+              15_000,
+              60_000);
+          scheduler.runAsyncRepeating(
+              () -> guarded("recovery sweep", recovery::sweep), 300_000, 300_000);
+          DiscordWorker discordWorker =
+              new DiscordWorker(storage, new WebhookSender(), discordWorkerConfig(), getLogger());
+          scheduler.runAsyncRepeating(
+              () ->
+                  guarded(
+                      "discord worker", () -> discordWorker.runOnce(System.currentTimeMillis())),
+              10_000,
+              5_000);
+          scheduler.runAsyncRepeating(
+              () ->
+                  guarded(
+                      "history cleanup",
+                      () ->
+                          insights.purge(
+                              settings.historyRetentionDays(), System.currentTimeMillis())),
+              120_000,
+              settings.cleanupIntervalMinutes() * 60_000L);
+        };
     scheduler.runAsync(() -> {
       try {
         recovery.runAtStartup();
       } catch (RuntimeException e) {
         getLogger().log(Level.SEVERE, "startup recovery failed", e);
+      } finally {
+        startWorkers.run();
       }
     });
-    scheduler.runAsyncRepeating(
-        () -> guarded("payout worker", () -> payouts.runOnce(25)),
-        5_000,
-        st.payoutWorkerIntervalSeconds() * 1000L);
-    scheduler.runAsyncRepeating(
-        () ->
-            guarded(
-                "expiry sweep",
-                () ->
-                    orders.expireDue(
-                        100,
-                        id ->
-                            dev.orderhub.integration.Events.fire(
-                                new dev.orderhub.api.event.OrderExpireEvent(id)))),
-        15_000,
-        60_000);
-    scheduler.runAsyncRepeating(() -> guarded("recovery sweep", recovery::sweep), 300_000, 300_000);
-    DiscordWorker discordWorker =
-        new DiscordWorker(storage, new WebhookSender(), discordWorkerConfig(), getLogger());
-    scheduler.runAsyncRepeating(
-        () -> guarded("discord worker", () -> discordWorker.runOnce(System.currentTimeMillis())),
-        10_000,
-        5_000);
-    scheduler.runAsyncRepeating(
-        () ->
-            guarded(
-                "history cleanup",
-                () -> insights.purge(settings.historyRetentionDays(), System.currentTimeMillis())),
-        120_000,
-        settings.cleanupIntervalMinutes() * 60_000L);
     if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
       new dev.orderhub.placeholder.OrderHubExpansion(
               services,
