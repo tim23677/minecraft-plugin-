@@ -46,7 +46,39 @@ public final class OrderService {
       boolean autoRenew,
       String category,
       int maxOpenOrders,
-      boolean feeExempt) {
+      boolean feeExempt,
+      long expectedFee) {
+
+    /** Kein erwarteter Betrag: die Gebuehr wird nicht gegen eine Anzeige geprueft. */
+    public static final long FEE_UNCHECKED = -1;
+
+    public CreateOrderRequest(
+        UUID requestId,
+        UUID owner,
+        ItemSnapshot item,
+        long unitPrice,
+        int quantity,
+        int minDelivery,
+        Duration lifetime,
+        boolean autoRenew,
+        String category,
+        int maxOpenOrders,
+        boolean feeExempt) {
+      this(
+          requestId,
+          owner,
+          item,
+          unitPrice,
+          quantity,
+          minDelivery,
+          lifetime,
+          autoRenew,
+          category,
+          maxOpenOrders,
+          feeExempt,
+          FEE_UNCHECKED);
+    }
+
     public CreateOrderRequest {
       Objects.requireNonNull(requestId, "requestId");
       Objects.requireNonNull(owner, "owner");
@@ -66,6 +98,8 @@ public final class OrderService {
     INVALID_QUANTITY,
     INVALID_LIFETIME,
     INVALID_AMOUNT,
+    /** Die bestaetigte Gebuehr weicht von der abgerechneten ab (z. B. Reload dazwischen). */
+    FEE_CHANGED,
     LIMIT_REACHED,
     INSUFFICIENT_FUNDS,
     ECONOMY_UNAVAILABLE,
@@ -134,6 +168,11 @@ public final class OrderService {
 
   private record Phase1(CreateResult early, JournalEntry entry) {}
 
+  /** Gebuehr, die diese Instanz fuer {@code escrow} abrechnet. Einzige Quelle fuer die Anzeige. */
+  public long quoteCreateFee(long escrow, boolean exempt) {
+    return fees.createFee(escrow, exempt);
+  }
+
   public CreateResult createOrder(CreateOrderRequest r) {
     CreateStatus invalid = validate(r);
     if (invalid != null) {
@@ -148,6 +187,10 @@ public final class OrderService {
       total = Money.add(escrow, fee);
     } catch (ArithmeticException e) {
       return new CreateResult(CreateStatus.INVALID_AMOUNT, null, null, 0, 0);
+    }
+    if (r.expectedFee() != CreateOrderRequest.FEE_UNCHECKED && r.expectedFee() != fee) {
+      // Vor jeder Buchung: nichts wurde abgebucht, die Anzeige war veraltet.
+      return new CreateResult(CreateStatus.FEE_CHANGED, null, null, escrow, fee);
     }
     String key = "escrow:" + r.owner() + ":" + r.requestId();
     Phase1 p1;

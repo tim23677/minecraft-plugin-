@@ -18,4 +18,6 @@ Added
 
 - `/orderadmin review list|show|resolve <tx> paid|refund|discard confirm <reason>` resolves MANUAL_REVIEW entries through the journal, idempotent, audited in the same transaction
 
+- The create confirmation stores the displayed fee; the engine aborts with `FEE_CHANGED` before any charge when it differs, and the display now uses the same fee source as the engine
+
 Known gaps are listed in RELEASE_REPORT.md.

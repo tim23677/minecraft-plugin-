@@ -103,7 +103,6 @@ public final class CreateFlow {
           s.messages().prefixed("general.invalid-amount", Messages.text("input", pRaw)));
       return;
     }
-    Settings settings = s.settings().get();
     if (unit < s.limits().minPrice() || unit > s.limits().maxPrice()) {
       player.sendMessage(
           s.messages()
@@ -123,9 +122,7 @@ public final class CreateFlow {
     }
     long total = Money.multiply(unit, q.getAsInt());
     boolean exempt = player.hasPermission("orderhub.bypass.fee");
-    long fee =
-        new dev.orderhub.config.Fees(settings.createFeeBp(), settings.salesTaxBp(), true)
-            .createFee(total, exempt);
+    long fee = s.orders().quoteCreateFee(total, exempt);
     player.sendMessage(
         s.messages()
             .prefixed(
@@ -141,7 +138,7 @@ public final class CreateFlow {
             s.messages().get("menu.confirm-title"),
             icon(Material.LIME_STAINED_GLASS_PANE, s.messages().get("menu.confirm")),
             icon(Material.RED_STAINED_GLASS_PANE, s.messages().get("menu.cancel")),
-            p -> submit(p, snapshot, template, quantity, unit, exempt),
+            p -> submit(p, snapshot, template, quantity, unit, exempt, fee),
             id -> {});
     s.menus().open(player, confirm);
   }
@@ -165,7 +162,8 @@ public final class CreateFlow {
       ItemStack template,
       int quantity,
       long unit,
-      boolean feeExempt) {
+      boolean feeExempt,
+      long shownFee) {
     Settings settings = s.settings().get();
     int maxOpen = s.limits().maxOpenOrders(player::hasPermission);
     UUID requestId = UUID.randomUUID();
@@ -181,7 +179,8 @@ public final class CreateFlow {
             false,
             categoryOf(template),
             maxOpen,
-            feeExempt);
+            feeExempt,
+            shownFee);
     Async.supply(
         s.scheduler(),
         s.logger(),
@@ -227,6 +226,11 @@ public final class CreateFlow {
                       "create.limit-reached",
                       Messages.number("count", 0),
                       Messages.number("limit", s.limits().maxOpenOrders(player::hasPermission))));
+      case FEE_CHANGED ->
+          player.sendMessage(
+              s.messages()
+                  .prefixed(
+                      "create.fee-changed", Messages.text("fee", Money.format(result.fee()))));
       case INVALID_PRICE, INVALID_QUANTITY, INVALID_AMOUNT ->
           player.sendMessage(
               s.messages().prefixed("general.invalid-amount", Messages.text("input", "")));
