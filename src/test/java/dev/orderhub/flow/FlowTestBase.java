@@ -224,15 +224,16 @@ abstract class FlowTestBase {
   }
 
   protected void click(int slot) {
+    click(supplier.getOpenInventory(), slot);
+  }
+
+  /** Klick auf eine zuvor gemerkte Ansicht, auch wenn sie inzwischen geschlossen wurde. */
+  protected void click(org.bukkit.inventory.InventoryView view, int slot) {
     server
         .getPluginManager()
         .callEvent(
             new InventoryClickEvent(
-                supplier.getOpenInventory(),
-                SlotType.CONTAINER,
-                slot,
-                ClickType.LEFT,
-                InventoryAction.PICKUP_ALL));
+                view, SlotType.CONTAINER, slot, ClickType.LEFT, InventoryAction.PICKUP_ALL));
   }
 
   /** Alle Diamanten: Spielerinventar, Cursor, offenes Menue, Rueckgaben, Claims, Reservierungen. */
