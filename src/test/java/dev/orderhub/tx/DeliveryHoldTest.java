@@ -164,4 +164,45 @@ class DeliveryHoldTest {
     assertThat(h.delivery.lookup(order, SUPPLIER, "n1")).isPresent();
     assertThat(h.delivery.lookup(order, SUPPLIER, "other")).isEmpty();
   }
+
+  @Test
+  void closingAnUnknownAttemptTombstonesTheKeySoALatePrepareCreatesNoHold() {
+    Harness h = harness();
+    long order = h.create(OWNER, 100, 10, 1).orderId();
+    assertThat(h.delivery.closeAttempt(order, SUPPLIER, "late"))
+        .isEqualTo(DeliveryEngine.AttemptStatus.NEVER_PREPARED);
+    // verspaetet committendes prepare mit demselben Schluessel: kein Eintrag, keine Reservierung
+    var late = h.delivery.prepare(new PrepareRequest(order, SUPPLIER, 2, "late", null, false, 5));
+    assertThat(late.status()).isEqualTo(DeliveryEngine.PrepareStatus.KEY_ALREADY_FAILED);
+    assertThat(h.storage.holds()).isEmpty();
+    // Wiederholung des Abschlusses aendert nichts
+    assertThat(h.delivery.closeAttempt(order, SUPPLIER, "late"))
+        .isEqualTo(DeliveryEngine.AttemptStatus.EXISTS);
+  }
+
+  @Test
+  void closingAnAttemptThatWasPreparedLeavesTheItemsToTheReservation() {
+    Harness h = harness();
+    long order = h.create(OWNER, 100, 10, 1).orderId();
+    h.delivery.prepare(new PrepareRequest(order, SUPPLIER, 2, "n", null, false, 5));
+    assertThat(h.delivery.closeAttempt(order, SUPPLIER, "n"))
+        .isEqualTo(DeliveryEngine.AttemptStatus.EXISTS);
+    h.restart();
+    h.recovery.sweep();
+    assertThat(h.storage.snapshot().returns())
+        .singleElement()
+        .satisfies(p -> assertThat(p.quantity()).isEqualTo(5));
+  }
+
+  @Test
+  void abortAfterRecoveryAlreadyReleasedTheItemsIsNotAnAbortTheCallerMayCompleteItself() {
+    Harness h = harness();
+    long order = h.create(OWNER, 100, 10, 1).orderId();
+    UUID tx = prepare(h, order);
+    h.restart();
+    h.recovery.sweep(); // Recovery war schneller: Items liegen als Rueckgabe in der Datenbank
+    assertThat(h.delivery.abort(tx)).isEqualTo(DeliveryEngine.AbortResult.ALREADY_FAILED);
+    assertThat(h.delivery.confirmItemsRemoved(tx)).isEqualTo(DeliveryEngine.ConfirmResult.REJECTED);
+    assertThat(returned(h, tx)).isEqualTo(IN_MENU); // genau einmal
+  }
 }

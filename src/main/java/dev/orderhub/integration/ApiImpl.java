@@ -102,6 +102,14 @@ public final class ApiImpl implements OrderHubApi {
       new OrderService() {
         @Override
         public CompletableFuture<CreateResult> createOrder(CreateRequest request) {
+          return createOrder(request, CreateOptions.DEFAULT);
+        }
+
+        @Override
+        public CompletableFuture<CreateResult> createOrder(
+            CreateRequest request, CreateOptions options) {
+          final String caller = callerPlugin();
+          final boolean bypass = options != null && options.bypassChecks();
           if (request == null
               || request.requestId() == null
               || request.owner() == null
@@ -128,7 +136,28 @@ public final class ApiImpl implements OrderHubApi {
                       || request.lifetime().isZero()
                   ? Duration.ofHours(s.settings().get().expiryHours())
                   : request.lifetime();
+          return access(request.owner(), bypass)
+              .thenCompose(access ->
+                  access.allowed()
+                      ? run(() -> doCreate(request, snapshot, lifetime, access, caller, bypass))
+                      : auditDenied(request, caller));
+        }
+
+        private CompletableFuture<CreateResult> auditDenied(CreateRequest request, String caller) {
           return run(() -> {
+            auditApi(caller, "api.order.create", null, "NO_PERMISSION owner=" + request.owner());
+            return new CreateResult(CreateStatus.NO_PERMISSION, null, "NO_PERMISSION");
+          });
+        }
+
+        private CreateResult doCreate(
+            CreateRequest request,
+            ItemSnapshot snapshot,
+            Duration lifetime,
+            ApiAccess access,
+            String caller,
+            boolean bypass) {
+          {
             var result =
                 s.orders()
                     .createOrder(
@@ -142,8 +171,13 @@ public final class ApiImpl implements OrderHubApi {
                             lifetime,
                             false,
                             "items",
-                            s.limits().defaultMaxOpenOrders(),
-                            false));
+                            access.maxOpenOrders(),
+                            access.feeExempt()));
+            auditApi(
+                caller,
+                "api.order.create",
+                result.orderId() == null ? null : String.valueOf(result.orderId()),
+                result.status().name() + (bypass ? " bypass" : "") + " owner=" + request.owner());
             if (result.status() == dev.orderhub.service.OrderService.CreateStatus.CREATED
                 && result.orderId() != null) {
               Events.fire(
@@ -166,7 +200,7 @@ public final class ApiImpl implements OrderHubApi {
               }
             }
             return new CreateResult(map(result.status()), result.orderId(), result.status().name());
-          });
+          }
         }
 
         @Override
@@ -221,6 +255,76 @@ public final class ApiImpl implements OrderHubApi {
         }
       };
 
+  /** Rechte des Auftraggebers: online im Entity-Kontext pruefen, offline nur mit Bypass. */
+  private CompletableFuture<ApiAccess> access(UUID owner, boolean bypass) {
+    if (bypass) {
+      return CompletableFuture.completedFuture(ApiAccess.bypass(s.limits()));
+    }
+    org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(owner);
+    if (player == null) {
+      return CompletableFuture.completedFuture(ApiAccess.DENIED);
+    }
+    CompletableFuture<ApiAccess> result = new CompletableFuture<>();
+    boolean scheduled =
+        s.scheduler()
+            .tryRunOn(
+                player,
+                () -> {
+                  try {
+                    result.complete(ApiAccess.forPlayer(player::hasPermission, s.limits()));
+                  } catch (RuntimeException e) {
+                    result.completeExceptionally(e);
+                  }
+                });
+    if (!scheduled) {
+      result.complete(ApiAccess.DENIED);
+    }
+    return result;
+  }
+
+  /** Name des Plugins, das die API aufruft (erste Stackposition ausserhalb von OrderHub). */
+  private static String callerPlugin() {
+    return java.lang.StackWalker.getInstance(java.lang.StackWalker.Option.RETAIN_CLASS_REFERENCE)
+        .walk(frames ->
+            frames
+                .map(java.lang.StackWalker.StackFrame::getDeclaringClass)
+                .filter(c -> !c.getName().startsWith("dev.orderhub."))
+                .map(ApiImpl::pluginOf)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse("unknown"));
+  }
+
+  private static String pluginOf(Class<?> type) {
+    try {
+      return org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(type).getName();
+    } catch (RuntimeException | LinkageError e) {
+      return null;
+    }
+  }
+
+  private void auditApi(String caller, String action, String target, String detail) {
+    try {
+      s.storage()
+          .transact(uow -> {
+            uow.audit()
+                .append(
+                    new dev.orderhub.storage.AuditRepository.Entry(
+                        "plugin:" + caller,
+                        action,
+                        target,
+                        null,
+                        detail,
+                        s.storage().serverId(),
+                        uow.now()));
+            return null;
+          })
+          .join();
+    } catch (RuntimeException e) {
+      s.logger().log(java.util.logging.Level.WARNING, "api audit failed", e);
+    }
+  }
+
   private static OrderService.CreateStatus map(dev.orderhub.service.OrderService.CreateStatus st) {
     return switch (st) {
       case CREATED -> OrderService.CreateStatus.CREATED;
@@ -229,6 +333,7 @@ public final class ApiImpl implements OrderHubApi {
       case INVALID_QUANTITY, INVALID_AMOUNT -> OrderService.CreateStatus.INVALID_QUANTITY;
       case LIMIT_REACHED -> OrderService.CreateStatus.LIMIT_REACHED;
       case INSUFFICIENT_FUNDS -> OrderService.CreateStatus.INSUFFICIENT_FUNDS;
+      case FEE_CHANGED -> OrderService.CreateStatus.FEE_CHANGED;
       case ECONOMY_UNAVAILABLE -> OrderService.CreateStatus.ECONOMY_UNAVAILABLE;
       default -> OrderService.CreateStatus.ERROR;
     };

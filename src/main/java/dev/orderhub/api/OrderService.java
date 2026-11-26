@@ -42,6 +42,10 @@ public interface OrderService {
     LIMIT_REACHED,
     INSUFFICIENT_FUNDS,
     ECONOMY_UNAVAILABLE,
+    /** Der Auftraggeber darf keine Auftraege erstellen oder ist nicht pruefbar. */
+    NO_PERMISSION,
+    /** Die abgerechnete Gebuehr weicht vom erwarteten Betrag ab. */
+    FEE_CHANGED,
     ERROR
   }
 
@@ -82,6 +86,24 @@ public interface OrderService {
   record CancelResult(CancelStatus status, long refundedMinor) {}
 
   CompletableFuture<CreateResult> createOrder(CreateRequest request);
+
+  /**
+   * Optionen fuer {@link #createOrder(CreateRequest, CreateOptions)}.
+   *
+   * @param bypassChecks {@code true}: keine Rechte- und Limitpruefung des Auftraggebers,
+   *     Standardlimit und volle Gebuehr. Gedacht fuer Plugins, die selbst fuer die Berechtigung
+   *     bürgen (z. B. Auftraege fuer Offline-Spieler). Der Aufruf wird mit dem aufrufenden Plugin
+   *     im Audit-Log vermerkt.
+   */
+  record CreateOptions(boolean bypassChecks) {
+    public static final CreateOptions DEFAULT = new CreateOptions(false);
+  }
+
+  /** Wie {@link #createOrder(CreateRequest)}, mit ausdruecklichen Optionen. */
+  default CompletableFuture<CreateResult> createOrder(
+      CreateRequest request, CreateOptions options) {
+    return createOrder(request);
+  }
 
   CompletableFuture<Optional<OrderView>> getOrder(long orderId);
 

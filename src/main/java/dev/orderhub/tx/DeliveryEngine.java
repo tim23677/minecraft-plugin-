@@ -382,6 +382,49 @@ public final class DeliveryEngine {
     uow.holds().finish(e.id(), HoldRepository.State.CONSUMED, now);
   }
 
+  /** Ausgang von {@link #closeAttempt}. */
+  public enum AttemptStatus {
+    /** Der Versuch existierte nicht und kann nun nie mehr entstehen: Items direkt zurueckgeben. */
+    NEVER_PREPARED,
+    /** Der Versuch existiert: die Reservierung und die Recovery gehoeren die Items. */
+    EXISTS
+  }
+
+  /**
+   * Schliesst einen Lieferversuch mit unklarem Ausgang von prepare atomar ab: Existiert der
+   * Journal-Eintrag, haben Reservierung und Recovery die Items. Sonst wird unter demselben
+   * Schluessel ein FAILED-Eintrag (Tombstone) angelegt, so dass ein verspaetet committendes prepare
+   * nie mehr eine Reservierung erzeugt. Erst danach darf der Aufrufer Items direkt zurueckgeben.
+   * Wirft bei Datenbankfehlern: dann nichts zurueckgeben, spaeter erneut versuchen.
+   */
+  public AttemptStatus closeAttempt(long orderId, UUID supplier, String nonce) {
+    String key = key(orderId, supplier, nonce);
+    return TxRunner.run(
+        storage,
+        uow -> {
+          if (uow.journal().findByKey(key).isPresent()) {
+            return AttemptStatus.EXISTS;
+          }
+          JournalEntry tombstone =
+              JournalEntry.created(
+                  key,
+                  orderId,
+                  supplier,
+                  storage.serverId(),
+                  TxType.DELIVERY,
+                  null,
+                  0,
+                  0,
+                  uow.now());
+          var inserted = uow.journal().insertIfAbsent(tombstone);
+          if (!inserted.created()) {
+            return AttemptStatus.EXISTS;
+          }
+          JournalSteps.to(uow, inserted.entry(), TxState.FAILED, "prepare outcome unknown: closed");
+          return AttemptStatus.NEVER_PREPARED;
+        });
+  }
+
   /** Journal-Eintrag zu einem Lieferversuch (fuer Aufrufer mit unklarem Ausgang von prepare). */
   public Optional<JournalEntry> lookup(long orderId, UUID supplier, String nonce) {
     return TxRunner.run(storage, uow -> uow.journal().findByKey(key(orderId, supplier, nonce)));

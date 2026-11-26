@@ -22,4 +22,7 @@ Added
 
 - Delivery return reservation (`delivery_holds`, migration V2): a delivery persists all items in the menu together with PREPARED. A crash or disable before ITEMS_REMOVED, after it, or after commit never loses or duplicates items; the surplus beyond the delivered quantity always becomes a persistent return
 
+- API `createOrder` checks `orderhub.create`, the owner's `orderhub.limit.*` tier and `orderhub.bypass.fee` like the command, rejects offline owners unless `CreateOptions(bypassChecks=true)` is passed, and writes the calling plugin to the audit log (`api.order.create`). New add-only statuses `NO_PERMISSION` and `FEE_CHANGED`
+- A delivery whose prepare outcome is unknown is closed atomically with a tombstone before items go back directly; a recovery that was faster than the flow never leads to returning items twice
+
 Known gaps are listed in RELEASE_REPORT.md.

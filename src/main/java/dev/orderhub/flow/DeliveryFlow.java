@@ -150,8 +150,10 @@ public final class DeliveryFlow {
               s.delivery().confirmItemsRemoved(prepared.journalId());
           if (confirmed != DeliveryEngine.ConfirmResult.CONFIRMED
               && confirmed != DeliveryEngine.ConfirmResult.ALREADY_CONFIRMED) {
-            s.delivery().abort(prepared.journalId());
-            return new Step(null, null);
+            var aborted = s.delivery().abort(prepared.journalId());
+            // Nur bei ABORTED wurde die Reservierung verbraucht: dann geben wir selbst zurueck.
+            // Sonst (Recovery war schneller) liegen die Items schon als Rueckgabe in der Datenbank.
+            return new Step(null, null, aborted != DeliveryEngine.AbortResult.ABORTED);
           }
           return new Step(prepared, confirmed);
         },
@@ -171,27 +173,53 @@ public final class DeliveryFlow {
   private void prepareOutcomeUnknown(
       Player player, DeliveryMenu menu, Order order, UUID supplier, String nonce) {
     player.sendMessage(s.messages().prefixed("general.database-error"));
+    closeAttempt(player, menu, order, supplier, nonce, 1);
+  }
+
+  private static final int CLOSE_ATTEMPTS = 6;
+
+  /**
+   * Schliesst den Versuch atomar ab (Tombstone). Nur wenn er nie entstanden ist, gehen die Items
+   * direkt zurueck. Schlaegt die Datenbank fehl, bleiben die Items im eingefrorenen Menue und der
+   * Abschluss wird wiederholt (fail closed, nie doppelt zurueckgeben).
+   */
+  private void closeAttempt(
+      Player player, DeliveryMenu menu, Order order, UUID supplier, String nonce, int attempt) {
     s.scheduler()
         .runAsync(() -> {
-          boolean known;
+          DeliveryEngine.AttemptStatus status;
           try {
-            known = s.delivery().lookup(order.id(), supplier, nonce).isPresent();
+            status = s.delivery().closeAttempt(order.id(), supplier, nonce);
           } catch (RuntimeException e) {
-            s.logger().log(java.util.logging.Level.SEVERE, "prepare lookup failed", e);
-            known = false;
+            if (attempt >= CLOSE_ATTEMPTS) {
+              s.logger()
+                  .log(
+                      java.util.logging.Level.SEVERE,
+                      "delivery attempt "
+                          + nonce
+                          + " of "
+                          + supplier
+                          + " could not be closed; items stay unreturned (manual compensation)",
+                      e);
+              return;
+            }
+            s.scheduler()
+                .runLater(
+                    () -> closeAttempt(player, menu, order, supplier, nonce, attempt + 1), 100);
+            return;
           }
-          boolean recoveryOwnsItems = known;
+          boolean directReturn = status == DeliveryEngine.AttemptStatus.NEVER_PREPARED;
           boolean handled =
               s.scheduler()
                   .tryRunOn(
                       player,
                       () -> {
-                        if (!recoveryOwnsItems) {
+                        if (directReturn) {
                           giveAll(player, menu.takeInputs());
                         }
                         player.closeInventory();
                       });
-          if (!handled && !recoveryOwnsItems) {
+          if (!handled && directReturn) {
             for (ItemStack stack : menu.takeInputs()) {
               ItemStack template = stack.clone();
               template.setAmount(1);
@@ -222,6 +250,13 @@ public final class DeliveryFlow {
     if (!usable(step)) {
       player.sendMessage(
           s.messages().prefixed(failureKey(step), Messages.number("min", order.minDelivery())));
+      if (step.storedByEngine()) {
+        // Die Items liegen bereits als Rueckgabe in der Datenbank: Menue leeren, nicht doppeln.
+        menu.takeInputs();
+        player.closeInventory();
+        new ParcelFlow(s, ParcelFlow.Kind.RETURN).claimAll(player);
+        return;
+      }
       giveAll(player, menu.takeInputs());
       player.closeInventory();
       return;
@@ -259,6 +294,10 @@ public final class DeliveryFlow {
   /** Spieler nicht mehr erreichbar (laeuft auf einem Async-Thread). */
   private void finishWithoutPlayer(UUID supplier, DeliveryMenu menu, Order order, Step step) {
     if (!usable(step)) {
+      if (step.storedByEngine()) {
+        menu.takeInputs();
+        return;
+      }
       for (ItemStack stack : menu.takeInputs()) {
         ItemStack template = stack.clone();
         template.setAmount(1);
@@ -444,5 +483,11 @@ public final class DeliveryFlow {
   }
 
   private record Step(
-      DeliveryEngine.PrepareResult prepared, DeliveryEngine.ConfirmResult confirmed) {}
+      DeliveryEngine.PrepareResult prepared,
+      DeliveryEngine.ConfirmResult confirmed,
+      boolean storedByEngine) {
+    Step(DeliveryEngine.PrepareResult prepared, DeliveryEngine.ConfirmResult confirmed) {
+      this(prepared, confirmed, false);
+    }
+  }
 }
