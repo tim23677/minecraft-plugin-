@@ -1,61 +1,55 @@
 # OrderHub Release-Bericht
 
-Stand: 2026-11-26, Version 0.1.0-SNAPSHOT, Branch `claude/friendly-lamport-fgt8mq`.
+Stand: 2026-11-26, Version 0.1.0-SNAPSHOT, Branch `claude/practical-cori-vbbwgd`.
 
 ## Ergebnis
 
-OrderHub ist in diesem Stand NICHT "RELEASE READY" im Sinn der Abschlusskriterien. Der Kern (Aufträge, Escrow, Lieferung, Abholung, Rückgabe, Journal, Recovery, SQLite und MariaDB, Befehle, Menüs, Discord, API, PlaceholderAPI) ist gebaut, kompiliert warnungsfrei und ist automatisiert getestet. Mehrere Pflichtpunkte sind nicht erfüllt oder nicht geprüft. Sie stehen unten einzeln.
+OrderHub ist in diesem Stand NICHT release-fähig im Sinn der Abschlusskriterien. Block A ist nicht vollständig erledigt (Punkte 3, 5, 6 und 7 fehlen). Der Lauf auf echtem Paper und Folia (Punkt 8, Teilumfang) ist bestanden, deckt aber nur Laden, Aktivieren und einen Konsolenbefehl ab. Die Abschlussbedingung "Auftrag erstellen, liefern, abholen, Neustart, Recovery" ist auf einem echten Server nicht geprüft.
 
-Das Jar liegt unter `release/OrderHub-0.1.0-SNAPSHOT.jar` (SHA-256 in `release/SHA256SUMS`, erzeugt mit `./gradlew release`). Es ist ein Entwicklungsstand für einen Testserver, kein verkaufsfertiges Produkt.
+In dieser Sitzung erledigt, jeweils mit Code, Tests, Dokumentation, Changelog und grünem Build:
+
+- Punkt 1: Vault-Aufrufe laufen standardmäßig auf dem globalen Thread (`economy.async-safe: false`, `economy.timeout-ms`). Eine Zeitüberschreitung bei withdraw oder deposit wirft `EconomyOutcomeUnknownException`. Test `GlobalThreadEconomyTest` (5 Tests), darunter "kein Provider-Aufruf außerhalb des globalen Threads".
+- Punkt 2: `/orderadmin review list`, `review show <tx>`, `review resolve <tx> paid|refund|discard confirm <Grund>`. Die Aufloesung läuft über das Journal, ist idempotent (Wiederholung meldet ALREADY_RESOLVED, anderer Ausgang CONFLICT) und schreibt den Audit-Eintrag in derselben Transaktion. Test `AdminReviewTest` (6 Tests). Hinweis zur Bedeutung: `paid` schließt den Eintrag ohne Geldbewegung ab, `refund` stellt den Betrag über die Refund-Queue an den Spieler des Eintrags (nur für DELIVERY und ESCROW_CREATE, die Administration muss vorher prüfen, dass nichts gezahlt wurde), `discard` setzt den Eintrag auf FAILED.
+- Punkt 4: Der Bestätigungsdialog speichert die angezeigte Gebühr, die Engine bricht vor jeder Buchung mit `FEE_CHANGED` ab, wenn sie abweicht. Die Anzeige nimmt dieselbe Gebühr wie die Abrechnung (`OrderService.quoteCreateFee`). Test `FeeConsistencyTest` (3 Tests). Grenze: Die Engine selbst liest ihre Gebühr weiterhin nur beim Start, eine geänderte Gebühr wirkt erst nach einem Neustart (die Option steht so in CONFIGURATION.md). Ein unveränderlicher Settings-Snapshot, der bei Reload ausgetauscht wird, ist nicht umgesetzt.
+- Punkt 8 (Teil): mcstage-Szenario korrigiert (Wartezeit auf die asynchrone Initialisierung, richtiger erwarteter Text), CI-Job `server-smoke` in `.github/workflows/build.yml`, nur aktiv bei der Repository-Variable `ACCEPT_MINECRAFT_EULA=true`.
 
 ## Was tatsächlich gelaufen ist
 
 | Prüfung | Befehl | Ergebnis |
 |---|---|---|
-| Kompilierung mit `-Xlint:all -Werror`, Spotless, SpotBugs (Main und Test), Shadow-Jar | `./gradlew build -x dependencyCheckAnalyze` | erfolgreich |
-| Unit- und MockBukkit-Tests auf SQLite | im Build enthalten | 722 Tests, 0 Fehler, 0 übersprungen |
-| Integrationstests gegen echte MariaDB 10.11.14 (lokal gestartet) | `./gradlew integrationTest` mit `ORDERHUB_TEST_MARIADB_*` | 44 Tests, 0 Fehler, 0 übersprungen |
-| Lasttest SQLite, 100.000 Aufträge, 8 parallele Sucher | `./gradlew loadTest` | Einfügen 10,2 s (9.784 Aufträge/s). 480 Suchen in 27,7 s Wandzeit. Latenz je Suche: p50 246 ms, p95 1.177 ms, Maximum 7.807 ms |
+| Kompilierung mit `-Xlint:all -Werror`, Spotless, SpotBugs, Tests, Shadow-Jar | `./gradlew build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 786 Tests, 0 Fehler, 0 übersprungen |
+| Echter Server Paper 1.21.11 (Build 132) und Folia 1.21.11 (Build 14) | `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` | 2 bestanden in 55,7 s: Plugin lädt, `OrderHub enabled (server-id main, SQLITE)`, Recovery ohne Fehler, Konsolenbefehl antwortet |
 
-Zum Lasttest: SQLite nutzt hier einen Verbindungs-Pool der Größe 1, deshalb stehen parallele Suchen an. Langsame Fälle sind Suchen ohne Item-Filter mit bestimmten Sortierungen (ohne passenden Index). Ein MariaDB-Lasttest wurde nicht ausgeführt.
+Hinweis zur Umgebung: Gradle bekam über den Proxy bei parallelen Downloads HTTP 429. Mit `--max-workers=1` läuft der Build durch. Die EULA-Zustimmung hat der Nutzer im Auftrag ausdrücklich erteilt.
 
-Der Snapshot-Test für das Auftragslimit (`ownerLimitHoldsWhenTheTransactionAlreadyReadBeforeLocking`) wurde gegen MariaDB einmal ohne und einmal mit dem Fix ausgeführt: ohne Fix fehlgeschlagen, mit Fix bestanden.
+Die Ergebnisse aus dem früheren Stand (Integrationstests gegen MariaDB 10.11.14: 44 Tests bestanden, Lasttest SQLite 100.000 Aufträge: p50 246 ms, p95 1.177 ms, Maximum 7.807 ms) wurden in dieser Sitzung nicht erneut ausgeführt. `./gradlew integrationTest` wurde nicht gestartet.
 
-## Was NICHT geprüft wurde
+## Beobachtungen aus dem echten Serverlauf
 
-- Kein Lauf auf einem echten Paper- oder Folia-Server. `tools/mcstage/run.sh` braucht die EULA-Zustimmung der verantwortlichen Person (siehe CLAUDE.md), sie wurde nicht erteilt und nicht stellvertretend gegeben. Das Jar wurde nur unter MockBukkit geladen. Die Kriterien "Paper-Kompatibilität praktisch geprüft" und "Folia-Kompatibilität praktisch geprüft" sind damit offen. Die Folia-Pfade wurden von einem Review-Agenten gelesen, nicht ausgeführt.
-- `dependencyCheckAnalyze` nicht ausgeführt (kein `NVD_API_KEY`). Die Bibliotheken sind nicht auf bekannte CVEs geprüft.
-- PIT (Mutationstest) nicht ausgeführt.
-- MySQL nicht getestet (nur MariaDB 10.11). Die Migrationen nutzen `CREATE INDEX IF NOT EXISTS`, das MySQL 8 nicht kennt.
-- Der Testcontainers-Pfad ist nicht gelaufen (kein Docker-Daemon). Die MariaDB-Tests liefen gegen eine lokal installierte Instanz.
-- Die Bukkit-nahen Abläufe `DeliveryFlow`, `ParcelFlow`, `CreateFlow`, `Menus`, `InsightsFlow` haben keine eigenen automatisierten Tests. Getestet sind die Engines darunter, das GUI-Framework, die Befehle (Berechtigungen, Tab-Vervollständigung, Fehlerfälle) und die Dienste.
-- Kein manueller Testplan durchgeführt. `TESTPLAN.md` enthält 23 Szenarien mit "Tatsächliches Ergebnis: nicht ausgeführt".
-- Vault-Provider: Aufrufe laufen standardmäßig auf dem globalen Thread (Punkt 1 erledigt, `GlobalThreadEconomyTest`, 5 Tests). Mit einem echten Economy-Plugin nicht geprüft.
-- Mehrere-Server-Betrieb ist nur auf Datenbankebene getestet (zwei Storage-Instanzen gegen eine MariaDB), nicht mit zwei echten Servern.
+- Beim Start erscheinen drei ERROR-Zeilen `SLF4J(W): No SLF4J providers were found` und eine Paper-Warnung über System.out/err-Nutzung. Ursache ist HikariCP ohne SLF4J-Provider. Funktional folgenlos, für ein Produkt aber unschön. Nicht behoben.
+- Ohne Vault meldet das Plugin eine Warnung und kann keine Aufträge erstellen. Ein Lauf mit Vault und Economy-Plugin fand nicht statt.
 
-## Nicht umgesetzt oder nur teilweise (Vergleich mit dem Auftrag)
+## Offen
 
-Nicht vorhanden:
+Block A: Punkt 3 (Rückgabe-Reservierung `item_returns` zwischen PREPARED und ITEMS_REMOVED), Punkt 5 (Discord-Outbox mit Claim), Punkt 6 (Audit in derselben Transaktion für alle Admin-Aktionen, Reload-Audit, API-Aufrufer protokollieren, Limit- und Rechteprüfung in `createOrder` der API), Punkt 7 (Treiber relokieren oder über den Library-Loader laden, Ergebnis in COMPATIBILITY.md; der CI-Job `dependency-check` mit `NVD_API_KEY` existiert, wurde hier nicht ausgeführt).
 
-- Cache mit Outbox-Polling und serverübergreifender Invalidierung. Es gibt nur den Unterbau (Tabelle `cache_outbox`, Repository, Test). Es gibt keinen Cache außer dem kurzlebigen Platzhalter-Cache.
-- Auftragsvorlagen, Bulk-Erstellung, Reputation, Gruppen- und Weltbeschränkungen, Sound-Konfiguration (Option vorhanden, ohne Wirkung).
-- Bedienbare Auto-Verlängerung und Mindestliefermenge (die Engine kann beides, die Befehle setzen `false` bzw. 1).
-- GUI-Menüs für Statistik, Marktanalyse, Favoriten, Verlauf, Admin-Dashboard und Transaction Inspector. Diese Funktionen gibt es als Chatausgabe und Befehl.
-- Konfigurationsversionierung mit Migrationsregeln: `config-version` und `menu-version` werden nicht ausgewertet, `ConfigUpdater` ergänzt nur fehlende Schlüssel.
-- Die Optionen `cache.*`, `create-cooldown-seconds`, `recommendation-window-days`, `notifications.batch-window-seconds`, `reputation.enabled`, `sounds.*`, `commands.aliases` und die meisten Einträge in `menus.yml` sind eingelesen, haben aber keine Wirkung (in CONFIGURATION.md vermerkt).
-- Eigene Pakete `order`, `transaction`, `statistics`, `notification`, `migration`, `security`, `util` laut Vorgabe: Die Funktionen liegen in `service`, `tx`, `storage`, `flow`, `bootstrap`.
-- `TransactionStateChangeEvent` wird nur für Auftragserstellung und Lieferung ausgelöst, nicht für jeden Zustand der Auszahlungswarteschlange.
+Block B: Punkt 8 (Rest: Spieler-Szenario, Neustart, Folia-Smoke-Skript), 9, 10, 11, 12, 13.
 
-Bekannte Restrisiken:
+Block C: Punkte 14 bis 20.
 
-- Absturz zwischen erfolgreicher Vault-Zahlung und gespeichertem Ergebnis: bleibt ein Fall für MANUAL_REVIEW (keine Exactly-once-Garantie, nie automatisch wiederholt).
-- Lieferung: Stürzt der Server in den Millisekunden zwischen Journalzustand PREPARED und ITEMS_REMOVED ab, oder wird das Plugin dort deaktiviert, können Items aus dem flüchtigen Menü verloren gehen (die Recovery setzt den Eintrag dann auf FAILED ohne Rückgabe).
-- Wird das Plugin während einer laufenden Lieferung deaktiviert, entscheidet die Recovery anhand des Journals. Überzählige Items über die vorbereitete Menge hinaus gehen in diesem Fall nicht zurück.
-- Audit-Einträge für Admin-Befehle werden in einer eigenen Transaktion nach der Aktion geschrieben. `reload` wird nicht auditiert.
-- API-Aufrufe von Drittplugins werden nicht dem aufrufenden Plugin zugeordnet protokolliert. `createOrder` nutzt das Standardlimit und prüft keine Spielerberechtigung.
-- Die angezeigte Erstellgebühr kommt aus der aktuellen Konfiguration, abgerechnet wird mit dem beim Start geladenen Wert. Nach `/orderadmin reload` mit geänderter Gebühr weichen beide ab.
-- Die JDBC-Treiber (SQLite, MariaDB) sind nicht relokiert. Konflikte mit Plugins, die andere Versionen bündeln, sind nicht getestet.
-- Mehrere Server können dieselbe Discord-Outbox-Zeile doppelt senden (kein Claim). Das hat keine Sicherheitswirkung, kann aber doppelte Nachrichten erzeugen.
+Block D: Punkte 21 bis 25.
+
+Bekannte Restrisiken, die aus dem früheren Bericht unverändert gelten:
+
+- Absturz zwischen erfolgreicher Vault-Zahlung und gespeichertem Ergebnis bleibt ein Fall für MANUAL_REVIEW (keine Exactly-once-Garantie, nie automatisch wiederholt).
+- Lieferung: Stürzt der Server zwischen PREPARED und ITEMS_REMOVED ab, können Items aus dem flüchtigen Menü verloren gehen (Punkt 3).
+- Überzählige Items über die vorbereitete Menge hinaus gehen bei Deaktivierung während einer Lieferung nicht zurück.
+- Audit-Einträge der älteren Admin-Befehle entstehen in einer eigenen Transaktion nach der Aktion, `reload` wird nicht auditiert (Punkt 6). Der neue Befehl `review resolve` schreibt dagegen in derselben Transaktion.
+- API-Aufrufe von Drittplugins werden nicht dem aufrufenden Plugin zugeordnet, `createOrder` der API prüft keine Spielerberechtigung.
+- JDBC-Treiber sind nicht relokiert.
+- Mehrere Server können dieselbe Discord-Outbox-Zeile doppelt senden.
+- MySQL 8 ist nicht unterstützt (`CREATE INDEX IF NOT EXISTS`), das steht im README.
+- Suchleistung: p95 über 1 s bei 100.000 Aufträgen ohne Item-Filter.
 
 ## Reviews mit Agenten und Behebung
 
