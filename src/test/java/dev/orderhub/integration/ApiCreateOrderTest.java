@@ -56,7 +56,7 @@ class ApiCreateOrderTest {
       server.getScheduler().waitAsyncTasksFinished();
       server.getScheduler().performOneTick();
       try {
-        Thread.sleep(20);
+        Thread.sleep(250);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         break;

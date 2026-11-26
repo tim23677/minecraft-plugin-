@@ -1,6 +1,7 @@
 package dev.orderhub.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -76,5 +77,30 @@ class MigrationsTest {
         .isTrue();
     assertThat(JdbcStorage.isRetryable(new java.sql.SQLException("dup", "23000", 1062))).isFalse();
     assertThat(JdbcStorage.isRetryable(new IllegalStateException("x"))).isFalse();
+  }
+
+  private static java.sql.Connection connectionReporting(String product) {
+    java.sql.DatabaseMetaData meta =
+        (java.sql.DatabaseMetaData)
+            java.lang.reflect.Proxy.newProxyInstance(
+                MigrationsTest.class.getClassLoader(),
+                new Class<?>[] {java.sql.DatabaseMetaData.class},
+                (proxy, method, args) ->
+                    method.getName().equals("getDatabaseProductName") ? product : null);
+    return (java.sql.Connection)
+        java.lang.reflect.Proxy.newProxyInstance(
+            MigrationsTest.class.getClassLoader(),
+            new Class<?>[] {java.sql.Connection.class},
+            (proxy, method, args) -> method.getName().equals("getMetaData") ? meta : null);
+  }
+
+  @Test
+  void mysqlIsRejectedWithAClearMessageAndMariaDbAndSqliteAreAccepted() throws Exception {
+    assertThatThrownBy(() -> Migrations.detect(connectionReporting("MySQL")))
+        .isInstanceOf(MigrationException.class)
+        .hasMessageContaining("MySQL is not supported")
+        .hasMessageContaining("MariaDB");
+    assertThat(Migrations.detect(connectionReporting("MariaDB"))).isEqualTo(Dialect.MARIADB);
+    assertThat(Migrations.detect(connectionReporting("SQLite"))).isEqualTo(Dialect.SQLITE);
   }
 }

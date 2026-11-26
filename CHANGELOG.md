@@ -33,4 +33,6 @@ Added
 
 - Jar size 13.7 MB to 0.5 MB: Hikari, SQLite and MariaDB drivers load through the Paper library loader (`libraries` in plugin.yml, Maven Central) instead of being bundled; the plugin uses Paper's own slf4j, so no SLF4J error lines appear at startup
 
+- MySQL is not supported: the plugin refuses to start against a MySQL server with a clear message (use MariaDB 10.6+ or SQLite)
+
 Known gaps are listed in RELEASE_REPORT.md.

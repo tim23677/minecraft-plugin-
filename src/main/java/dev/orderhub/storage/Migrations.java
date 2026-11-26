@@ -108,8 +108,14 @@ public final class Migrations {
     if (product.contains("sqlite")) {
       return Dialect.SQLITE;
     }
-    if (product.contains("mariadb") || product.contains("mysql")) {
+    if (product.contains("mariadb")) {
       return Dialect.MARIADB;
+    }
+    if (product.contains("mysql")) {
+      // Die Schema-Skripte nutzen CREATE INDEX IF NOT EXISTS, das MySQL nicht kennt. Lieber klar
+      // abbrechen als halb migrieren.
+      throw new MigrationException(
+          "MySQL is not supported. Use MariaDB 10.6 or newer (storage.type: mariadb) or SQLite.");
     }
     throw new MigrationException("unsupported database: " + product);
   }
