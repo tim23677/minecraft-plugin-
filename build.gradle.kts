@@ -53,7 +53,7 @@ tasks.processResources {
 
 tasks.test {
     useJUnitPlatform {
-        excludeTags("integration")
+        excludeTags("integration", "load")
     }
     testLogging { events("passed", "skipped", "failed") }
 }
@@ -70,6 +70,22 @@ val integrationTest by tasks.registering(Test::class) {
     useJUnitPlatform { includeTags("integration") }
     shouldRunAfter(tasks.test)
     testLogging { events("passed", "skipped", "failed") }
+}
+
+// Reproduzierbarer Lasttest (100.000 Auftraege auf SQLite). Ergebnis: build/reports/load.txt
+val loadTest by tasks.registering(Test::class) {
+    description = "Runs tests tagged 'load' (100k orders, parallel searches)."
+    group = "verification"
+    testClassesDirs =
+        sourceSets.test
+            .get()
+            .output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("load") }
+    testLogging {
+        events("passed", "failed")
+        showStandardStreams = true
+    }
 }
 
 tasks.shadowJar {
