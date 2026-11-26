@@ -1,5 +1,6 @@
 package dev.orderhub.gui;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -8,6 +9,9 @@ import org.bukkit.inventory.ItemStack;
 /**
  * Kontext eines Button-Klicks. Der Cursor ist eine Kopie, Aenderungen daran wirken nicht zurueck.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP",
+    justification = "Player und Menu sind Live-Referenzen des Servers und gewollt direkt nutzbar")
 public final class ClickContext {
 
   private final Player player;

@@ -12,6 +12,7 @@ import dev.orderhub.tx.PayoutWorker;
 import dev.orderhub.tx.RecoveryReport;
 import dev.orderhub.tx.RecoveryService;
 import dev.orderhub.tx.ReturnEngine;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,6 +20,9 @@ import java.util.List;
 import java.util.UUID;
 
 /** Verdrahtet Storage, Economy und alle Dienste wie ein Prozessstart. */
+@SuppressFBWarnings(
+    value = "PA_PUBLIC_PRIMITIVE_ATTRIBUTE",
+    justification = "Testfixture: oeffentliche Felder dienen dem schnellen Zugriff in Tests")
 public final class Harness {
 
   /** Sammelt Audit-Ausgaben. */

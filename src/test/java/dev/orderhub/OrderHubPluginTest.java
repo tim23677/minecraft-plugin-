@@ -27,7 +27,8 @@ class OrderHubPluginTest {
   @Test
   void pluginEnablesAndRegistersCommand() {
     assertThat(plugin.isEnabled()).isTrue();
-    assertThat(plugin.getCommand("orderhub")).isNotNull();
+    assertThat(plugin.getCommand("order")).isNotNull();
+    assertThat(plugin.getCommand("orderadmin")).isNotNull();
     assertThat(plugin.scheduler()).isNotNull();
   }
 

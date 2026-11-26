@@ -3,6 +3,7 @@ package dev.orderhub.tx;
 import dev.orderhub.storage.PayoutRepository;
 import dev.orderhub.storage.Storage;
 import dev.orderhub.storage.UnitOfWork;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public final class RecoveryService {
   private static final int PAGE = 500;
 
   /** Nur waehrend eines (synchronisierten) Laufs gesetzt. */
-  private long activeStaleBefore;
+  private volatile long activeStaleBefore;
 
   private final Storage storage;
   private final ClaimEngine claims;
@@ -36,6 +37,9 @@ public final class RecoveryService {
   private final Clock clock;
   private final Duration staleAfter;
 
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Engines sind injizierte, gemeinsam genutzte Dienste, keine Wertobjekte")
   public RecoveryService(
       Storage storage,
       ClaimEngine claims,

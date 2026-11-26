@@ -1,4 +1,4 @@
-package dev.orderhub.config;
+package dev.orderhub.bootstrap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

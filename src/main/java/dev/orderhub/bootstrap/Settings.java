@@ -1,4 +1,4 @@
-package dev.orderhub.config;
+package dev.orderhub.bootstrap;
 
 import dev.orderhub.money.Money;
 import java.util.ArrayList;

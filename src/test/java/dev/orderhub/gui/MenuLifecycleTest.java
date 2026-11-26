@@ -31,7 +31,7 @@ class MenuLifecycleTest extends GuiTestSupport {
 
   /** Fuellt alle Slots des Spielerinventars (inklusive Ruestung und Offhand in MockBukkit). */
   private void fillInventory() {
-    int size = player.getInventory().getContents().length;
+    int size = java.util.Objects.requireNonNull(player.getInventory().getContents()).length;
     for (int i = 0; i < size; i++) {
       player.getInventory().setItem(i, new ItemStack(Material.STONE, 64));
     }

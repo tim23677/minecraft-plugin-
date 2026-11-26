@@ -43,6 +43,19 @@ final class FoliaPluginScheduler implements PluginScheduler {
   }
 
   @Override
+  public void runAsyncRepeating(Runnable task, long initialDelayMillis, long periodMillis) {
+    plugin
+        .getServer()
+        .getAsyncScheduler()
+        .runAtFixedRate(
+            plugin,
+            t -> task.run(),
+            Math.max(1, initialDelayMillis),
+            Math.max(1, periodMillis),
+            java.util.concurrent.TimeUnit.MILLISECONDS);
+  }
+
+  @Override
   public void cancelAll() {
     plugin.getServer().getGlobalRegionScheduler().cancelTasks(plugin);
     plugin.getServer().getAsyncScheduler().cancelTasks(plugin);

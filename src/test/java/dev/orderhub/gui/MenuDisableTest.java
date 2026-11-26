@@ -59,6 +59,9 @@ class MenuDisableTest extends GuiTestSupport {
     public void runAsync(Runnable task) {}
 
     @Override
+    public void runAsyncRepeating(Runnable task, long initialDelayMillis, long periodMillis) {}
+
+    @Override
     public void cancelAll() {}
   }
 
@@ -85,7 +88,7 @@ class MenuDisableTest extends GuiTestSupport {
   }
 
   private void assertDisarmed(InputMenu menu) {
-    for (ItemStack item : menu.getInventory().getContents()) {
+    for (ItemStack item : java.util.Objects.requireNonNull(menu.getInventory().getContents())) {
       assertThat(item == null || item.isEmpty()).as("slot content %s", item).isTrue();
     }
     assertThat(menu.isClosed()).isTrue();

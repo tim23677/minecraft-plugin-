@@ -30,7 +30,11 @@ public abstract class Menu implements InventoryHolder {
   private final SlotPolicy slotPolicy;
   private final Map<Integer, Button> buttons = new ConcurrentHashMap<>();
   private final AtomicBoolean closed = new AtomicBoolean();
+  private final AtomicBoolean frozen = new AtomicBoolean();
 
+  @SuppressFBWarnings(
+      value = "CT_CONSTRUCTOR_THROW",
+      justification = "Nur Argumentpruefung, kein Finalizer, keine Ressourcen vor der Pruefung")
   // Der Holder wird nur als Referenz im Inventar abgelegt, dort wird nichts aufgerufen.
   @SuppressWarnings("this-escape")
   protected Menu(Component title, int rows, SlotPolicy slotPolicy) {
@@ -89,6 +93,23 @@ public abstract class Menu implements InventoryHolder {
   /** Aktueller Button an {@code slot} oder {@code null}. */
   final Button buttonAt(int slot) {
     return buttons.get(slot);
+  }
+
+  /**
+   * Friert das Menue ein: jeder weitere Klick wird abgebrochen. Wird benutzt, sobald ein Abschluss
+   * (z. B. Lieferung) laeuft, damit sich Eingabeslots nicht mehr aendern.
+   */
+  public final void freeze() {
+    frozen.set(true);
+  }
+
+  public final boolean isFrozen() {
+    return frozen.get();
+  }
+
+  /** Wie {@link #drainInputs()}, oeffentlich fuer Menues, die ihren Inhalt selbst abschliessen. */
+  public final List<ItemStack> takeInputs() {
+    return drainInputs();
   }
 
   public final boolean isClosed() {

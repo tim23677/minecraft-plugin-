@@ -5,6 +5,7 @@ import dev.orderhub.domain.NewOrder;
 import dev.orderhub.domain.Order;
 import dev.orderhub.domain.OrderQuery;
 import dev.orderhub.domain.OrderStatus;
+import dev.orderhub.storage.AuditRepository;
 import dev.orderhub.storage.Dialect;
 import dev.orderhub.storage.JournalRepository;
 import dev.orderhub.storage.LedgerRepository;
@@ -16,6 +17,7 @@ import dev.orderhub.storage.UnitOfWork;
 import dev.orderhub.tx.InvalidTransitionException;
 import dev.orderhub.tx.JournalEntry;
 import dev.orderhub.tx.TxState;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -41,6 +43,9 @@ import java.util.function.Function;
  * Datenbank. Fehlerinjektion: {@link #failTransaction}, {@link #setOutage}, {@link
  * #crashAfterCommit}.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP",
+    justification = "Testfixture: die internen Listen werden bewusst direkt gelesen und geprueft")
 public final class InMemoryStorage implements Storage {
 
   /** Stelle, an der eine Transaktion scheitert. */
@@ -76,6 +81,7 @@ public final class InMemoryStorage implements Storage {
     Map<String, Long> claimKeys = new HashMap<>();
     Map<Long, ParcelRepository.Parcel> returns = new LinkedHashMap<>();
     Map<String, Long> returnKeys = new HashMap<>();
+    List<dev.orderhub.storage.AuditRepository.Entry> audit = new ArrayList<>();
 
     State copy() {
       State s = new State();
@@ -92,6 +98,7 @@ public final class InMemoryStorage implements Storage {
       s.claimKeys = new HashMap<>(claimKeys);
       s.returns = new LinkedHashMap<>(returns);
       s.returnKeys = new HashMap<>(returnKeys);
+      s.audit = new ArrayList<>(audit);
       return s;
     }
   }
@@ -333,6 +340,25 @@ public final class InMemoryStorage implements Storage {
     @Override
     public PayoutRepository payouts() {
       return payouts;
+    }
+
+    @Override
+    public AuditRepository audit() {
+      return new AuditRepository() {
+        @Override
+        public void append(AuditRepository.Entry entry) {
+          s.audit.add(entry);
+        }
+
+        @Override
+        public java.util.List<AuditRepository.Entry> recent(int limit) {
+          int from = Math.max(0, s.audit.size() - limit);
+          java.util.List<AuditRepository.Entry> out =
+              new java.util.ArrayList<>(s.audit.subList(from, s.audit.size()));
+          java.util.Collections.reverse(out);
+          return out;
+        }
+      };
     }
 
     @Override

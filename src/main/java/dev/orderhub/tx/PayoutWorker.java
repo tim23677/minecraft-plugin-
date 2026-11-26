@@ -18,6 +18,8 @@ import java.util.Optional;
  */
 public final class PayoutWorker {
 
+  private final Object lock = new Object();
+
   /** Ergebnis eines Laufs. */
   public record RunReport(
       int completed, int released, int escalated, boolean economyProblem, boolean skippedBackoff) {}
@@ -58,7 +60,13 @@ public final class PayoutWorker {
   }
 
   /** Verarbeitet bis zu {@code maxItems} Zeilen nacheinander. */
-  public synchronized RunReport runOnce(int maxItems) {
+  public RunReport runOnce(int maxItems) {
+    synchronized (lock) {
+      return runLocked(maxItems);
+    }
+  }
+
+  private RunReport runLocked(int maxItems) {
     if (clock.millis() < notBeforeMillis) {
       return new RunReport(0, 0, 0, false, true);
     }

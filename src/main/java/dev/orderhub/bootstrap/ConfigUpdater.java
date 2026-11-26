@@ -1,4 +1,4 @@
-package dev.orderhub.config;
+package dev.orderhub.bootstrap;
 
 import java.io.IOException;
 import java.io.InputStream;

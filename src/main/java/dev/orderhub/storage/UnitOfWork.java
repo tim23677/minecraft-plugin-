@@ -14,6 +14,8 @@ public interface UnitOfWork {
 
   ParcelRepository returns();
 
+  AuditRepository audit();
+
   /** Aktuelle Zeit in Millisekunden, einheitlich fuer die Transaktion. */
   long now();
 }

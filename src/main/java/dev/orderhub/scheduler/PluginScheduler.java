@@ -35,6 +35,12 @@ public interface PluginScheduler {
   /** Task ausserhalb der Server-Threads (I/O, Datenbank). */
   void runAsync(Runnable task);
 
+  /**
+   * Wiederkehrender Task ausserhalb der Server-Threads (Worker, Bereinigung). Er laeuft bis {@link
+   * #cancelAll()} und darf lange I/O enthalten, aber nie zwei Laeufe gleichzeitig starten.
+   */
+  void runAsyncRepeating(Runnable task, long initialDelayMillis, long periodMillis);
+
   /** Bricht alle von diesem Scheduler gestarteten Tasks ab. */
   void cancelAll();
 

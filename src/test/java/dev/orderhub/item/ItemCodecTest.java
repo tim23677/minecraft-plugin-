@@ -69,7 +69,7 @@ class ItemCodecTest {
     ItemStack input = new ItemStack(Material.DIAMOND_SWORD);
     ItemMeta meta = input.getItemMeta();
     meta.displayName(Component.text("n"));
-    input.setItemMeta(meta);
+    assertThat(input.setItemMeta(meta)).isTrue();
     ItemStack decoded = codec.decode(codec.encode(input));
     assertThat(decoded.getType()).isEqualTo(Material.DIAMOND_SWORD);
     assertThat(decoded.getItemMeta().hasDisplayName()).isTrue();
@@ -95,7 +95,7 @@ class ItemCodecTest {
     ItemStack big = new ItemStack(Material.DIAMOND);
     ItemMeta meta = big.getItemMeta();
     meta.displayName(Component.text("x".repeat(ItemSnapshot.MAX_DATA_BYTES * 2)));
-    big.setItemMeta(meta);
+    assertThat(big.setItemMeta(meta)).isTrue();
     assertReason(() -> codec.encode(big), ItemCodecException.Reason.TOO_LARGE);
   }
 

@@ -3,6 +3,9 @@ lang-version: 1
 prefix: "<gradient:#4ea8de:#7b6cf6>OrderHub</gradient> <dark_gray>|</dark_gray> "
 
 general:
+  help: "<gray>/order create [quantity] [price] | mine | market [sort] | claims | returns | deliver <id> | cancel <id>"
+  usage-create: "<gray>Hold the item you want and use <white>/order create <quantity> <price></white> or just <white>/order create</white>."
+  not-available: "<yellow>This feature is not part of this build yet."
   no-permission: "<red>You do not have permission to do that."
   players-only: "<red>This command can only be used by players."
   unknown-subcommand: "<red>Unknown subcommand. Use <white>/order help</white>."
@@ -47,6 +50,7 @@ order:
   completed: "<green>Your order #<id> for <item> is complete."
 
 delivery:
+  processing: "<yellow>Your delivery is being processed. If items or money are missing, check /order claims and /order returns shortly."
   success: "<green>Delivered <quantity>x <item> to order #<id>. You will receive <amount>."
   below-minimum: "<red>This order requires at least <min> items per delivery."
   own-order: "<red>You cannot deliver to your own order."
@@ -72,10 +76,13 @@ favorites:
   alert-set: "<green>Price alert set for <item> at <price>."
 
 notify:
+  claims-waiting: "<aqua>You have <count> item packages waiting. Use <white>/order claims</white>."
+  delivered: "<aqua>Order #<id>: <quantity>x <item> delivered."
   new-order: "<aqua>New order for <item>: <quantity>x at <unit> each."
   summary: "<aqua>You have <count> new notifications."
 
 admin:
+  help: "<gray>reload | list [status] | cancel <id> confirm <reason> | purge-expired confirm <reason> | transactions [player-uuid] | transaction <uuid> | inspect <id> | recovery confirm <reason> | statistics | debug"
   confirm-required: "<yellow>Repeat the command with <white>confirm</white> and a reason to proceed."
   reason-required: "<red>A reason is required."
   cancelled: "<green>Order #<id> cancelled by an administrator. Reason logged."
@@ -86,6 +93,22 @@ admin:
   transaction: "<gray>Transaction <white><id></white> <state> <amount> player <player>"
 
 menu:
+  delivery-info: "<yellow>Delivery preview"
+  main:
+    market: "<green>Marketplace"
+    market-hint: "<gray>Browse open orders and deliver items"
+    mine: "<green>My orders"
+    mine-hint: "<gray>Left click: cancel, right click: pause or resume"
+    create: "<green>Create order"
+    create-hint: "<gray>Hold an item and use /order create"
+    claims: "<green>Collect items"
+    claims-hint: "<gray>Items delivered to your orders"
+    stats: "<green>Statistics"
+    stats-hint: "<gray>Your trading numbers"
+    favorites: "<green>Favorites"
+    favorites-hint: "<gray>Watched items and price alerts"
+    history: "<green>Trade history"
+    history-hint: "<gray>Your past trades"
   main-title: "OrderHub"
   marketplace-title: "Marketplace"
   create-title: "Create order"
@@ -119,6 +142,9 @@ sort:
   HIGHEST_DEMAND: "Highest demand"
 
 lore:
+  delivery-accepted: "<gray>Accepted: <white><quantity></white> of <white><remaining></white> still needed"
+  delivery-gross: "<gray>Gross payout: <white><amount>"
+  claim-quantity: "<gray>Waiting: <white><quantity>"
   order-unit: "<gray>Price each: <white><unit>"
   order-progress: "<gray>Progress: <white><filled>/<total> <gray>(<percent>%)"
   order-owner: "<gray>Buyer: <white><owner>"

@@ -302,11 +302,12 @@ class ItemMatcherTest {
 
   @Test
   void policyRejectsNonExemptableCriteria() {
-    org.assertj.core.api.Assertions.assertThatThrownBy(
-            () -> MatchPolicy.strict().allowing(RejectionReason.BLOCKED_MATERIAL))
+    org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+            java.util.Objects.requireNonNull(
+                MatchPolicy.strict().allowing(RejectionReason.BLOCKED_MATERIAL)))
         .isInstanceOf(IllegalArgumentException.class);
-    org.assertj.core.api.Assertions.assertThatThrownBy(
-            () -> MatchPolicy.strict().allowing(RejectionReason.EMPTY))
+    org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+            java.util.Objects.requireNonNull(MatchPolicy.strict().allowing(RejectionReason.EMPTY)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

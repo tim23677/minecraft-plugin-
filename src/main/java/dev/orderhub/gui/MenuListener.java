@@ -104,6 +104,10 @@ public final class MenuListener implements Listener {
       deny(event);
       return;
     }
+    if (menu.isFrozen()) {
+      deny(event);
+      return;
+    }
     SlotPolicy policy = menu.slotPolicy();
     if (policy.isInput(slot)) {
       ItemStack placed = event.getCursor();

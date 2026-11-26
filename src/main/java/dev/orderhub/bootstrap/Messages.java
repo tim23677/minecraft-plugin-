@@ -1,4 +1,4 @@
-package dev.orderhub.config;
+package dev.orderhub.bootstrap;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -87,6 +87,11 @@ public final class Messages {
   /** Platzhalter, dessen Wert nie als MiniMessage interpretiert wird (sicher fuer Spielernamen). */
   public static TagResolver text(String name, String value) {
     return Placeholder.unparsed(name, value);
+  }
+
+  /** Platzhalter fuer eine fertige Komponente (z. B. Item-Name). */
+  public static TagResolver component(String name, Component value) {
+    return Placeholder.component(name, value);
   }
 
   /** Platzhalter fuer eine Zahl. */

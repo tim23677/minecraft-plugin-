@@ -77,7 +77,11 @@ public abstract class ParcelTransferEngine {
   }
 
   /** Ergebnis von {@link #releaseHanging}. */
-  public record HangingResult(int released, List<RecoveryReport.Escalation> escalations) {}
+  public record HangingResult(int released, List<RecoveryReport.Escalation> escalations) {
+    public HangingResult {
+      escalations = List.copyOf(escalations);
+    }
+  }
 
   private final Storage storage;
   private final Function<UnitOfWork, ParcelRepository> repo;

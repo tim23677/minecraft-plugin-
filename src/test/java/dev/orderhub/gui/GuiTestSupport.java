@@ -57,6 +57,9 @@ abstract class GuiTestSupport {
     }
 
     @Override
+    public void runAsyncRepeating(Runnable task, long initialDelayMillis, long periodMillis) {}
+
+    @Override
     public void cancelAll() {}
   }
 
@@ -237,7 +240,7 @@ abstract class GuiTestSupport {
 
   protected static int count(Inventory inventory, Material material) {
     int sum = 0;
-    for (ItemStack item : inventory.getContents()) {
+    for (ItemStack item : java.util.Objects.requireNonNull(inventory.getContents())) {
       if (item != null && item.getType() == material) {
         sum += item.getAmount();
       }

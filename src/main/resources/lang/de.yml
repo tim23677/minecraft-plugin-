@@ -3,6 +3,9 @@ lang-version: 1
 prefix: "<gradient:#4ea8de:#7b6cf6>OrderHub</gradient> <dark_gray>|</dark_gray> "
 
 general:
+  help: "<gray>/order create [Menge] [Preis] | mine | market [Sortierung] | claims | returns | deliver <id> | cancel <id>"
+  usage-create: "<gray>Halte das gewünschte Item und nutze <white>/order create <Menge> <Preis></white> oder nur <white>/order create</white>."
+  not-available: "<yellow>Diese Funktion ist in diesem Build noch nicht enthalten."
   no-permission: "<red>Dafür fehlt dir die Berechtigung."
   players-only: "<red>Dieser Befehl ist nur für Spieler."
   unknown-subcommand: "<red>Unbekannter Unterbefehl. Nutze <white>/order help</white>."
@@ -47,6 +50,7 @@ order:
   completed: "<green>Dein Auftrag #<id> für <item> ist vollständig."
 
 delivery:
+  processing: "<yellow>Deine Lieferung wird verarbeitet. Fehlen Items oder Geld, prüfe gleich /order claims und /order returns."
   success: "<green><quantity>x <item> an Auftrag #<id> geliefert. Du erhältst <amount>."
   below-minimum: "<red>Dieser Auftrag verlangt mindestens <min> Items pro Lieferung."
   own-order: "<red>Du kannst nicht an deinen eigenen Auftrag liefern."
@@ -72,10 +76,13 @@ favorites:
   alert-set: "<green>Preisalarm für <item> bei <price> gesetzt."
 
 notify:
+  claims-waiting: "<aqua>Es warten <count> Itempakete auf dich. Nutze <white>/order claims</white>."
+  delivered: "<aqua>Auftrag #<id>: <quantity>x <item> geliefert."
   new-order: "<aqua>Neuer Auftrag für <item>: <quantity>x zu je <unit>."
   summary: "<aqua>Du hast <count> neue Benachrichtigungen."
 
 admin:
+  help: "<gray>reload | list [Status] | cancel <id> confirm <Grund> | purge-expired confirm <Grund> | transactions [Spieler-UUID] | transaction <uuid> | inspect <id> | recovery confirm <Grund> | statistics | debug"
   confirm-required: "<yellow>Wiederhole den Befehl mit <white>confirm</white> und einer Begründung."
   reason-required: "<red>Eine Begründung ist erforderlich."
   cancelled: "<green>Auftrag #<id> von einem Administrator storniert. Begründung protokolliert."
@@ -86,6 +93,22 @@ admin:
   transaction: "<gray>Transaktion <white><id></white> <state> <amount> Spieler <player>"
 
 menu:
+  delivery-info: "<yellow>Lieferungsvorschau"
+  main:
+    market: "<green>Marktplatz"
+    market-hint: "<gray>Offene Aufträge ansehen und Items liefern"
+    mine: "<green>Meine Aufträge"
+    mine-hint: "<gray>Linksklick: stornieren, Rechtsklick: pausieren oder fortsetzen"
+    create: "<green>Auftrag erstellen"
+    create-hint: "<gray>Item in die Hand nehmen und /order create nutzen"
+    claims: "<green>Items abholen"
+    claims-hint: "<gray>An deine Aufträge gelieferte Items"
+    stats: "<green>Statistik"
+    stats-hint: "<gray>Deine Handelszahlen"
+    favorites: "<green>Favoriten"
+    favorites-hint: "<gray>Beobachtete Items und Preisalarme"
+    history: "<green>Handelshistorie"
+    history-hint: "<gray>Deine bisherigen Geschäfte"
   main-title: "OrderHub"
   marketplace-title: "Marktplatz"
   create-title: "Auftrag erstellen"
@@ -119,6 +142,9 @@ sort:
   HIGHEST_DEMAND: "Höchste Nachfrage"
 
 lore:
+  delivery-accepted: "<gray>Angenommen: <white><quantity></white> von <white><remaining></white> noch benötigt"
+  delivery-gross: "<gray>Bruttoauszahlung: <white><amount>"
+  claim-quantity: "<gray>Wartet: <white><quantity>"
   order-unit: "<gray>Preis je Stück: <white><unit>"
   order-progress: "<gray>Fortschritt: <white><filled>/<total> <gray>(<percent>%)"
   order-owner: "<gray>Käufer: <white><owner>"

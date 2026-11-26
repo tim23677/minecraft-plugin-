@@ -16,6 +16,7 @@ final class JdbcUnitOfWork implements UnitOfWork {
   private final JdbcPayoutRepository payouts;
   private final JdbcParcelRepository claims;
   private final JdbcParcelRepository returns;
+  private final JdbcAuditRepository audit;
 
   JdbcUnitOfWork(Connection connection, Dialect dialect, long now) {
     this.now = now;
@@ -26,6 +27,7 @@ final class JdbcUnitOfWork implements UnitOfWork {
     this.payouts = new JdbcPayoutRepository(jdbc);
     this.claims = new JdbcParcelRepository(jdbc, "item_claims");
     this.returns = new JdbcParcelRepository(jdbc, "item_returns");
+    this.audit = new JdbcAuditRepository(jdbc);
   }
 
   @Override
@@ -56,6 +58,11 @@ final class JdbcUnitOfWork implements UnitOfWork {
   @Override
   public ParcelRepository returns() {
     return returns;
+  }
+
+  @Override
+  public AuditRepository audit() {
+    return audit;
   }
 
   @Override

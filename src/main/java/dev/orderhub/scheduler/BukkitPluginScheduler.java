@@ -47,6 +47,15 @@ final class BukkitPluginScheduler implements PluginScheduler {
   }
 
   @Override
+  public void runAsyncRepeating(Runnable task, long initialDelayMillis, long periodMillis) {
+    plugin
+        .getServer()
+        .getScheduler()
+        .runTaskTimerAsynchronously(
+            plugin, task, Math.max(1, initialDelayMillis / 50), Math.max(1, periodMillis / 50));
+  }
+
+  @Override
   public void cancelAll() {
     plugin.getServer().getScheduler().cancelTasks(plugin);
   }
