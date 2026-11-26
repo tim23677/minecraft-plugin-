@@ -34,6 +34,7 @@ public final class MenuManager {
   private final Predicate<Entity> ownedByCurrentContext;
   private final ClickDebounce debounce;
   private final Map<UUID, Menu> open = new ConcurrentHashMap<>();
+  private volatile boolean disabled;
 
   public MenuManager(
       Logger logger, PluginScheduler scheduler, ReturnSink returnSink, MenuConfig config) {
@@ -59,11 +60,22 @@ public final class MenuManager {
   public void open(Player player, Menu menu) {
     Objects.requireNonNull(player, "player");
     Objects.requireNonNull(menu, "menu");
-    scheduler.runOn(player, () -> openNow(player, menu));
+    if (disabled) {
+      menu.markClosed();
+      return;
+    }
+    if (!scheduler.tryRunOn(player, () -> openNow(player, menu))) {
+      menu.markClosed(); // nie geoeffnet, nichts zurueckzugeben
+    }
+  }
+
+  /** {@code true} nach {@link #closeAll()}: keine neuen Menues, alle Klicks gesperrt. */
+  public boolean isDisabled() {
+    return disabled;
   }
 
   private void openNow(Player player, Menu menu) {
-    if (!player.isOnline() || menu.isClosed()) {
+    if (disabled || !player.isOnline() || menu.isClosed()) {
       menu.markClosed();
       return;
     }
@@ -95,11 +107,14 @@ public final class MenuManager {
    * verfolgte und das offene obere Inventar des Spielers.
    */
   boolean isCurrent(Player player, Menu menu) {
-    if (!player.isOnline() || menu.isClosed() || open.get(player.getUniqueId()) != menu) {
+    if (disabled
+        || !player.isOnline()
+        || menu.isClosed()
+        || open.get(player.getUniqueId()) != menu) {
       return false;
     }
     Inventory top = player.getOpenInventory().getTopInventory();
-    return top.getHolder(false) == menu;
+    return MenuHolders.of(top) == menu;
   }
 
   boolean acquireClick(UUID playerId) {
@@ -108,7 +123,8 @@ public final class MenuManager {
 
   /** Inventar wurde geschlossen. */
   public void handleClose(Player player, Inventory inventory, CloseReason reason) {
-    if (inventory.getHolder(false) instanceof Menu menu) {
+    Menu menu = MenuHolders.of(inventory);
+    if (menu != null) {
       finish(menu, player, reason);
     }
   }
@@ -182,43 +198,49 @@ public final class MenuManager {
   }
 
   /**
-   * Beendet alle offenen Menues (Plugin-Disable). Im Kontext des Spielers wird normal
-   * zurueckgegeben. Liegt der Spieler nicht im aktuellen Kontext (Folia: globaler Thread) und
-   * laesst sich kein Task mehr einplanen, gehen die Items im Notpfad direkt an den ReturnSink.
+   * Plugin-Disable, in zwei Phasen.
+   *
+   * <p>Phase 1 laeuft synchron und ohne Entity-Scheduler: Der Manager wird gesperrt, jedes Menue
+   * wird entschaerft (Eingabeslot-Inhalte heraus, Inventar samt Button-Items geleert) und die Items
+   * gehen sofort an den persistenten {@link ReturnSink}. Damit kann nichts mehr verloren gehen oder
+   * als Button-Item in ein Spielerinventar gelangen, auch wenn spaeter keine Aufgabe mehr laeuft
+   * (Folia nach dem Disable).
+   *
+   * <p>Phase 2 schliesst nur noch die Ansicht der Spieler: direkt, wenn der Spieler im aktuellen
+   * Kontext liegt, sonst per Entity-Scheduler. Wird die Aufgabe nicht angenommen, ist das
+   * unkritisch, weil Phase 1 bereits alles gesichert hat.
    */
   public void closeAll() {
+    disabled = true;
+    List<UUID> viewers = new ArrayList<>();
     for (Map.Entry<UUID, Menu> entry : new ArrayList<>(open.entrySet())) {
-      closeOne(entry.getKey(), entry.getValue());
+      emergencyReturn(entry.getKey(), entry.getValue());
+      viewers.add(entry.getKey());
+    }
+    for (UUID playerId : viewers) {
+      closeView(playerId);
     }
   }
 
-  private void closeOne(UUID playerId, Menu menu) {
+  private void closeView(UUID playerId) {
     Player player = Bukkit.getPlayer(playerId);
     if (player == null) {
-      emergencyReturn(playerId, menu);
-    } else if (ownedByCurrentContext.test(player)) {
-      finish(menu, player, CloseReason.PLUGIN_DISABLE);
+      return;
+    }
+    if (ownedByCurrentContext.test(player)) {
       player.closeInventory();
-    } else {
-      try {
-        scheduler.runOn(
-            player,
-            () -> {
-              finish(menu, player, CloseReason.PLUGIN_DISABLE);
-              player.closeInventory();
-            });
-      } catch (RuntimeException e) {
-        emergencyReturn(playerId, menu);
-      }
+    } else if (!scheduler.tryRunOn(player, player::closeInventory)) {
+      logger.log(Level.FINE, "view of {0} stays open, menu is already disarmed", playerId);
     }
   }
 
+  /** Entschaerft ein Menue ohne Spielerkontext: Inhalt in die Senke, Inventar leer. */
   private void emergencyReturn(UUID playerId, Menu menu) {
     if (!menu.markClosed()) {
       return;
     }
     open.remove(playerId, menu);
-    List<ItemStack> items = menu.drainInputs();
+    List<ItemStack> items = menu.disarm();
     try {
       menu.onAbandon(playerId, CloseReason.PLUGIN_DISABLE);
     } catch (RuntimeException e) {

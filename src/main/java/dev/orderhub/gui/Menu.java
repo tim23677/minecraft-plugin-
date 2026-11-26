@@ -116,6 +116,17 @@ public abstract class Menu implements InventoryHolder {
     return items;
   }
 
+  /**
+   * Entschaerft das Menue beim Plugin-Disable: nimmt die Eingabeslot-Inhalte heraus und leert das
+   * gesamte Inventar samt Buttons, damit keine Button-Items herausgenommen werden koennen.
+   */
+  final List<ItemStack> disarm() {
+    List<ItemStack> items = drainInputs();
+    buttons.clear();
+    inventory.clear();
+    return items;
+  }
+
   /** Kopien des aktuellen Eingabeslot-Inhalts, ohne ihn zu entnehmen. */
   public final List<ItemStack> inputContents() {
     List<ItemStack> items = new ArrayList<>();

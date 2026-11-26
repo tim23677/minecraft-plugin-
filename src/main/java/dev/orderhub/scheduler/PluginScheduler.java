@@ -16,6 +16,19 @@ public interface PluginScheduler {
   /** Task auf dem Thread, der {@code entity} besitzt. */
   void runOn(Entity entity, Runnable task);
 
+  /**
+   * Wie {@link #runOn}, meldet aber, ob der Task angenommen wurde. {@code false}, wenn die Entity
+   * nicht mehr existiert (Folia: Retired) oder das Plugin keine Tasks mehr einplanen darf.
+   */
+  default boolean tryRunOn(Entity entity, Runnable task) {
+    try {
+      runOn(entity, task);
+      return true;
+    } catch (RuntimeException e) {
+      return false;
+    }
+  }
+
   /** Task im globalen Kontext (kein Welt- oder Entity-Bezug). */
   void runGlobal(Runnable task);
 

@@ -64,7 +64,7 @@ public final class MenuListener implements Listener {
   }
 
   private static Menu menuOf(Inventory inventory) {
-    return inventory != null && inventory.getHolder(false) instanceof Menu menu ? menu : null;
+    return MenuHolders.of(inventory);
   }
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
@@ -72,6 +72,10 @@ public final class MenuListener implements Listener {
     Inventory top = event.getView().getTopInventory();
     Menu menu = menuOf(top);
     if (menu == null) {
+      return;
+    }
+    if (manager.isDisabled()) {
+      deny(event); // fail closed: nach closeAll bleibt jeder Klick auf OrderHub-Inventare gesperrt
       return;
     }
     int raw = event.getRawSlot();
