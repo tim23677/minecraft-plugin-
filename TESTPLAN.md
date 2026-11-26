@@ -290,3 +290,14 @@ Befehl: `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` (EULA-Zustimmung vom N
 | Folia 1.21.11 (Build 14) | bestanden | wie oben |
 
 Summary: 2 passed in 51.0s. Nicht geprüft: Auftrag erstellen, liefern, abholen, Neustart mit Spieler und Vault-Economy (braucht einen Bot-Spieler und ein Economy-Plugin, siehe RELEASE_REPORT.md).
+
+## Lauf für 1.0.0
+
+| Prüfung | Befehl | Ergebnis |
+|---|---|---|
+| Build mit -Xlint:all -Werror, Spotless, SpotBugs, Tests | `./gradlew clean build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 815 Tests, 0 Fehler, 0 übersprungen |
+| Integrationstests gegen MariaDB 11.4 (Testcontainers) | `TESTCONTAINERS_RYUK_DISABLED=true ./gradlew integrationTest --max-workers=1` | erfolgreich, 49 bestanden, 1 übersprungen (SQLite-Test) |
+| Lasttest SQLite, 100.000 Aufträge, 8 Sucher | `./gradlew loadTest --max-workers=1` | p50 19 ms, p95 163 ms, Maximum 1.246 ms (vorher p95 1.026 ms) |
+| Echter Server Paper 1.21.11 und Folia 1.21.11 | `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` | 2 bestanden in 86,5 s, Bibliotheken per Paper-Loader geladen, keine SLF4J- oder ERROR-Zeilen |
+
+Nicht ausgeführt: Spieler-Szenario mit Vault und Economy-Plugin auf dem echten Server, MariaDB-Lasttest, MariaDB 10.11, `dependencyCheckAnalyze` (kein NVD_API_KEY).
