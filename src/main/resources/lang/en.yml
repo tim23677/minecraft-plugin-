@@ -1,0 +1,127 @@
+# OrderHub language file (MiniMessage). Placeholders in <angle> brackets.
+lang-version: 1
+prefix: "<gradient:#4ea8de:#7b6cf6>OrderHub</gradient> <dark_gray>|</dark_gray> "
+
+general:
+  no-permission: "<red>You do not have permission to do that."
+  players-only: "<red>This command can only be used by players."
+  unknown-subcommand: "<red>Unknown subcommand. Use <white>/order help</white>."
+  invalid-number: "<red>'<input>' is not a valid number."
+  invalid-amount: "<red>'<input>' is not a valid amount."
+  busy: "<red>The system is busy. Please try again in a moment."
+  database-error: "<red>A database error occurred. Your funds are safe. Please contact an administrator."
+  reloaded: "<green>Configuration reloaded."
+  cooldown: "<red>Please wait <seconds> seconds."
+
+create:
+  prompt-quantity: "<gray>Type the quantity in chat, or <white><cancel></white> to abort."
+  prompt-price: "<gray>Type the price per item in chat (for example <white>8</white> or <white>1.5k</white>), or <white><cancel></white> to abort."
+  cancelled: "<gray>Order creation cancelled."
+  timeout: "<gray>Input timed out."
+  summary: "<gray>Order: <white><quantity>x <item></white> at <white><unit></white> each. Total <white><total></white>, fee <white><fee></white>."
+  insufficient-funds: "<red>You need <total> (including fee) but only have <balance>."
+  success: "<green>Order #<id> created for <quantity>x <item>. <total> is held in escrow."
+  limit-reached: "<red>You already have <count> open orders (limit <limit>)."
+  price-out-of-range: "<red>The price must be between <min> and <max>."
+  quantity-out-of-range: "<red>The quantity must be between 1 and <max>."
+  item-rejected: "<red>This item cannot be ordered: <reason>."
+
+reject:
+  blocked: "blocked item"
+  custom-name: "it has a custom name"
+  lore: "it has lore"
+  enchanted: "it is enchanted"
+  damaged: "it is damaged"
+  container: "it contains items"
+  components: "it has unsupported data"
+  air: "no item selected"
+
+order:
+  cancelled: "<yellow>Order #<id> cancelled. <refund> refunded."
+  paused: "<yellow>Order #<id> paused."
+  resumed: "<green>Order #<id> resumed."
+  expired: "<yellow>Order #<id> expired. <refund> refunded."
+  not-found: "<red>Order #<id> not found."
+  not-yours: "<red>This is not your order."
+  not-active: "<red>This order is not accepting deliveries."
+  completed: "<green>Your order #<id> for <item> is complete."
+
+delivery:
+  success: "<green>Delivered <quantity>x <item> to order #<id>. You will receive <amount>."
+  below-minimum: "<red>This order requires at least <min> items per delivery."
+  own-order: "<red>You cannot deliver to your own order."
+  nothing: "<gray>No valid items in the delivery slots."
+  returned: "<yellow>Some items were returned to you."
+  stored-for-later: "<yellow>Your inventory is full. <quantity>x <item> were stored and can be collected with <white>/order claims</white>."
+  payout: "<green>You received <amount> for your delivery."
+  payout-delayed: "<yellow>Your payout of <amount> is queued and will arrive shortly."
+
+claim:
+  nothing: "<gray>You have nothing to collect."
+  success: "<green>Collected <quantity>x <item>."
+  partial: "<yellow>Collected <quantity>x <item>. The rest stays stored until you have space."
+  full: "<red>Your inventory is full. Items stay stored."
+
+market:
+  no-data: "<gray>Not enough market data"
+  recommendation: "<gray>Recommended price range for <item>: <white><low></white> to <white><high></white> (based on <trades> trades in <days> days)."
+
+favorites:
+  added: "<green><item> added to favorites."
+  removed: "<yellow><item> removed from favorites."
+  alert-set: "<green>Price alert set for <item> at <price>."
+
+notify:
+  new-order: "<aqua>New order for <item>: <quantity>x at <unit> each."
+  summary: "<aqua>You have <count> new notifications."
+
+admin:
+  confirm-required: "<yellow>Repeat the command with <white>confirm</white> and a reason to proceed."
+  reason-required: "<red>A reason is required."
+  cancelled: "<green>Order #<id> cancelled by an administrator. Reason logged."
+  recovery-started: "<gray>Recovery started."
+  recovery-report: "<gray>Recovery finished: <fixed> fixed, <review> need manual review."
+  purge-done: "<green>Processed <count> expired orders."
+  header: "<gradient:#4ea8de:#7b6cf6>OrderHub admin</gradient>"
+  transaction: "<gray>Transaction <white><id></white> <state> <amount> player <player>"
+
+menu:
+  main-title: "OrderHub"
+  marketplace-title: "Marketplace"
+  create-title: "Create order"
+  details-title: "Order #<id>"
+  delivery-title: "Deliver to order #<id>"
+  my-orders-title: "My orders"
+  claims-title: "Collect items"
+  favorites-title: "Favorites"
+  analytics-title: "Market analytics"
+  statistics-title: "Your statistics"
+  history-title: "Trade history"
+  admin-title: "Admin dashboard"
+  inspector-title: "Transaction <id>"
+  confirm-title: "Confirm"
+  back: "<gray>Back"
+  next: "<yellow>Next page"
+  previous: "<yellow>Previous page"
+  confirm: "<green>Confirm"
+  cancel: "<red>Cancel"
+  deliver: "<green>Deliver"
+  search: "<yellow>Search"
+  sort: "<yellow>Sort: <white><sort>"
+  favorite-on: "<yellow>Remove from favorites"
+  favorite-off: "<yellow>Add to favorites"
+
+sort:
+  NEWEST: "Newest"
+  HIGHEST_PRICE: "Highest price"
+  LOWEST_PRICE: "Lowest price"
+  ALMOST_COMPLETED: "Almost completed"
+  HIGHEST_DEMAND: "Highest demand"
+
+lore:
+  order-unit: "<gray>Price each: <white><unit>"
+  order-progress: "<gray>Progress: <white><filled>/<total> <gray>(<percent>%)"
+  order-owner: "<gray>Buyer: <white><owner>"
+  order-escrow: "<gray>Held in escrow: <white><escrow>"
+  order-expires: "<gray>Expires in: <white><time>"
+  order-min: "<gray>Minimum delivery: <white><min>"

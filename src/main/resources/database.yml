@@ -1,0 +1,25 @@
+# OrderHub: Datenbank / database
+# type: sqlite (ein Server) oder mariadb (mehrere Server, MariaDB oder MySQL)
+type: sqlite
+
+sqlite:
+  # Dateiname im Plugin-Ordner.
+  file: "orderhub.db"
+
+mariadb:
+  host: "localhost"
+  port: 3306
+  database: "orderhub"
+  username: "orderhub"
+  # Das Passwort wird bevorzugt aus der Umgebungsvariable ORDERHUB_DB_PASSWORD gelesen.
+  # Nur wenn sie fehlt, wird dieser Wert benutzt. Passwort nie in ein oeffentliches Repository legen.
+  password: ""
+  use-ssl: false
+  pool-size: 10
+  connection-timeout-ms: 10000
+
+# Wiederholungen bei Deadlock oder Lock-Konflikt.
+retry:
+  max-attempts: 5
+  initial-backoff-ms: 25
+  max-backoff-ms: 500
