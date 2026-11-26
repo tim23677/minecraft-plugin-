@@ -22,14 +22,16 @@ dependencies {
     compileOnly(libs.placeholderapi)
     compileOnly(libs.spotbugs.annotations)
 
-    implementation(libs.hikaricp)
-    implementation(libs.slf4j.api)
-    runtimeOnly(libs.sqlite.jdbc)
-    runtimeOnly(libs.mariadb.jdbc)
+    // Zur Laufzeit liefert Paper diese Bibliotheken (plugin.yml "libraries", Maven Central) bzw.
+    // sein eigenes slf4j. Das Jar bleibt klein, Treiber kollidieren nicht mit anderen Plugins.
+    compileOnly(libs.hikaricp)
+    compileOnly(libs.slf4j.api)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.paper.api)
+    testImplementation(libs.hikaricp)
+    testImplementation(libs.slf4j.api)
     testImplementation(libs.mockbukkit)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj)
@@ -48,7 +50,13 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.processResources {
-    val props = mapOf("version" to project.version)
+    val props =
+        mapOf(
+            "version" to project.version,
+            "hikariVersion" to libs.versions.hikari.get(),
+            "sqliteVersion" to libs.versions.sqlite.get(),
+            "mariadbVersion" to libs.versions.mariadb.get(),
+        )
     inputs.properties(props)
     filesMatching("plugin.yml") { expand(props) }
 }
@@ -92,8 +100,6 @@ val loadTest by tasks.registering(Test::class) {
 
 tasks.shadowJar {
     archiveClassifier.set("")
-    relocate("com.zaxxer.hikari", "dev.orderhub.libs.hikari")
-    relocate("org.slf4j", "dev.orderhub.libs.slf4j")
 }
 tasks.build { dependsOn(tasks.shadowJar) }
 

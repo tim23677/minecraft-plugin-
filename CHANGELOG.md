@@ -31,4 +31,6 @@ Added
 
 - Fees, limits and expiry are one immutable snapshot (`Rates`) that `/orderadmin reload` swaps atomically; changed fees apply without a restart and the amount shown at confirmation is checked against the charged amount
 
+- Jar size 13.7 MB to 0.5 MB: Hikari, SQLite and MariaDB drivers load through the Paper library loader (`libraries` in plugin.yml, Maven Central) instead of being bundled; the plugin uses Paper's own slf4j, so no SLF4J error lines appear at startup
+
 Known gaps are listed in RELEASE_REPORT.md.

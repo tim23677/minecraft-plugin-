@@ -14,6 +14,9 @@ properties:
   online-mode: "false"
 
 forbid:
+  - "SLF4J"
+  - "Nag author"
+  - "ERROR]: [OrderHub]"
   - "Could not load 'plugins"
   - re:Exception in thread "Server thread"
   - "Error occurred while enabling OrderHub"

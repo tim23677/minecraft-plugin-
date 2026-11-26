@@ -4,6 +4,10 @@ main: dev.orderhub.OrderHubPlugin
 api-version: '1.21'
 folia-supported: true
 softdepend: [Vault, PlaceholderAPI]
+libraries:
+  - com.zaxxer:HikariCP:${hikariVersion}
+  - org.xerial:sqlite-jdbc:${sqliteVersion}
+  - org.mariadb.jdbc:mariadb-java-client:${mariadbVersion}
 description: Player-to-player buy order marketplace with escrow, delivery and claims
 permissions:
   orderhub.use:
