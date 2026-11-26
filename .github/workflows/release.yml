@@ -1,5 +1,8 @@
 name: release
 
+# Hinweis: Die Actions sind noch ueber Versions-Tags eingebunden. Renovate (helpers:pinGitHubActionDigests)
+# schlaegt die Umstellung auf feste Commit-SHAs vor. Vor dem ersten Release diesen PR zusammenfuehren.
+
 # Ein Git-Tag der Form v1.2.3 baut das Release: Jar, SHA256SUMS, Kaeufer- und Quellpaket,
 # Provenance-Attestation und ein GitHub-Release.
 on:

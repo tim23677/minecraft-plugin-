@@ -35,6 +35,7 @@ Die EULA-Zustimmung hat der Nutzer im Auftrag ausdrücklich erteilt. Gradle beka
 - `OrderHubPlugin` und `OrderService` zerlegen, API in ein eigenes Modul auslagern: nicht umgesetzt.
 - Strukturierte Logzeilen mit Transaktions-ID je Geldbewegung und bStats: nicht umgesetzt.
 - Auto-Verlängerung, Mindestliefermenge und Vorlagen im Erstellmenü, aktiver ChatInput-Timeout, Aufräumen der Cooldown-Tabelle beim Verlassen: nicht umgesetzt.
+- GitHub Actions in `build.yml` und `release.yml` sind über Versions-Tags statt feste Commit-SHAs eingebunden (Befund eines Sicherheits-Reviews). Renovate ist so konfiguriert, dass es die SHAs vorschlägt. Das Pinnen habe ich hier nicht selbst gemacht, weil ich die SHAs nicht prüfen konnte. Vor dem ersten Release den Renovate-PR zusammenführen.
 - Paper-API ist weiter ein Snapshot (`1.21.11-R0.1-SNAPSHOT`), Builds sind nicht bitgleich reproduzierbar.
 - Spieler-Szenario auf Folia (EssentialsX läuft dort nicht), mit anderen Economy-Plugins, mit MariaDB und zwei Servern: nicht ausgeführt.
 
