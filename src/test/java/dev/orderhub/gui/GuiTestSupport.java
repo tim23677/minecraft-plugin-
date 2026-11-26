@@ -144,6 +144,22 @@ abstract class GuiTestSupport {
     MockBukkit.unmock();
   }
 
+  /** Ersetzt Manager und Listener (z. B. mit einem Scheduler, der nichts ausfuehrt). */
+  protected void rebuild(
+      PluginScheduler customScheduler, java.util.function.Predicate<Entity> owned) {
+    org.bukkit.event.HandlerList.unregisterAll(plugin);
+    manager =
+        new MenuManager(
+            Logger.getLogger("test"),
+            customScheduler,
+            sink,
+            new MenuConfig(150),
+            owned,
+            clockNanos::get);
+    listener = new MenuListener(manager, Logger.getLogger("test"));
+    server.getPluginManager().registerEvents(listener, plugin);
+  }
+
   protected InputMenu openInputMenu() {
     InputMenu menu = new InputMenu();
     manager.open(player, menu);
