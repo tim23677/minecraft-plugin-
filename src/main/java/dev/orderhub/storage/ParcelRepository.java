@@ -35,7 +35,9 @@ public interface ParcelRepository {
       long createdAt,
       long updatedAt) {}
 
-  /** Neues Paket. Pro {@code (sourceTx, owner)} hoechstens eins, wiederholtes add ist wirkungslos. */
+  /**
+   * Neues Paket. Pro {@code (sourceTx, owner)} hoechstens eins, wiederholtes add ist wirkungslos.
+   */
   long add(UUID owner, Long orderId, ItemSnapshot item, int quantity, UUID sourceTx, long now);
 
   Optional<Parcel> find(long id);

@@ -12,8 +12,8 @@ import org.bukkit.NamespacedKey;
 
 /**
  * Welche Abweichungen vom Standarditem zugelassen sind. Standard ({@link #strict()}) lehnt alles
- * ab. Ausnahmen gibt es je Kriterium ({@link RejectionReason}) und je Datenkomponente
- * (Namespaced Key, nur fuer {@link RejectionReason#UNEXPECTED_COMPONENT}).
+ * ab. Ausnahmen gibt es je Kriterium ({@link RejectionReason}) und je Datenkomponente (Namespaced
+ * Key, nur fuer {@link RejectionReason#UNEXPECTED_COMPONENT}).
  *
  * @param allowedCriteria zugelassene Kriterien (nur CUSTOM_NAME, LORE, ENCHANTED, DAMAGED,
  *     CONTAINER_CONTENTS, UNEXPECTED_COMPONENT)

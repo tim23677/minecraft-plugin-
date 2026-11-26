@@ -17,12 +17,12 @@ import java.util.Set;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Serverseitige Item-Pruefung fuer Auftragserstellung und Lieferung. Vertraut keinen
- * Clientangaben: Es zaehlt nur der tatsaechliche {@link ItemStack}.
+ * Serverseitige Item-Pruefung fuer Auftragserstellung und Lieferung. Vertraut keinen Clientangaben:
+ * Es zaehlt nur der tatsaechliche {@link ItemStack}.
  *
  * <p>Pruefung ueber die Paper-Datenkomponenten-API ({@code getDataTypes}, {@code
- * isDataOverridden}), nicht ueber ItemMeta. Als "unerwartet" gilt jede Komponente, die vom
- * Prototyp des Materials abweicht und nicht ausdruecklich erlaubt ist, sowie jede entfernte
+ * isDataOverridden}), nicht ueber ItemMeta. Als "unerwartet" gilt jede Komponente, die vom Prototyp
+ * des Materials abweicht und nicht ausdruecklich erlaubt ist, sowie jede entfernte
  * Prototyp-Komponente.
  *
  * <p>Nur im passenden Server-, Region- oder Entity-Kontext aufrufen.
@@ -84,7 +84,8 @@ public final class ItemMatcher {
   }
 
   private ValidationResult checkNamed(ItemStack stack) {
-    if (!policy.allows(RejectionReason.CUSTOM_NAME) && stack.hasData(DataComponentTypes.CUSTOM_NAME)) {
+    if (!policy.allows(RejectionReason.CUSTOM_NAME)
+        && stack.hasData(DataComponentTypes.CUSTOM_NAME)) {
       return ValidationResult.rejected(RejectionReason.CUSTOM_NAME);
     }
     ItemLore lore = stack.getData(DataComponentTypes.LORE);

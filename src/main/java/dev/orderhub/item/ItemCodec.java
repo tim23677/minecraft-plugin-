@@ -11,10 +11,10 @@ import org.bukkit.inventory.ItemStack;
 /**
  * Wandelt {@link ItemStack} (Einzelitem) in {@link ItemSnapshot} und zurueck.
  *
- * <p>Format: {@code [Magic 'OHI1'][formatVersion int][dataVersion int][ItemStack.serializeAsBytes]}.
- * Es wird nie Java-Deserialisierung eigener Daten verwendet. Dekodieren prueft Magic, Versionen,
- * Groesse, Menge 1, Material gegen {@code itemKey} und lehnt AIR ab. Jeder Fehler ist eine {@link
- * ItemCodecException}, es gibt keinen Teilzustand.
+ * <p>Format: {@code [Magic 'OHI1'][formatVersion int][dataVersion
+ * int][ItemStack.serializeAsBytes]}. Es wird nie Java-Deserialisierung eigener Daten verwendet.
+ * Dekodieren prueft Magic, Versionen, Groesse, Menge 1, Material gegen {@code itemKey} und lehnt
+ * AIR ab. Jeder Fehler ist eine {@link ItemCodecException}, es gibt keinen Teilzustand.
  *
  * <p>Thread-Hinweis: Erzeugt und liest Bukkit-Objekte, daher nur im passenden Server-, Region- oder
  * Entity-Kontext verwenden. Die erzeugten {@link ItemSnapshot}s sind reine Bytes und duerfen
