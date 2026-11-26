@@ -157,7 +157,10 @@ public final class OrderAdminCommand implements CommandHandler {
             sender,
             () -> {
               var report = admin.runRecovery(actor, reason);
-              reply(sender, Component.text(report.summary()));
+              reply(
+                  sender,
+                  s.messages()
+                      .get("admin.recovery-summary", Messages.text("summary", report.summary())));
             });
       }
       case "statistics" -> {
@@ -168,32 +171,27 @@ public final class OrderAdminCommand implements CommandHandler {
                 var st = admin.statistics();
                 reply(
                     sender,
-                    Component.text(
-                        "active="
-                            + st.active()
-                            + " paused="
-                            + st.paused()
-                            + " completed="
-                            + st.completed()
-                            + " cancelled="
-                            + st.cancelled()
-                            + " expired="
-                            + st.expired()
-                            + " manual-review="
-                            + st.manualReview()));
+                    s.messages()
+                        .get(
+                            "admin.statistics",
+                            Messages.number("active", st.active()),
+                            Messages.number("paused", st.paused()),
+                            Messages.number("completed", st.completed()),
+                            Messages.number("cancelled", st.cancelled()),
+                            Messages.number("expired", st.expired()),
+                            Messages.number("review", st.manualReview())));
               });
         }
       }
       case "debug" -> {
         if (need(sender, "orderhub.admin.view")) {
           sender.sendMessage(
-              Component.text(
-                  "server-id="
-                      + s.storage().serverId()
-                      + " dialect="
-                      + s.storage().dialect()
-                      + " menus-open="
-                      + s.menus().openCount()));
+              s.messages()
+                  .get(
+                      "admin.debug",
+                      Messages.text("server", s.storage().serverId()),
+                      Messages.text("dialect", String.valueOf(s.storage().dialect())),
+                      Messages.number("menus", s.menus().openCount())));
         }
       }
       default -> sender.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
@@ -210,20 +208,20 @@ public final class OrderAdminCommand implements CommandHandler {
               sender,
               () -> {
                 var open = admin.manualReview(50);
-                reply(sender, Component.text("MANUAL_REVIEW: " + open.size()));
+                reply(
+                    sender,
+                    s.messages().get("admin.review-header", Messages.number("count", open.size())));
                 for (JournalEntry e : open) {
                   reply(
                       sender,
-                      Component.text(
-                          e.id()
-                              + " "
-                              + e.type()
-                              + " "
-                              + Money.format(e.amount())
-                              + " player="
-                              + e.playerId()
-                              + " "
-                              + String.valueOf(e.detail())));
+                      s.messages()
+                          .get(
+                              "admin.review-line",
+                              Messages.text("id", e.id().toString()),
+                              Messages.text("type", e.type().name()),
+                              Messages.text("amount", Money.format(e.amount())),
+                              Messages.text("player", e.playerId().toString()),
+                              Messages.text("detail", String.valueOf(e.detail()))));
                 }
               });
         }
@@ -244,9 +242,7 @@ public final class OrderAdminCommand implements CommandHandler {
           return;
         }
         if (args.length < 4) {
-          sender.sendMessage(
-              Component.text(
-                  "/orderadmin review resolve <tx> paid|refund|discard confirm <reason>"));
+          sender.sendMessage(s.messages().prefixed("admin.review-usage"));
           return;
         }
         UUID tx;
@@ -269,14 +265,14 @@ public final class OrderAdminCommand implements CommandHandler {
               var r = admin.resolveReview(tx, how, actor, reason);
               reply(
                   sender,
-                  Component.text(
-                      "review "
-                          + tx
-                          + " "
-                          + how
-                          + ": "
-                          + r.status()
-                          + (r.refundTx() == null ? "" : " refund-tx=" + r.refundTx())));
+                  s.messages()
+                      .get(
+                          "admin.review-result",
+                          Messages.text("tx", tx.toString()),
+                          Messages.text("how", how.name()),
+                          Messages.text("status", r.status().name()),
+                          Messages.text(
+                              "refund", r.refundTx() == null ? "-" : r.refundTx().toString())));
             });
       }
       default -> sender.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
@@ -356,21 +352,16 @@ public final class OrderAdminCommand implements CommandHandler {
     for (Order o : orders) {
       reply(
           sender,
-          Component.text(
-              "#"
-                  + o.id()
-                  + " "
-                  + o.item().itemKey()
-                  + " "
-                  + o.quantityFilled()
-                  + "/"
-                  + o.quantityTotal()
-                  + " @"
-                  + Money.format(o.unitPrice())
-                  + " owner="
-                  + o.owner()
-                  + " "
-                  + o.status()));
+          s.messages()
+              .get(
+                  "admin.order-line",
+                  Messages.number("id", o.id()),
+                  Messages.text("item", o.item().itemKey()),
+                  Messages.number("filled", o.quantityFilled()),
+                  Messages.number("total", o.quantityTotal()),
+                  Messages.text("unit", Money.format(o.unitPrice())),
+                  Messages.text("owner", o.owner().toString()),
+                  Messages.text("status", o.status().name())));
     }
   }
 
@@ -408,7 +399,12 @@ public final class OrderAdminCommand implements CommandHandler {
     }
     if (sub.equals("inspect") && args[1].matches("[0-9]{1,18}")) {
       var order = admin.order(Long.parseLong(args[1]));
-      reply(sender, Component.text(order.map(Order::toString).orElse("not found")));
+      reply(
+          sender,
+          order
+              .map(o -> s.messages().get("admin.transaction", Messages.text("entry", o.toString())))
+              .orElseGet(
+                  () -> s.messages().prefixed("order.not-found", Messages.text("id", args[1]))));
       return;
     }
     try {

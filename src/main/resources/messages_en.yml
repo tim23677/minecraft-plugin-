@@ -96,7 +96,7 @@ admin:
   transaction: "<gray><entry>"
   ledger-line: "<gray>  <kind> <white><amount></white> <player>"
   warning: "<red>[OrderHub] <message>"
-  help: "<gray>reload | list [status] | cancel <id> confirm <reason> | purge-expired confirm <reason> | transactions [player-uuid] | transaction <uuid> | inspect <id> | recovery confirm <reason> | statistics | debug"
+  help: "<gray>reload | list [status] | cancel <id> confirm <reason> | purge-expired confirm <reason> | transactions [player-uuid] | transaction <uuid> | inspect <id> | recovery confirm <reason> | review list|show|resolve | statistics | debug"
   confirm-required: "<yellow>Repeat the command with <white>confirm</white> and a reason to proceed."
   reason-required: "<red>A reason is required."
   cancelled: "<green>Order #<id> cancelled by an administrator. Reason logged."
@@ -104,6 +104,14 @@ admin:
   recovery-report: "<gray>Recovery finished: <fixed> fixed, <review> need manual review."
   purge-done: "<green>Processed <count> expired orders."
   header: "<gradient:#4ea8de:#7b6cf6>OrderHub admin</gradient>"
+  statistics: "<gray>Active <white><active></white>, paused <white><paused></white>, completed <white><completed></white>, cancelled <white><cancelled></white>, expired <white><expired></white>, manual review <white><review></white>."
+  debug: "<gray>Server <white><server></white>, database <white><dialect></white>, open menus <white><menus></white>."
+  review-header: "<gradient:#4ea8de:#7b6cf6>Manual review</gradient> <gray>(<count>)"
+  review-line: "<gray><white><id></white> <type> <amount> player <player> <detail>"
+  review-usage: "<yellow>Usage: /orderadmin review resolve <tx> paid|refund|discard confirm <reason>"
+  review-result: "<gray>Review <white><tx></white> <how>: <white><status></white> (refund transaction <refund>)"
+  order-line: "<gray>#<id> <white><item></white> <filled>/<total> at <unit>, owner <owner>, <status>"
+  recovery-summary: "<gray><summary>"
   transaction: "<gray>Transaction <white><id></white> <state> <amount> player <player>"
 
 menu:
