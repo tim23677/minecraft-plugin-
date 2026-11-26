@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew build:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew integrationTest:*)",
+      "Bash(./gradlew spotlessCheck:*)",
+      "Bash(./gradlew spotlessApply:*)",
+      "Bash(./gradlew spotbugsMain:*)",
+      "Bash(./gradlew spotbugsTest:*)",
+      "Bash(./gradlew pitest:*)",
+      "Bash(./gradlew dependencyCheckAnalyze:*)",
+      "Bash(./gradlew dependencies:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "Paper-API und MockBukkit muessen zur gleichen Minecraft-Version passen: nur manuell anheben.",
+      "matchPackageNames": ["io.papermc.paper:paper-api", "org.mockbukkit.mockbukkit:mockbukkit-v1.21"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Java 21 ist fest: keine Major-Spruenge der Toolchain.",
+      "matchDatasources": ["java-version"],
+      "enabled": false
+    },
+    {
+      "description": "Vorabversionen nicht vorschlagen.",
+      "matchPackageNames": ["*"],
+      "ignoreUnstable": true
+    }
+  ],
+  "vulnerabilityAlerts": { "labels": ["security"] }
+}
