@@ -100,3 +100,10 @@ retention:
   history-days: 120
   # Hintergrundbereinigung, Minuten zwischen zwei Laeufen.
   cleanup-interval-minutes: 30
+
+updates:
+  # Pruefung auf neue Versionen gegen die GitHub-Releases eines Repositories. Standard: aus.
+  # Es wird nur die Versionsnummer abgefragt, es werden keine Daten gesendet.
+  check: false
+  # Repository im Format owner/name, das die Releases veroeffentlicht.
+  repository: ""

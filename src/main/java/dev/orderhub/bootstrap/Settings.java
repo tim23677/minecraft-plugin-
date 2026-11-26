@@ -41,6 +41,8 @@ public record Settings(
     int cleanupIntervalMinutes,
     boolean economyAsyncSafe,
     int economyTimeoutMs,
+    boolean updateCheck,
+    String updateRepository,
     List<String> warnings) {
 
   public Settings {
@@ -97,6 +99,8 @@ public record Settings(
         range(cfg, "retention.cleanup-interval-minutes", 30, 1, 1440, warnings),
         cfg.getBoolean("economy.async-safe", false),
         range(cfg, "economy.timeout-ms", 10_000, 500, 120_000, warnings),
+        cfg.getBoolean("updates.check", false),
+        validRepositoryOrEmpty(str(cfg, "updates.repository", ""), warnings),
         List.copyOf(warnings));
   }
 
@@ -115,6 +119,15 @@ public record Settings(
       }
     }
     return unknown;
+  }
+
+  private static String validRepositoryOrEmpty(String repository, List<String> warnings) {
+    if (repository.isEmpty() || UpdateChecker.validRepository(repository)) {
+      return repository;
+    }
+    warnings.add(
+        "updates.repository '" + repository + "' must look like owner/name, update check is off");
+    return "";
   }
 
   private static String str(ConfigurationSection cfg, String path, String def) {

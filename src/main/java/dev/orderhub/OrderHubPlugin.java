@@ -438,6 +438,22 @@ public class OrderHubPlugin extends JavaPlugin {
         expansion = created;
       }
     }
+    if (st.updateCheck() && !st.updateRepository().isEmpty()) {
+      String current = getPluginMeta().getVersion();
+      scheduler.runAsync(() ->
+          new dev.orderhub.bootstrap.UpdateChecker()
+              .newerVersion(
+                  dev.orderhub.bootstrap.UpdateChecker.latestReleaseUrl(st.updateRepository()),
+                  current)
+              .ifPresent(tag ->
+                  getLogger()
+                      .info(
+                          "A newer OrderHub version is available: "
+                              + tag
+                              + " (running "
+                              + current
+                              + ")")));
+    }
     getLogger()
         .info("OrderHub enabled (server-id " + st.serverId() + ", " + storage.dialect() + ")");
   }

@@ -310,7 +310,7 @@ public final class AdminService {
       java.nio.file.Path file =
           dev.orderhub.storage.Backups.sqliteBackup(
               jdbc.dataSource(), dataDir.resolve("backups"), "manual", 10);
-      audit(actor, "backup.sqlite", file.getFileName().toString(), reason, "ok");
+      audit(actor, "backup.sqlite", String.valueOf(file.getFileName()), reason, "ok");
       return new FileResult(file, 0);
     } catch (java.sql.SQLException | java.io.IOException e) {
       throw new IllegalStateException("backup failed: " + e.getMessage(), e);
@@ -336,7 +336,7 @@ public final class AdminService {
                 ? dev.orderhub.storage.CsvExport.writeOrders(storage, out)
                 : dev.orderhub.storage.CsvExport.writeLedger(storage, out);
       }
-      audit(actor, "export." + what, file.getFileName().toString(), reason, "rows=" + rows);
+      audit(actor, "export." + what, String.valueOf(file.getFileName()), reason, "rows=" + rows);
       return new FileResult(file, rows);
     } catch (java.io.IOException e) {
       throw new IllegalStateException("export failed: " + e.getMessage(), e);

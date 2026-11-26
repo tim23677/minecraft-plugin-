@@ -73,10 +73,11 @@ public final class Backups {
     try (Stream<Path> files = Files.list(dir)) {
       List<Path> old =
           files
-              .filter(p -> p.getFileName().toString().startsWith(family))
-              .filter(p -> p.getFileName().toString().endsWith(".db"))
+              .filter(p -> String.valueOf(p.getFileName()).startsWith(family))
+              .filter(p -> String.valueOf(p.getFileName()).endsWith(".db"))
               .sorted(
-                  java.util.Comparator.comparing((Path p) -> p.getFileName().toString()).reversed())
+                  java.util.Comparator.comparing((Path p) -> String.valueOf(p.getFileName()))
+                      .reversed())
               .skip(Math.max(1, keep))
               .toList();
       for (Path p : old) {

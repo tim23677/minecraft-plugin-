@@ -239,7 +239,7 @@ abstract class FlowTestBase {
   /** Alle Diamanten: Spielerinventar, Cursor, offenes Menue, Rueckgaben, Claims, Reservierungen. */
   protected int diamondsEverywhere() {
     int sum = 0;
-    for (ItemStack i : supplier.getInventory().getContents()) {
+    for (ItemStack i : Objects.requireNonNull(supplier.getInventory().getContents())) {
       if (i != null && i.getType() == Material.DIAMOND) {
         sum += i.getAmount();
       }
@@ -268,7 +268,7 @@ abstract class FlowTestBase {
 
   protected int inInventory(PlayerMock player, Material material) {
     int sum = 0;
-    for (ItemStack i : player.getInventory().getContents()) {
+    for (ItemStack i : Objects.requireNonNull(player.getInventory().getContents())) {
       if (i != null && i.getType() == material) {
         sum += i.getAmount();
       }
