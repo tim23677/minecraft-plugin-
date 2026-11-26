@@ -1,0 +1,16 @@
+name: OrderHub
+version: '${version}'
+main: dev.orderhub.OrderHubPlugin
+api-version: '1.21'
+folia-supported: true
+softdepend: [Vault]
+description: OrderHub
+commands:
+  orderhub:
+    description: Opens the OrderHub menu
+    usage: /<command>
+    permission: orderhub.use
+permissions:
+  orderhub.use:
+    description: Use the OrderHub menu
+    default: true

@@ -1,0 +1,41 @@
+package dev.orderhub.scheduler;
+
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
+import org.bukkit.plugin.Plugin;
+
+/** Scheduler fuer Folia, nutzt die Region-, Entity- und Async-Scheduler der Paper-API. */
+final class FoliaPluginScheduler implements PluginScheduler {
+
+  private final Plugin plugin;
+
+  FoliaPluginScheduler(Plugin plugin) {
+    this.plugin = plugin;
+  }
+
+  @Override
+  public void runAt(Location location, Runnable task) {
+    plugin.getServer().getRegionScheduler().run(plugin, location, t -> task.run());
+  }
+
+  @Override
+  public void runOn(Entity entity, Runnable task) {
+    entity.getScheduler().run(plugin, t -> task.run(), null);
+  }
+
+  @Override
+  public void runGlobal(Runnable task) {
+    plugin.getServer().getGlobalRegionScheduler().run(plugin, t -> task.run());
+  }
+
+  @Override
+  public void runAsync(Runnable task) {
+    plugin.getServer().getAsyncScheduler().runNow(plugin, t -> task.run());
+  }
+
+  @Override
+  public void cancelAll() {
+    plugin.getServer().getGlobalRegionScheduler().cancelTasks(plugin);
+    plugin.getServer().getAsyncScheduler().cancelTasks(plugin);
+  }
+}

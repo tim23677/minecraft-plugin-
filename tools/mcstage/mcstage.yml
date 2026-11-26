@@ -1,0 +1,34 @@
+# Echter Serverlauf von OrderHub auf Paper und Folia.
+# Start: tools/mcstage/run.sh   (setzt die EULA-Zustimmung des Nutzers voraus, siehe dort)
+name: orderhub loads on paper and folia
+
+platforms: [paper, folia]
+versions: ["1.21.11"]
+
+memory: 1G
+
+plugins:
+  - build/libs/OrderHub-0.1.0-SNAPSHOT.jar
+
+properties:
+  online-mode: "false"
+
+forbid:
+  - "Could not load 'plugins"
+  - re:Exception in thread "Server thread"
+  - "Error occurred while enabling OrderHub"
+
+timeout: 60s
+
+steps:
+  # `enabled:` greift hier nicht: mcstage 0.56.0 verbraucht alle Zeilen bis "Done" im Boot-Schritt,
+  # OrderHub meldet "Enabling OrderHub" aber davor. Deshalb die Pluginliste abfragen.
+  - send: "plugins"
+  - expect: "OrderHub"
+    timeout: 30s
+
+  # Die Konsole darf das Menue nicht oeffnen.
+  - send: "orderhub"
+  - expect: "Only players can use this command."
+
+  - wait: 5s
