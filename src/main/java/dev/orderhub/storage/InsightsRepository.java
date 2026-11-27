@@ -78,5 +78,17 @@ public interface InsightsRepository {
 
   List<Note> pendingNotes(UUID player, int limit);
 
+  /**
+   * Offene Hinweise fuer mehrere Spieler auf einmal (aelteste zuerst), hoechstens {@code limit}.
+   */
+  List<Note> pendingNotesForPlayers(java.util.Collection<UUID> players, int limit);
+
+  /**
+   * Beansprucht Hinweise atomar: nur wer die Zeile tatsaechlich von "offen" auf "zugestellt" setzt,
+   * bekommt die Id zurueck. Zwei Server, die gleichzeitig dieselben Hinweise lesen, liefern so
+   * jeden genau einmal aus.
+   */
+  List<Long> claimNotes(List<Long> ids, long now);
+
   void markNotesDelivered(List<Long> ids, long now);
 }

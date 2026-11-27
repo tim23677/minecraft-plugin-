@@ -221,15 +221,30 @@ public final class InsightsService {
    * Holt offene Benachrichtigungen und markiert sie als zugestellt (Zusammenfassung beim Login).
    */
   public List<InsightsRepository.Note> takeNotes(UUID player, int limit) {
+    return storage.transact(uow -> claim(uow, uow.insights().pendingNotes(player, limit))).join();
+  }
+
+  /**
+   * Holt offene Hinweise fuer die Spieler, die gerade auf diesem Server online sind (wird
+   * zeitgesteuert aufgerufen). Hinweise, die ein anderer Server in derselben Zeit beansprucht hat,
+   * fehlen hier.
+   */
+  public List<InsightsRepository.Note> takeNotesForOnline(
+      java.util.Collection<UUID> players, int limit) {
     return storage
-        .transact(uow -> {
-          List<InsightsRepository.Note> notes = uow.insights().pendingNotes(player, limit);
-          uow.insights()
-              .markNotesDelivered(
-                  notes.stream().map(InsightsRepository.Note::id).toList(), uow.now());
-          return notes;
-        })
+        .transact(uow -> claim(uow, uow.insights().pendingNotesForPlayers(players, limit)))
         .join();
+  }
+
+  private static List<InsightsRepository.Note> claim(
+      dev.orderhub.storage.UnitOfWork uow, List<InsightsRepository.Note> pending) {
+    if (pending.isEmpty()) {
+      return pending;
+    }
+    List<Long> claimed =
+        uow.insights()
+            .claimNotes(pending.stream().map(InsightsRepository.Note::id).toList(), uow.now());
+    return pending.stream().filter(n -> claimed.contains(n.id())).toList();
   }
 
   /** Bereinigt alten Handelsverlauf. */

@@ -428,6 +428,10 @@ public class OrderHubPlugin extends JavaPlugin {
               () -> guarded("recovery sweep", recovery::sweep), 300_000, 300_000);
           scheduler.runAsyncRepeating(
               () -> guarded("cooldown purge", create::purgeExpiredCooldowns), 60_000, 60_000);
+          dev.orderhub.flow.NoteDispatcher noteDispatcher =
+              new dev.orderhub.flow.NoteDispatcher(services, getServer()::getOnlinePlayers);
+          scheduler.runAsyncRepeating(
+              () -> guarded("note dispatch", noteDispatcher::runOnce), 15_000, 10_000);
           scheduler.runAsyncRepeating(
               () ->
                   guarded(

@@ -253,6 +253,53 @@ final class JdbcInsightsRepository implements InsightsRepository {
   }
 
   @Override
+  public List<Note> pendingNotesForPlayers(java.util.Collection<UUID> players, int limit) {
+    if (players.isEmpty()) {
+      return List.of();
+    }
+    List<Note> out = new java.util.ArrayList<>();
+    List<UUID> all = List.copyOf(players);
+    int cap = Math.max(1, Math.min(limit, 500));
+    // In Gruppen, damit die Parameterzahl begrenzt bleibt.
+    for (int from = 0; from < all.size() && out.size() < cap; from += 100) {
+      List<UUID> chunk = all.subList(from, Math.min(all.size(), from + 100));
+      String marks = String.join(",", java.util.Collections.nCopies(chunk.size(), "?"));
+      List<Object> params = new java.util.ArrayList<>(chunk);
+      params.add(cap - out.size());
+      out.addAll(
+          jdbc.list(
+              "SELECT id, player_uuid, kind, payload, created_at FROM notifications "
+                  + "WHERE player_uuid IN ("
+                  + marks
+                  + ") AND delivered_at IS NULL ORDER BY id ASC LIMIT ?",
+              rs ->
+                  new Note(
+                      rs.getLong("id"),
+                      Jdbc.uuid(rs, "player_uuid"),
+                      rs.getString("kind"),
+                      rs.getString("payload"),
+                      rs.getLong("created_at")),
+              params.toArray()));
+    }
+    return out;
+  }
+
+  @Override
+  public List<Long> claimNotes(List<Long> ids, long now) {
+    List<Long> claimed = new java.util.ArrayList<>();
+    for (long id : ids) {
+      if (jdbc.update(
+              "UPDATE notifications SET delivered_at = ? WHERE id = ? AND delivered_at IS NULL",
+              now,
+              id)
+          > 0) {
+        claimed.add(id);
+      }
+    }
+    return claimed;
+  }
+
+  @Override
   public void markNotesDelivered(List<Long> ids, long now) {
     for (long id : ids) {
       jdbc.update("UPDATE notifications SET delivered_at = ? WHERE id = ?", now, id);

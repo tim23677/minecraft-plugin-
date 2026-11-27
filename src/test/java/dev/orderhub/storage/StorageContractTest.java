@@ -2072,4 +2072,275 @@ abstract class StorageContractTest {
     assertThat(tx(storage(), (UnitOfWork u) -> u.orders().count(OrderQuery.firstPage())))
         .isEqualTo(14);
   }
+
+  // ---------------------------------------------------------------- Mehrserver-Szenarien
+
+  private static final UUID MS_OWNER = new UUID(0, 1);
+  private static final UUID MS_SUPPLIER_A = new UUID(0, 2);
+  private static final UUID MS_SUPPLIER_B = new UUID(0, 3);
+
+  private dev.orderhub.service.OrderService orderService(
+      JdbcStorage storage, dev.orderhub.testsupport.InMemoryEconomy economy) {
+    return new dev.orderhub.service.OrderService(
+        storage,
+        economy,
+        dev.orderhub.config.Limits.defaults(),
+        dev.orderhub.config.Fees.none(),
+        new dev.orderhub.config.Expiry(java.time.Duration.ofDays(7), true));
+  }
+
+  /** Eine Lieferung von {@code qty}; {@code true}, wenn sie festgeschrieben wurde. */
+  private boolean deliverOnce(
+      dev.orderhub.tx.DeliveryEngine engine, long orderId, UUID supplier, int qty) {
+    var prepared = engine.prepare(orderId, supplier, qty, UUID.randomUUID().toString());
+    if (!prepared.ok()) {
+      return false;
+    }
+    engine.confirmItemsRemoved(prepared.journalId());
+    return engine.commit(prepared.journalId()).status()
+        == dev.orderhub.tx.DeliveryEngine.CommitStatus.COMMITTED;
+  }
+
+  @Test
+  void twoServersDeliveringToTheSameOrderNeverOverfillNeverPayTwiceAndLoseNothing()
+      throws Exception {
+    JdbcStorage a = server("srv-a");
+    JdbcStorage b = server("srv-b");
+    var economy = new dev.orderhub.testsupport.InMemoryEconomy();
+    economy.setBalance(MS_OWNER, 10_000_000);
+    long orderId = orderService(a, economy).createOrder(msRequest(100, 100)).orderId();
+    var engineA = new dev.orderhub.tx.DeliveryEngine(a, dev.orderhub.config.Fees.none());
+    var engineB = new dev.orderhub.tx.DeliveryEngine(b, dev.orderhub.config.Fees.none());
+
+    java.util.concurrent.atomic.AtomicInteger committedA =
+        new java.util.concurrent.atomic.AtomicInteger();
+    java.util.concurrent.atomic.AtomicInteger committedB =
+        new java.util.concurrent.atomic.AtomicInteger();
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    try {
+      CountDownLatch start = new CountDownLatch(1);
+      Future<?> fa =
+          pool.submit(() -> {
+            start.await();
+            for (int i = 0; i < 10; i++) {
+              if (deliverOnce(engineA, orderId, MS_SUPPLIER_A, 10)) {
+                committedA.incrementAndGet();
+              }
+            }
+            return null;
+          });
+      Future<?> fb =
+          pool.submit(() -> {
+            start.await();
+            for (int i = 0; i < 10; i++) {
+              if (deliverOnce(engineB, orderId, MS_SUPPLIER_B, 10)) {
+                committedB.incrementAndGet();
+              }
+            }
+            return null;
+          });
+      start.countDown();
+      fa.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      fb.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    } finally {
+      pool.shutdownNow();
+    }
+
+    int commits = committedA.get() + committedB.get();
+    assertThat(commits).as("20 Versuche zu je 10 gegen 100 Stueck").isEqualTo(10);
+    Order order = tx(a, (UnitOfWork u) -> u.orders().find(orderId)).orElseThrow();
+    assertThat(order.quantityFilled()).isEqualTo(100);
+    assertThat(order.status()).isEqualTo(OrderStatus.COMPLETED);
+    assertThat(order.escrowRemaining()).isZero();
+    // jeder Treffer hat genau ein Paket fuer den Auftraggeber erzeugt
+    int claimed =
+        tx(b, (UnitOfWork u) -> u.claims().listAvailable(MS_OWNER, 0, 100)).stream()
+            .mapToInt(p -> p.quantity())
+            .sum();
+    assertThat(claimed).isEqualTo(100);
+
+    // Auszahlungen von beiden Servern gleichzeitig abarbeiten: jede Zeile wird genau einmal bezahlt
+    var workerA =
+        new dev.orderhub.tx.PayoutWorker(
+            a,
+            economy,
+            java.time.Clock.systemUTC(),
+            3,
+            java.time.Duration.ofMillis(5),
+            java.time.Duration.ofMillis(20));
+    var workerB =
+        new dev.orderhub.tx.PayoutWorker(
+            b,
+            economy,
+            java.time.Clock.systemUTC(),
+            3,
+            java.time.Duration.ofMillis(5),
+            java.time.Duration.ofMillis(20));
+    ExecutorService payers = Executors.newFixedThreadPool(2);
+    try {
+      List<Future<?>> runs = new ArrayList<>();
+      for (var w : List.of(workerA, workerB)) {
+        runs.add(
+            payers.submit(() -> {
+              for (int i = 0; i < 20; i++) {
+                w.runOnce(50);
+              }
+              return null;
+            }));
+      }
+      for (Future<?> f : runs) {
+        f.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      }
+    } finally {
+      payers.shutdownNow();
+    }
+    assertThat(economy.duplicateReferences()).isEmpty();
+    assertThat(economy.balance(MS_SUPPLIER_A) + economy.balance(MS_SUPPLIER_B))
+        .as("100 Stueck zu je 100")
+        .isEqualTo(10_000);
+    assertThat(economy.balance(MS_SUPPLIER_A)).isEqualTo(committedA.get() * 1000L);
+    assertThat(economy.balance(MS_SUPPLIER_B)).isEqualTo(committedB.get() * 1000L);
+  }
+
+  private dev.orderhub.service.OrderService.CreateOrderRequest msRequest(long price, int qty) {
+    return new dev.orderhub.service.OrderService.CreateOrderRequest(
+        UUID.randomUUID(),
+        MS_OWNER,
+        TestData.item("minecraft:diamond"),
+        price,
+        qty,
+        1,
+        null,
+        false,
+        "ores",
+        100,
+        false);
+  }
+
+  @Test
+  void aServerThatCrashesMidDeliveryIsRecoveredByTheOtherServerWithoutLossOrDuplicate()
+      throws Exception {
+    JdbcStorage a = server("srv-a");
+    JdbcStorage b = server("srv-b");
+    var economy = new dev.orderhub.testsupport.InMemoryEconomy();
+    economy.setBalance(MS_OWNER, 10_000_000);
+    long orderId = orderService(a, economy).createOrder(msRequest(100, 50)).orderId();
+    var engineA = new dev.orderhub.tx.DeliveryEngine(a, dev.orderhub.config.Fees.none());
+
+    // Server A nimmt 7 Items entgegen, bestaetigt die Entnahme und stuerzt vor dem Commit ab.
+    var prepared = engineA.prepare(orderId, MS_SUPPLIER_A, 7, "crash-nonce");
+    assertThat(prepared.ok()).isTrue();
+    engineA.confirmItemsRemoved(prepared.journalId());
+
+    // Server B laeuft weiter und fuehrt seine Wiederherstellung aus.
+    Thread.sleep(30);
+    var audit = new dev.orderhub.testsupport.Harness.RecordingAudit();
+    var recoveryB =
+        new dev.orderhub.tx.RecoveryService(
+            b,
+            new dev.orderhub.tx.ClaimEngine(b, audit),
+            new dev.orderhub.tx.ReturnEngine(b, audit),
+            audit,
+            java.time.Clock.systemUTC(),
+            java.time.Duration.ofMillis(10));
+    recoveryB.sweep();
+    recoveryB.sweep(); // ein zweiter Lauf darf nichts mehr aendern
+
+    assertThat(
+            tx(b, (UnitOfWork u) -> u.journal().find(prepared.journalId())).orElseThrow().state())
+        .isEqualTo(dev.orderhub.tx.TxState.FAILED);
+    var returns = tx(b, (UnitOfWork u) -> u.returns().listAvailable(MS_SUPPLIER_A, 0, 100));
+    assertThat(returns).as("genau eine Rueckgabe, keine Verdopplung").hasSize(1);
+    assertThat(returns.get(0).quantity()).isEqualTo(7);
+    Order order = tx(a, (UnitOfWork u) -> u.orders().find(orderId)).orElseThrow();
+    assertThat(order.quantityFilled()).isZero();
+    assertThat(order.escrowRemaining()).isEqualTo(5_000);
+    assertThat(tx(b, (UnitOfWork u) -> u.claims().listAvailable(MS_OWNER, 0, 100))).isEmpty();
+    assertThat(economy.balance(MS_SUPPLIER_A)).isZero();
+
+    // Der abgestuerzte Server startet neu und holt nach: Recovery bleibt idempotent.
+    JdbcStorage a2 = server("srv-a");
+    var recoveryA =
+        new dev.orderhub.tx.RecoveryService(
+            a2,
+            new dev.orderhub.tx.ClaimEngine(a2, audit),
+            new dev.orderhub.tx.ReturnEngine(a2, audit),
+            audit,
+            java.time.Clock.systemUTC(),
+            java.time.Duration.ZERO);
+    recoveryA.runAtStartup();
+    assertThat(tx(a2, (UnitOfWork u) -> u.returns().listAvailable(MS_SUPPLIER_A, 0, 100)))
+        .hasSize(1);
+  }
+
+  @Test
+  void aNoteIsClaimedExactlyOnceWhenTwoServersReadItAtTheSameTime() throws Exception {
+    JdbcStorage a = server("srv-a");
+    JdbcStorage b = server("srv-b");
+    UUID player = UUID.randomUUID();
+    for (int i = 0; i < 30; i++) {
+      final int n = i;
+      tx(
+          a,
+          (UnitOfWork u) ->
+              u.insights().addNote(player, "delivered", "k|1|" + n, "d" + n, TestData.T0));
+    }
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    try {
+      CountDownLatch start = new CountDownLatch(1);
+      List<Future<List<Long>>> runs = new ArrayList<>();
+      for (JdbcStorage server : List.of(a, b)) {
+        runs.add(
+            pool.submit(() -> {
+              start.await();
+              List<Long> mine = new ArrayList<>();
+              for (int round = 0; round < 5; round++) {
+                mine.addAll(
+                    tx(
+                        server,
+                        (UnitOfWork u) -> {
+                          var pending = u.insights().pendingNotesForPlayers(List.of(player), 100);
+                          return u.insights()
+                              .claimNotes(
+                                  pending.stream()
+                                      .map(dev.orderhub.storage.InsightsRepository.Note::id)
+                                      .toList(),
+                                  TestData.T0 + 1);
+                        }));
+              }
+              return mine;
+            }));
+      }
+      start.countDown();
+      List<Long> all = new ArrayList<>();
+      for (Future<List<Long>> f : runs) {
+        all.addAll(f.get(TIMEOUT_SECONDS, TimeUnit.SECONDS));
+      }
+      assertThat(all).as("jeder Hinweis genau einmal").hasSize(30).doesNotHaveDuplicates();
+    } finally {
+      pool.shutdownNow();
+    }
+    assertThat(tx(a, (UnitOfWork u) -> u.insights().pendingNotesForPlayers(List.of(player), 100)))
+        .isEmpty();
+  }
+
+  @Test
+  void pendingNotesForPlayersOnlyReturnsTheAskedPlayersAndRespectsTheLimit() {
+    JdbcStorage a = server("srv-a");
+    UUID p1 = UUID.randomUUID();
+    UUID p2 = UUID.randomUUID();
+    UUID p3 = UUID.randomUUID();
+    for (int i = 0; i < 5; i++) {
+      final int n = i;
+      tx(a, (UnitOfWork u) -> u.insights().addNote(p1, "delivered", "x", "a" + n, TestData.T0));
+      tx(a, (UnitOfWork u) -> u.insights().addNote(p2, "delivered", "x", "b" + n, TestData.T0));
+      tx(a, (UnitOfWork u) -> u.insights().addNote(p3, "delivered", "x", "c" + n, TestData.T0));
+    }
+    var both = tx(a, (UnitOfWork u) -> u.insights().pendingNotesForPlayers(List.of(p1, p2), 100));
+    assertThat(both).hasSize(10).allMatch(n -> !n.player().equals(p3));
+    assertThat(tx(a, (UnitOfWork u) -> u.insights().pendingNotesForPlayers(List.of(p1, p2), 4)))
+        .hasSize(4);
+    assertThat(tx(a, (UnitOfWork u) -> u.insights().pendingNotesForPlayers(List.of(), 10)))
+        .isEmpty();
+  }
 }
