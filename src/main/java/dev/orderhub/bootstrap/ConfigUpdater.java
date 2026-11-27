@@ -69,6 +69,11 @@ public final class ConfigUpdater {
                 }
               }));
     }
+    if (fileName.equals("menus.yml")) {
+      // Version 2 fuehrt title, slots, materials und texts ein. Alles Neue kommt aus den
+      // Standardwerten, nichts wird geloescht oder ueberschrieben.
+      return List.of(new Migration(2, cfg -> {}));
+    }
     return List.of();
   }
 

@@ -58,8 +58,29 @@ public final class Menus {
     return stack;
   }
 
+  private volatile MarketFlow market;
+
+  /** Verdrahtet den Marktplatz mit Suche, Kategorien und Keyset-Paginierung. */
+  public void market(MarketFlow flow) {
+    this.market = flow;
+  }
+
+  /** Marktplatz mit Filter (Suche, Kategorie, Sortierung). */
+  public void openMarket(Player player, MarketFlow.Filter filter) {
+    MarketFlow flow = market;
+    if (flow == null) {
+      openMarket(player, filter.sort());
+      return;
+    }
+    flow.open(player, filter);
+  }
+
   /** Marktplatz: alle aktiven Auftraege nach {@code sort}, Klick oeffnet das Liefermenue. */
   public void openMarket(Player player, OrderQuery.Sort sort) {
+    if (market != null) {
+      market.open(player, new MarketFlow.Filter(sort, null, null));
+      return;
+    }
     OrderQuery query = new OrderQuery(null, null, null, OrderStatus.ACTIVE, sort, 0, 100);
     Async.supply(
         s.scheduler(),
@@ -246,7 +267,7 @@ public final class Menus {
     return icon;
   }
 
-  private ItemStack orderIcon(Order order) {
+  public ItemStack orderIcon(Order order) {
     Optional<ItemStack> stack = ItemService.decode(s.codec(), order.item());
     ItemStack icon = stack.orElseGet(() -> new ItemStack(Material.BARRIER));
     icon.setAmount(1);

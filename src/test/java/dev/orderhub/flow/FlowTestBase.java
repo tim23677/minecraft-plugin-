@@ -114,6 +114,11 @@ abstract class FlowTestBase {
     public void cancelAll() {}
   }
 
+  /** Welche Abweichungen in Auftraegen zugelassen sind. Tests ueberschreiben das bei Bedarf. */
+  protected MatchPolicy matchPolicy() {
+    return MatchPolicy.strict();
+  }
+
   protected static final UUID OWNER = Harness.player(1);
 
   @TempDir Path dir;
@@ -154,7 +159,7 @@ abstract class FlowTestBase {
             nanos::incrementAndGet);
     server.getPluginManager().registerEvents(new MenuListener(menus, logger), plugin);
     ItemMatcher matcher =
-        new ItemMatcher(codec, MatchPolicy.strict(), Blocklist.parse(List.of(), true).blocklist());
+        new ItemMatcher(codec, matchPolicy(), Blocklist.parse(List.of(), true).blocklist());
     Rates rates = Rates.from(settings);
     services =
         new Services(

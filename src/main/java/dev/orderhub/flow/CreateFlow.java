@@ -316,18 +316,11 @@ public final class CreateFlow {
 
   /** Grobe Kategorie fuer Filter, abgeleitet vom Material-Namen. */
   static String categoryOf(ItemStack stack) {
-    Material m = stack.getType();
-    if (m.isBlock()) {
-      return "blocks";
-    }
-    if (m.isEdible()) {
-      return "food";
-    }
-    return "items";
+    return dev.orderhub.item.Categorizer.of(stack.getType().getKey().toString());
   }
 
   /** Fuer Tests: Liste der erlaubten Kategorien. */
   static List<String> categories() {
-    return List.of("blocks", "food", "items");
+    return dev.orderhub.item.Categorizer.ALL;
   }
 }

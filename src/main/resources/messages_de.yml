@@ -70,7 +70,9 @@ claim:
   full: "<red>Dein Inventar ist voll. Die Items bleiben gespeichert."
 
 market:
-  no-data: "<gray>Not enough market data"
+  empty: "<gray>Keine offenen Aufträge passen zu deinem Filter."
+  search-prompt: "<gray>Tippe den Itemnamen ein, nach dem du suchen willst (zum Beispiel <white>diamond</white>). Mit <white>-</white> löschst du die Suche, mit <white><cancel></white> brichst du ab."
+  no-data: "<gray>Nicht genug Marktdaten"
   recommendation: "<gray>Empfohlener Preisbereich für <item>: <white><low></white> bis <white><high></white> (basierend auf <trades> Geschäften in <days> Tagen)."
 
 favorites:
@@ -107,6 +109,13 @@ admin:
   transaction: "<gray>Transaktion <white><id></white> <state> <amount> Spieler <player>"
 
 menu:
+  market:
+    category: "<yellow>Kategorie: <white><category>"
+    category-hint: "<gray>Klicken, um die Kategorie zu wechseln"
+    sort: "<yellow>Sortierung: <white><sort>"
+    sort-hint: "<gray>Klicken, um die Sortierung zu wechseln"
+    search: "<yellow>Suche: <white><text>"
+    search-hint: "<gray>Klicken und einen Itemnamen im Chat eingeben"
   delivery-info: "<yellow>Lieferungsvorschau"
   main:
     market: "<green>Marktplatz"
@@ -154,6 +163,11 @@ sort:
   LOWEST_PRICE: "Niedrigster Preis"
   ALMOST_COMPLETED: "Fast erfüllt"
   HIGHEST_DEMAND: "Höchste Nachfrage"
+  newest: "Neueste"
+  highest-price: "Höchster Preis"
+  lowest-price: "Niedrigster Preis"
+  almost-completed: "Fast erfüllt"
+  highest-demand: "Höchste Nachfrage"
 
 lore:
   delivery-accepted: "<gray>Angenommen: <white><quantity></white> von <white><remaining></white> noch benötigt"
@@ -184,3 +198,19 @@ analytics:
   no-demand: "<gray>Keine offenen Aufträge für dieses Item."
   trades: "<gray><days> Tag(e): <white><trades></white> Geschäfte, <white><units></white> Items, Volumen <white><volume></white>, Median <white><median></white>, Durchschnitt <white><avg></white>."
   no-trades: "<gray><days> Tag(e): keine abgeschlossenen Geschäfte."
+
+category:
+  all: "Alle"
+  ores: "Erze"
+  blocks: "Blöcke"
+  farm: "Farmprodukte"
+  mob-drops: "Mob-Drops"
+  tools: "Werkzeuge"
+  potions: "Tränke"
+  misc: "Sonstiges"
+
+sell:
+  no-item: "<red>Halte das Item, das du verkaufen willst, in der Haupthand."
+  hand-changed: "<red>Das Item in deiner Hand hat sich geändert. Bitte versuche es erneut."
+  no-order: "<gray>Zurzeit sucht kein offener Auftrag dieses Item."
+  none-fits: "<gray>Es gibt offene Aufträge für dieses Item, aber keiner nimmt an, was du hast (Mindestmenge, Qualität oder dein eigener Auftrag)."

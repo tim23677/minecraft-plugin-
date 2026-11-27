@@ -2,6 +2,7 @@ package dev.orderhub.flow;
 
 import dev.orderhub.bootstrap.Messages;
 import dev.orderhub.domain.Order;
+import dev.orderhub.domain.OrderOptions;
 import dev.orderhub.gui.DeliveryMenu;
 import dev.orderhub.item.PreparedTemplate;
 import dev.orderhub.item.Tolerance;
@@ -40,19 +41,43 @@ public final class DeliveryFlow {
         s.scheduler(),
         s.logger(),
         player,
-        () -> s.storage().transact(uow -> uow.orders().find(orderId)).join(),
-        found -> {
-          if (found.isEmpty()) {
+        () ->
+            s.storage()
+                .transact(uow -> {
+                  Optional<Order> order = uow.orders().find(orderId);
+                  return new Loaded(
+                      order,
+                      order.isPresent() ? uow.orders().options(orderId) : OrderOptions.EXACT);
+                })
+                .join(),
+        loaded -> {
+          if (loaded.order().isEmpty()) {
             player.sendMessage(
                 s.messages().prefixed("order.not-found", Messages.number("id", orderId)));
             return;
           }
-          openMenu(player, found.get());
+          openMenu(player, loaded.order().get(), loaded.options(), 0);
         },
         orphan -> {});
   }
 
-  private void openMenu(Player player, Order order) {
+  private record Loaded(Optional<Order> order, OrderOptions options) {}
+
+  /** Toleranz des Auftrags fuer den Abgleich, siehe {@link Tolerance}. */
+  static Tolerance toleranceOf(OrderOptions options) {
+    return new Tolerance(options.minDurabilityPercent(), options.enchantmentsAtLeast());
+  }
+
+  /**
+   * Oeffnet das Liefermenue fuer {@code order} und legt bis zu {@code quantity} passende Items aus
+   * dem Inventar des Spielers hinein (Vorschau). Geliefert wird erst nach Bestaetigen, bis dahin
+   * gibt das Menue die Items beim Schliessen zurueck. Entity-Kontext.
+   */
+  void openPrefilled(Player player, Order order, OrderOptions options, int quantity) {
+    openMenu(player, order, options, quantity);
+  }
+
+  private void openMenu(Player player, Order order, OrderOptions options, int prefill) {
     if (!order.status().acceptsDeliveries() || order.remaining() <= 0) {
       player.sendMessage(s.messages().prefixed("order.not-active"));
       return;
@@ -76,24 +101,61 @@ public final class DeliveryFlow {
       return;
     }
     PreparedTemplate tpl = prepared.get();
+    Tolerance tolerance = toleranceOf(options);
     DeliveryMenu[] holder = new DeliveryMenu[1];
     DeliveryMenu menu =
         new DeliveryMenu(
             s.messages().get("menu.delivery-title", Messages.number("id", order.id())),
             inputSlots,
-            stack -> s.matcher().matches(stack, tpl, Tolerance.EXACT),
-            () -> info(order, wanted, holder[0], tpl),
+            stack -> s.matcher().matches(stack, tpl, tolerance),
+            () -> info(order, wanted, holder[0], tpl, tolerance),
             named(Material.LIME_STAINED_GLASS_PANE, s.messages().get("menu.deliver")),
             named(Material.RED_STAINED_GLASS_PANE, s.messages().get("menu.cancel")),
             m -> confirm(player, m, order),
             p -> p.closeInventory());
     holder[0] = menu;
     menu.template(tpl);
+    menu.tolerance(tolerance);
     s.menus().open(player, menu);
+    if (prefill > 0) {
+      prefill(player, menu, tpl, tolerance, Math.min(prefill, order.remaining()));
+    }
   }
 
-  private ItemStack info(Order order, ItemStack wanted, DeliveryMenu menu, PreparedTemplate tpl) {
-    int accepted = menu == null ? 0 : Math.min(count(menu.inputContents(), tpl), order.remaining());
+  /** Verschiebt passende Items aus dem Inventar in die Eingabeslots. Entity-Kontext. */
+  private void prefill(
+      Player player, DeliveryMenu menu, PreparedTemplate tpl, Tolerance tolerance, int quantity) {
+    var inventory = player.getInventory();
+    ItemStack[] contents = java.util.Objects.requireNonNull(inventory.getStorageContents());
+    int need = quantity;
+    int slotIndex = 0;
+    for (int i = 0; i < contents.length && need > 0 && slotIndex < inputSlots.size(); i++) {
+      ItemStack stack = contents[i];
+      if (stack == null || stack.isEmpty() || !s.matcher().matches(stack, tpl, tolerance)) {
+        continue;
+      }
+      int take = Math.min(need, stack.getAmount());
+      ItemStack moved = stack.clone();
+      moved.setAmount(take);
+      // Erst ins Menue legen, dann aus dem Inventar nehmen: bricht etwas ab, geht nichts verloren.
+      int slot = inputSlots.get(slotIndex++);
+      menu.getInventory().setItem(slot, moved);
+      if (take == stack.getAmount()) {
+        inventory.setItem(i, null);
+      } else {
+        ItemStack rest = stack.clone();
+        rest.setAmount(stack.getAmount() - take);
+        inventory.setItem(i, rest);
+      }
+      need -= take;
+    }
+    menu.refresh();
+  }
+
+  private ItemStack info(
+      Order order, ItemStack wanted, DeliveryMenu menu, PreparedTemplate tpl, Tolerance tol) {
+    int accepted =
+        menu == null ? 0 : Math.min(count(menu.inputContents(), tpl, tol), order.remaining());
     long payout = Money.multiply(order.unitPrice(), accepted);
     ItemStack icon = wanted.clone();
     icon.setAmount(1);
@@ -114,10 +176,10 @@ public final class DeliveryFlow {
     return icon;
   }
 
-  private int count(List<ItemStack> stacks, PreparedTemplate required) {
+  private int count(List<ItemStack> stacks, PreparedTemplate required, Tolerance tol) {
     int total = 0;
     for (ItemStack stack : stacks) {
-      if (s.matcher().matches(stack, required, Tolerance.EXACT)) {
+      if (s.matcher().matches(stack, required, tol)) {
         total += stack.getAmount();
       }
     }
@@ -132,7 +194,7 @@ public final class DeliveryFlow {
 
   private void confirm(Player player, DeliveryMenu menu, Order order) {
     menu.freeze(); // ab jetzt gehoeren die Items im Menue diesem Ablauf, nicht dem Schliessen-Hook
-    int inMenu = count(menu.inputContents(), menu.template());
+    int inMenu = count(menu.inputContents(), menu.template(), menu.tolerance());
     int available = Math.min(inMenu, order.remaining());
     if (available <= 0) {
       player.sendMessage(s.messages().prefixed("delivery.nothing"));
@@ -335,7 +397,7 @@ public final class DeliveryFlow {
     int total = 0;
     ItemStack template = null;
     for (ItemStack stack : drained) {
-      if (s.matcher().matches(stack, menu.template(), Tolerance.EXACT)) {
+      if (s.matcher().matches(stack, menu.template(), menu.tolerance())) {
         total += stack.getAmount();
         if (template == null) {
           template = stack.clone();

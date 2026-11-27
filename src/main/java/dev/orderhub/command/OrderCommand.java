@@ -27,6 +27,7 @@ public final class OrderCommand implements CommandHandler {
           "create",
           "mine",
           "market",
+          "sell",
           "claims",
           "returns",
           "deliver",
@@ -43,6 +44,12 @@ public final class OrderCommand implements CommandHandler {
   private final ParcelFlow claims;
   private final ParcelFlow returns;
   private final dev.orderhub.flow.InsightsFlow insights;
+  private volatile dev.orderhub.flow.SellFlow sell;
+
+  /** Verdrahtet {@code /order sell}. */
+  public void sell(dev.orderhub.flow.SellFlow flow) {
+    this.sell = flow;
+  }
 
   public OrderCommand(
       Services services,
@@ -102,7 +109,17 @@ public final class OrderCommand implements CommandHandler {
       }
       case "market" -> {
         if (need(player, "orderhub.market")) {
-          menus.openMarket(player, sortOf(args.length > 1 ? args[1] : null));
+          openMarket(player, args);
+        }
+      }
+      case "sell" -> {
+        if (need(player, "orderhub.market")) {
+          dev.orderhub.flow.SellFlow flow = sell;
+          if (flow == null) {
+            player.sendMessage(s.messages().prefixed("general.not-available"));
+          } else {
+            flow.start(player, args.length > 1 ? args[1] : null);
+          }
         }
       }
       case "claims" -> menus.openClaims(player);
@@ -140,6 +157,30 @@ public final class OrderCommand implements CommandHandler {
       default -> player.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
     }
     return true;
+  }
+
+  /** {@code /order market [sortierung | suchtext...]}. */
+  private void openMarket(Player player, String[] args) {
+    if (args.length > 1 && isSort(args[1])) {
+      menus.openMarket(
+          player, new dev.orderhub.flow.MarketFlow.Filter(sortOf(args[1]), null, null));
+      return;
+    }
+    String text =
+        args.length > 1
+            ? String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length))
+            : null;
+    menus.openMarket(
+        player, new dev.orderhub.flow.MarketFlow.Filter(OrderQuery.Sort.NEWEST, null, text));
+  }
+
+  private static boolean isSort(String raw) {
+    try {
+      OrderQuery.Sort.valueOf(raw.toUpperCase(Locale.ROOT).replace('-', '_'));
+      return true;
+    } catch (IllegalArgumentException e) {
+      return false;
+    }
   }
 
   private void openMain(Player player) {

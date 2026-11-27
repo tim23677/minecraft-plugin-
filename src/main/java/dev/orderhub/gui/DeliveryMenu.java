@@ -1,6 +1,7 @@
 package dev.orderhub.gui;
 
 import dev.orderhub.item.PreparedTemplate;
+import dev.orderhub.item.Tolerance;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -29,6 +30,17 @@ public final class DeliveryMenu extends Menu {
 
   public void template(PreparedTemplate value) {
     this.template = value;
+  }
+
+  private volatile Tolerance tolerance = Tolerance.EXACT;
+
+  /** Toleranz des Auftrags fuer den Abgleich (gesetzt vor dem Oeffnen). */
+  public Tolerance tolerance() {
+    return tolerance;
+  }
+
+  public void tolerance(Tolerance value) {
+    this.tolerance = value;
   }
 
   public DeliveryMenu(

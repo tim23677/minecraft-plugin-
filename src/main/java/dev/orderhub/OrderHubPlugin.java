@@ -363,11 +363,17 @@ public class OrderHubPlugin extends JavaPlugin {
     ParcelFlow claimFlow = new ParcelFlow(services, ParcelFlow.Kind.CLAIM);
     ParcelFlow returnFlow = new ParcelFlow(services, ParcelFlow.Kind.RETURN);
     Menus menuViews = new Menus(services, deliveryFlow, claimFlow);
+    loadMenuLayouts();
+    menuViews.market(
+        new dev.orderhub.flow.MarketFlow(
+            services, chat, deliveryFlow, menuViews::orderIcon, () -> layoutOf("market", 6)));
 
     AdminService admin = new AdminService(storage, orders, recovery);
-    commands.setOrder(
+    OrderCommand orderCommand =
         new OrderCommand(
-            services, create, deliveryFlow, menuViews, claimFlow, returnFlow, insightsFlow));
+            services, create, deliveryFlow, menuViews, claimFlow, returnFlow, insightsFlow);
+    orderCommand.sell(new dev.orderhub.flow.SellFlow(services, deliveryFlow));
+    commands.setOrder(orderCommand);
     OrderAdminCommand adminCommand =
         new OrderAdminCommand(services, admin, this::reloadConfig0, getDataFolder().toPath());
     commands.setAdmin(adminCommand);
@@ -433,6 +439,14 @@ public class OrderHubPlugin extends JavaPlugin {
       } catch (RuntimeException e) {
         getLogger().log(Level.SEVERE, "startup recovery failed", e);
       } finally {
+        try {
+          int changed = dev.orderhub.service.CategoryBackfill.run(storage);
+          if (changed > 0) {
+            getLogger().info("Reassigned " + changed + " open orders to the 2.0 categories");
+          }
+        } catch (RuntimeException e) {
+          getLogger().log(Level.WARNING, "category backfill failed, will retry at next start", e);
+        }
         startWorkers.run();
       }
     });
@@ -519,6 +533,28 @@ public class OrderHubPlugin extends JavaPlugin {
         Math.max(5, discordYml().getLong("delivery.max-backoff-seconds", 300)));
   }
 
+  private volatile YamlConfiguration menusYml;
+
+  /** Liest menus.yml neu ein (beim Start und bei reload) und meldet ungueltige Angaben. */
+  private void loadMenuLayouts() {
+    YamlConfiguration loaded =
+        YamlConfiguration.loadConfiguration(new File(getDataFolder(), "menus.yml"));
+    for (String name : loaded.getKeys(false)) {
+      if (loaded.isConfigurationSection(name) && !name.equals("icons")) {
+        dev.orderhub.gui.MenuLayout.parse(name, loaded.getConfigurationSection(name), 6)
+            .warnings()
+            .forEach(w -> getLogger().warning("menus.yml: " + w));
+      }
+    }
+    this.menusYml = loaded;
+  }
+
+  private dev.orderhub.gui.MenuLayout layoutOf(String name, int defaultRows) {
+    YamlConfiguration yml = menusYml;
+    return dev.orderhub.gui.MenuLayout.parse(
+        name, yml == null ? null : yml.getConfigurationSection(name), defaultRows);
+  }
+
   private List<Integer> deliverySlots() {
     YamlConfiguration menusYml =
         YamlConfiguration.loadConfiguration(new File(getDataFolder(), "menus.yml"));
@@ -580,6 +616,7 @@ public class OrderHubPlugin extends JavaPlugin {
    */
   private void reloadConfig0() {
     loadSettings();
+    loadMenuLayouts();
     getLogger().info("configuration reloaded (the database and payout settings need a restart)");
   }
 

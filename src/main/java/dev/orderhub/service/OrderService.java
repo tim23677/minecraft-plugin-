@@ -7,6 +7,7 @@ import dev.orderhub.config.Rates;
 import dev.orderhub.domain.ItemSnapshot;
 import dev.orderhub.domain.NewOrder;
 import dev.orderhub.domain.Order;
+import dev.orderhub.domain.OrderOptions;
 import dev.orderhub.domain.OrderStatus;
 import dev.orderhub.economy.EconomyBridge;
 import dev.orderhub.economy.EconomyResult;
@@ -48,7 +49,8 @@ public final class OrderService {
       String category,
       int maxOpenOrders,
       boolean feeExempt,
-      long expectedFee) {
+      long expectedFee,
+      OrderOptions options) {
 
     /** Kein erwarteter Betrag: die Gebuehr wird nicht gegen eine Anzeige geprueft. */
     public static final long FEE_UNCHECKED = -1;
@@ -80,7 +82,38 @@ public final class OrderService {
           FEE_UNCHECKED);
     }
 
+    /** Ohne Optionen: exakter Abgleich, keine Auto-Abholung. */
+    public CreateOrderRequest(
+        UUID requestId,
+        UUID owner,
+        ItemSnapshot item,
+        long unitPrice,
+        int quantity,
+        int minDelivery,
+        Duration lifetime,
+        boolean autoRenew,
+        String category,
+        int maxOpenOrders,
+        boolean feeExempt,
+        long expectedFee) {
+      this(
+          requestId,
+          owner,
+          item,
+          unitPrice,
+          quantity,
+          minDelivery,
+          lifetime,
+          autoRenew,
+          category,
+          maxOpenOrders,
+          feeExempt,
+          expectedFee,
+          OrderOptions.EXACT);
+    }
+
     public CreateOrderRequest {
+      Objects.requireNonNull(options, "options");
       Objects.requireNonNull(requestId, "requestId");
       Objects.requireNonNull(owner, "owner");
       Objects.requireNonNull(item, "item");
@@ -340,6 +373,9 @@ public final class OrderService {
                     r.autoRenew() && rates.get().expiry().autoRenewEnabled(),
                     r.category()),
                 now);
+    if (!r.options().equals(OrderOptions.EXACT)) {
+      uow.orders().saveOptions(order.id(), r.options());
+    }
     uow.ledger()
         .append(
             new LedgerRepository.Entry(

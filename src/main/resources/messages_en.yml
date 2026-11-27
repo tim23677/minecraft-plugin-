@@ -70,6 +70,8 @@ claim:
   full: "<red>Your inventory is full. Items stay stored."
 
 market:
+  empty: "<gray>No open orders match your filter."
+  search-prompt: "<gray>Type the item name to search for (for example <white>diamond</white>). <white>-</white> clears the search, <white><cancel></white> aborts."
   no-data: "<gray>Not enough market data"
   recommendation: "<gray>Recommended price range for <item>: <white><low></white> to <white><high></white> (based on <trades> trades in <days> days)."
 
@@ -123,6 +125,13 @@ admin:
   transaction: "<gray>Transaction <white><id></white> <state> <amount> player <player>"
 
 menu:
+  market:
+    category: "<yellow>Category: <white><category>"
+    category-hint: "<gray>Click to change the category"
+    sort: "<yellow>Sort: <white><sort>"
+    sort-hint: "<gray>Click to change the sort order"
+    search: "<yellow>Search: <white><text>"
+    search-hint: "<gray>Click and type an item name in chat"
   delivery-info: "<yellow>Delivery preview"
   main:
     market: "<green>Marketplace"
@@ -170,6 +179,11 @@ sort:
   LOWEST_PRICE: "Lowest price"
   ALMOST_COMPLETED: "Almost completed"
   HIGHEST_DEMAND: "Highest demand"
+  newest: "Newest"
+  highest-price: "Highest price"
+  lowest-price: "Lowest price"
+  almost-completed: "Almost completed"
+  highest-demand: "Highest demand"
 
 lore:
   delivery-accepted: "<gray>Accepted: <white><quantity></white> of <white><remaining></white> still needed"
@@ -200,3 +214,19 @@ analytics:
   no-demand: "<gray>No open orders for this item."
   trades: "<gray><days> day(s): <white><trades></white> trades, <white><units></white> items, volume <white><volume></white>, median <white><median></white>, average <white><avg></white>."
   no-trades: "<gray><days> day(s): no completed trades."
+
+category:
+  all: "All"
+  ores: "Ores"
+  blocks: "Blocks"
+  farm: "Farm products"
+  mob-drops: "Mob drops"
+  tools: "Tools"
+  potions: "Potions"
+  misc: "Miscellaneous"
+
+sell:
+  no-item: "<red>Hold the item you want to sell in your main hand."
+  hand-changed: "<red>The item in your hand changed. Please try again."
+  no-order: "<gray>No open order wants this item right now."
+  none-fits: "<gray>Open orders exist for this item, but none accepts what you have (minimum delivery, quality or your own order)."

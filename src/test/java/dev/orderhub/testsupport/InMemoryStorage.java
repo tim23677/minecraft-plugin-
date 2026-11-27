@@ -598,6 +598,42 @@ public final class InMemoryStorage implements Storage {
       }
 
       @Override
+      public List<CategoryRow> findLegacyCategories(long afterId, int limit) {
+        return s.orders.values().stream()
+            .filter(o -> o.id() > afterId)
+            .filter(o -> o.status() == OrderStatus.ACTIVE || o.status() == OrderStatus.PAUSED)
+            .filter(o -> java.util.Set.of("blocks", "food", "items").contains(o.category()))
+            .sorted(Comparator.comparingLong(Order::id))
+            .limit(limit)
+            .map(o -> new CategoryRow(o.id(), o.item().itemKey(), o.category()))
+            .toList();
+      }
+
+      @Override
+      public void setCategory(long orderId, String category) {
+        Order o = s.orders.get(orderId);
+        s.orders.put(
+            orderId,
+            new Order(
+                o.id(),
+                o.owner(),
+                o.serverId(),
+                o.item(),
+                o.unitPrice(),
+                o.quantityTotal(),
+                o.quantityFilled(),
+                o.minDelivery(),
+                o.escrowRemaining(),
+                o.status(),
+                o.createdAt(),
+                o.expiresAt(),
+                o.updatedAt(),
+                o.version(),
+                o.autoRenew(),
+                category));
+      }
+
+      @Override
       public dev.orderhub.domain.OrderOptions options(long orderId) {
         return s.options.getOrDefault(orderId, dev.orderhub.domain.OrderOptions.EXACT);
       }

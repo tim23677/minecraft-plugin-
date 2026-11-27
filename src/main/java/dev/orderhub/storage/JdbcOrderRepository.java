@@ -312,6 +312,22 @@ final class JdbcOrderRepository implements OrderRepository {
         options.autoClaim());
   }
 
+  @Override
+  public List<CategoryRow> findLegacyCategories(long afterId, int limit) {
+    return jdbc.list(
+        "SELECT id, item_key, category FROM orders WHERE id > ? "
+            + "AND status IN ('ACTIVE','PAUSED') AND category IN ('blocks','food','items') "
+            + "ORDER BY id LIMIT ?",
+        rs -> new CategoryRow(rs.getLong(1), rs.getString(2), rs.getString(3)),
+        afterId,
+        Math.max(1, limit));
+  }
+
+  @Override
+  public void setCategory(long orderId, String category) {
+    jdbc.update("UPDATE orders SET category = ? WHERE id = ?", category, orderId);
+  }
+
   static Order map(ResultSet rs) throws SQLException {
     ItemSnapshot item =
         new ItemSnapshot(

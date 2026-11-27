@@ -49,4 +49,16 @@ public interface OrderRepository {
 
   /** Speichert die Optionen eines neuen oder bestehenden Auftrags. */
   void saveOptions(long orderId, OrderOptions options);
+
+  /** Zeile fuer die Neuzuordnung von Kategorien. */
+  record CategoryRow(long id, String itemKey, String category) {}
+
+  /**
+   * Offene Auftraege (ACTIVE, PAUSED) mit einer Kategorie aelterer Versionen (blocks, food, items),
+   * aufsteigend nach Id, nur Ids hinter {@code afterId}.
+   */
+  List<CategoryRow> findLegacyCategories(long afterId, int limit);
+
+  /** Setzt die Kategorie. Aendert weder Version noch Escrow. */
+  void setCategory(long orderId, String category);
 }
