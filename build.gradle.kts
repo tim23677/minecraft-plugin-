@@ -381,6 +381,6 @@ pitest {
     targetTests.set(listOf("dev.orderhub.*Test", "dev.orderhub.*Tests"))
     excludedGroups.set(listOf("integration"))
     threads.set(2)
-    outputFormats.set(listOf("HTML"))
+    outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
 }
