@@ -1,78 +1,79 @@
-# OrderHub: Hauptkonfiguration / main configuration
-# config-version wird vom Plugin verwaltet. Nicht aendern. / Managed by the plugin, do not edit.
+# OrderHub: main configuration
+# config-version is managed by the plugin, do not edit it.
 config-version: 3
 
-# Eindeutige Kennung dieses Servers. Bei mehreren Servern an einer gemeinsamen Datenbank
-# muss jeder Server eine andere Kennung haben. Erlaubt: a-z, 0-9, Bindestrich, max. 32 Zeichen.
-# Unique id of this server. Every server sharing a database needs its own id.
+# Unique id of this server. Every server that shares a database needs its own id.
+# Allowed: a-z, 0-9 and hyphen, at most 32 characters. Needs a restart.
 server-id: "main"
 
-# Sprache der Spielertexte: en, de, fr, es, pl, pt-br, ru, tr oder zh-cn (Dateien messages_<sprache>.yml direkt in plugins/OrderHub). / Message language.
+# Language of the player texts: en, de, fr, es, pl, pt-br, ru, tr or zh-cn.
+# The files messages_<language>.yml lie directly in plugins/OrderHub.
 language: "en"
 
-# Debug-Ausgaben in der Konsole (keine vertraulichen Daten). / Extra console output.
+# Extra console output (no confidential data).
 debug: false
 
 storage:
-  # sqlite (ein Server, Standard) oder mariadb (mehrere Server, MariaDB). Aenderungen brauchen einen Neustart.
+  # sqlite (one server, default) or mariadb (several servers). Needs a restart.
   type: "sqlite"
   sqlite:
-    # Dateiname im Plugin-Ordner, ohne Pfadteile.
+    # File name inside the plugin folder, without path parts.
     file: "orderhub.db"
   mariadb:
-    # Vollstaendige JDBC-URL. Fuer nicht lokale Server sslMode=verify-full oder verify-ca anhaengen.
+    # Complete JDBC URL. For servers that are not local, append sslMode=verify-full or verify-ca.
     jdbc-url: "jdbc:mariadb://localhost:3306/orderhub?sslMode=disable"
     user: "orderhub"
-    # NAME der Umgebungsvariable, die das Passwort enthaelt. Das Passwort selbst steht nie in dieser Datei.
+    # NAME of the environment variable that holds the password. The password itself is never
+    # stored in this file.
     password-env: "ORDERHUB_DB_PASSWORD"
     pool-size: 10
-  # Wiederholungen bei Deadlock oder Lock-Konflikt.
+  # Retries on deadlock or lock conflict.
   retry:
     max-attempts: 5
     initial-backoff-ms: 25
     max-backoff-ms: 500
 
 orders:
-  # Preisgrenzen pro Stueck, Schreibweise wie im Spiel (z. B. 0.01, 1k, 2.5m).
+  # Price limits per item, written as in the game (for example 0.01, 1k, 2.5m).
   min-unit-price: "0.01"
   max-unit-price: "1000000"
-  # Maximale Menge pro Auftrag.
+  # Maximum quantity per order.
   max-quantity: 2304
-  # Standard-Limit offener Auftraege. Permissions orderhub.limit.5/10/25/50 erhoehen es,
-  # es gilt das hoechste zutreffende Limit.
+  # Default limit of open orders. The permissions orderhub.limit.5/10/25/50 raise it, the highest
+  # limit that applies wins.
   default-max-open-orders: 3
-  # Laufzeit in Stunden, danach laeuft der Auftrag ab und der Restbetrag wird erstattet.
+  # Lifetime in hours. After that the order expires and the remaining amount is refunded.
   expiry-hours: 168
-  # Eigener Abbruchbegriff bei Chat-Eingaben.
+  # Word that cancels a chat input.
   cancel-word: "cancel"
-  # Sekunden, die eine Chat-Eingabe wartet.
+  # Seconds a chat input waits.
   input-timeout-seconds: 60
-  # Mindestabstand in Sekunden zwischen zwei Auftragserstellungen eines Spielers (0 = aus).
+  # Minimum seconds between two order creations of one player (0 = off).
   create-cooldown-seconds: 5
 
 fees:
-  # Gebuehren in Basispunkten (100 = 1 %). Permission orderhub.bypass.fee befreit von der Erstellgebuehr.
+  # Fees in basis points (100 = 1 %). The permission orderhub.bypass.fee removes the creation fee.
   create-fee-bp: 100
   sales-tax-bp: 200
 
 items:
-  # Standardmaessig abgelehnt. Mit true zulassen.
+  # Rejected by default. Set to true to admit such items in orders. Admitting an item does not make
+  # deliveries inexact: the delivered item must still equal the ordered one in every component.
   allow-custom-name: false
   allow-lore: false
   allow-enchanted: false
   allow-damaged: false
-  # Voreinstellungen fuer Items, deren Besonderheit in einer Datenkomponente liegt. Sie lassen diese
-  # Items in Auftraegen zu. Geliefert werden muss weiter exakt das Bestellte (gleicher Effekt,
-  # gleiche Form, gleiches Muster). Verfuegbar:
-  #   potions          Traenke, Wurftraenke, Verweiltraenke (minecraft:potion_contents)
-  #   arrows           Pfeile mit Effekt (minecraft:potion_contents)
-  #   fireworks        Feuerwerksraketen und -sterne (minecraft:fireworks, firework_explosion)
-  #   goat-horns       Ziegenhoerner (minecraft:instrument)
-  #   banners          gemusterte Banner (minecraft:banner_patterns)
-  #   ominous-bottles  unheilvolle Flaschen (minecraft:ominous_bottle_amplifier)
-  #   player-heads     Spielerkoepfe (minecraft:profile)
-  #   all              alle oben genannten
-  # Eine Voreinstellung entfernen, damit diese Items wieder abgelehnt werden. [] = alles abgelehnt.
+  # Presets for items whose special trait lies in a data component. They admit these items in
+  # orders. Delivery must still match exactly (same effect, same shape, same pattern). Available:
+  #   potions          potions, splash potions, lingering potions (minecraft:potion_contents)
+  #   arrows           tipped arrows (minecraft:potion_contents)
+  #   fireworks        firework rockets and stars (minecraft:fireworks, firework_explosion)
+  #   goat-horns       goat horns (minecraft:instrument)
+  #   banners          patterned banners (minecraft:banner_patterns)
+  #   ominous-bottles  ominous bottles (minecraft:ominous_bottle_amplifier)
+  #   player-heads     player heads (minecraft:profile)
+  #   all              all of the above
+  # Remove a preset to reject those items again. [] rejects all of them.
   component-presets:
     - potions
     - arrows
@@ -81,62 +82,62 @@ items:
     - banners
     - ominous-bottles
     - player-heads
-  # Weitere einzeln zugelassene Datenkomponenten (Schluessel wie minecraft:repair_cost). Auch hier
-  # wird exakt verglichen.
+  # More data components admitted one by one (keys like minecraft:repair_cost). Delivery is exact
+  # here as well.
   allowed-components: []
-  # Zusaetzlich gesperrte Items (Material-Keys wie minecraft:elytra).
+  # Additionally blocked items (material keys like minecraft:elytra).
   blocked-materials: []
-  # Zusaetzlich gesperrte Item-Tags (z. B. minecraft:banners).
+  # Additionally blocked item tags (for example minecraft:banners).
   blocked-tags: []
 
 delivery:
-  # Sekunden Ruhezeit zwischen zwei Klicks im Menue (Schutz vor Doppelklicks).
+  # Milliseconds of quiet between two clicks in a menu (protection against double clicks).
   click-debounce-ms: 150
 
 cache:
-  # Maximale Eintraege des Platzhalter-Caches (PlaceholderAPI). Die Datenbank ist immer die Wahrheit.
+  # Maximum entries of the placeholder cache (PlaceholderAPI). The database is always the truth.
   max-entries: 5000
 
 economy:
-  # false (Standard): Vault-Aufrufe laufen auf dem globalen Server-Thread, wie es EssentialsX, CMI
-  # und die meisten Economy-Plugins erwarten. true nur, wenn der Provider nachweislich threadsicher ist.
+  # false (default): Vault calls run on the global server thread, as EssentialsX, CMI and most
+  # economy plugins expect. true only if the provider is proven to be thread safe.
   async-safe: false
-  # Wartezeit auf eine Vault-Antwort. Wurde der Aufruf bis dahin nie gestartet (z. B. Lag-Spike),
-  # ist sicher kein Geld geflossen und die Zahlung wird mit Backoff wiederholt. Wurde er gestartet
-  # und nicht beendet, gilt die Zahlung als unklar (MANUAL_REVIEW).
+  # Wait for a Vault answer. If the call was never started by then (for example during a lag
+  # spike), no money moved and the payment is retried with backoff. If it was started and did not
+  # finish, the payment counts as unclear (MANUAL_REVIEW).
   timeout-ms: 3000
 
 payouts:
-  # Wie oft die Auszahlungswarteschlange abgearbeitet wird.
+  # How often the payout queue is worked off, in seconds. Needs a restart.
   worker-interval-seconds: 2
-  # Maximale Wiederholungen bei sicher nicht ausgefuehrten Zahlungen.
+  # Maximum retries of payments that were safely not executed. Needs a restart.
   max-attempts: 5
 
 market:
-  # Mindestanzahl abgeschlossener Handelsgeschaefte fuer eine Preisempfehlung.
+  # Minimum number of completed trades for a price recommendation.
   min-trades-for-recommendation: 5
 
 notifications:
-  # Mindestabstand zwischen zwei Benachrichtigungen gleicher Art an einen Spieler.
+  # Minimum seconds between two notifications of the same kind to one player.
   cooldown-seconds: 60
-  # Wie die Zusammenfassung beim Login angezeigt wird: chat, actionbar oder title.
+  # How the summary is shown at login: chat, actionbar or title.
   display: chat
-  # Ton bei der Zusammenfassung, zum Beispiel entity.experience_orb.pickup. Leer = kein Ton.
+  # Sound that plays with the summary, for example entity.experience_orb.pickup. Empty = no sound.
   sound: ""
 
 logging:
-  # Eine strukturierte Zeile je Geld- und Item-Bewegung (Transaktions-Id, Spieler-UUID, Betrag,
-  # Zustand). Die Datei liegt in plugins/OrderHub/logs und rotiert. Neustart noetig.
+  # One structured line per money and item movement (transaction id, player UUID, amount, state).
+  # The file lies in plugins/OrderHub/logs and rotates. Needs a restart.
   transactions:
-    # Zeilen zusaetzlich in die Serverkonsole schreiben.
+    # Also write the lines to the server console.
     console: false
-    # Zeilen in logs/transactions.<n>.log schreiben.
+    # Write the lines to logs/transactions.<n>.log.
     file: true
     file-max-mb: 10
     file-count: 5
 
 health:
-  # Warnung im Log (einmal beim Ueberschreiten, nicht bei jeder Pruefung). 0 schaltet eine Pruefung ab.
+  # Warning in the log (once when a limit is crossed, not at every check). 0 turns a check off.
   warn:
     economy-latency-ms: 1000
     open-payments: 50
@@ -144,29 +145,29 @@ health:
     manual-review: 1
 
 backup:
-  # Zeitgesteuerte Sicherung der SQLite-Datenbank nach plugins/OrderHub/backups (VACUUM INTO).
-  # Bei MariaDB ohne Wirkung: dort mysqldump oder einen Snapshot des Datenbankservers verwenden.
-  # Neustart noetig.
+  # Scheduled backup of the SQLite database to plugins/OrderHub/backups (VACUUM INTO).
+  # No effect with MariaDB: use mysqldump or a snapshot of the database server there.
+  # Needs a restart.
   auto:
     enabled: true
     interval-hours: 24
     keep: 7
 
 metrics:
-  # Anonyme Nutzungsstatistik ueber bStats (Version, Datenbanktyp, Sprache). Keine Spielerdaten.
-  # false schaltet sie fuer OrderHub ab, serverweit geht das in plugins/bStats/config.yml.
-  # Neustart noetig.
+  # Anonymous usage statistics through bStats (version, database type, language). No player data.
+  # false turns them off for OrderHub, server wide you can turn them off in plugins/bStats/config.yml.
+  # Needs a restart.
   enabled: true
 
 retention:
-  # Aufbewahrung von Preisverlauf und Markt-Snapshots in Tagen.
+  # How long price history and market snapshots are kept, in days.
   history-days: 120
-  # Hintergrundbereinigung, Minuten zwischen zwei Laeufen.
+  # Background cleanup, minutes between two runs.
   cleanup-interval-minutes: 30
 
 updates:
-  # Pruefung auf neue Versionen gegen die GitHub-Releases eines Repositories. Standard: aus.
-  # Es wird nur die Versionsnummer abgefragt, es werden keine Daten gesendet.
+  # Check for new versions against the GitHub releases of a repository. Default: off.
+  # Only the version number is requested, no data is sent.
   check: false
-  # Repository im Format owner/name, das die Releases veroeffentlicht.
+  # Repository in the form owner/name that publishes the releases.
   repository: ""
