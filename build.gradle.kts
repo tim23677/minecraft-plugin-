@@ -251,7 +251,9 @@ val verifySalesZip by tasks.registering {
                 Regex("""OrderHub-$version/OrderHub-$version-bundled\.jar"""),
                 Regex("""OrderHub-$version/orderhub-api-[0-9.]+\.jar"""),
                 Regex("""OrderHub-$version/orderhub-api-[0-9.]+-javadoc\.jar"""),
-                Regex("""OrderHub-$version/(README\.md|CHANGELOG\.md|UPGRADE\.md|COMPATIBILITY\.md|LICENSE\.txt|THIRD_PARTY_NOTICES\.md|SHA256SUMS)"""),
+                Regex(
+                    """OrderHub-$version/(README\.md|CHANGELOG\.md|UPGRADE\.md|COMPATIBILITY\.md|LICENSE\.txt|THIRD_PARTY_NOTICES\.md|SHA256SUMS)""",
+                ),
                 Regex("""OrderHub-$version/config/(config|menus|discord)\.yml"""),
                 Regex("""OrderHub-$version/config/messages_[a-z]{2}(-[A-Za-z]{2})?\.yml"""),
             )
