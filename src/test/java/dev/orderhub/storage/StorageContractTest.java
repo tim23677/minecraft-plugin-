@@ -121,6 +121,8 @@ abstract class StorageContractTest {
             "market_snapshots",
             "notifications",
             "discord_outbox",
+            "order_options",
+            "order_templates",
             "cache_outbox",
             "server_registry",
             "schema_version",
@@ -139,7 +141,7 @@ abstract class StorageContractTest {
         Statement st = c.createStatement();
         var rs = st.executeQuery("SELECT COUNT(*), MIN(LENGTH(checksum)) FROM schema_version")) {
       assertThat(rs.next()).isTrue();
-      assertThat(rs.getInt(1)).isEqualTo(5);
+      assertThat(rs.getInt(1)).isEqualTo(7);
       assertThat(rs.getInt(2)).isEqualTo(64);
     }
   }
@@ -308,7 +310,7 @@ abstract class StorageContractTest {
       for (Future<Integer> f : results) {
         total += f.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
       }
-      assertThat(total).isEqualTo(5);
+      assertThat(total).isEqualTo(7);
     } finally {
       pool.shutdownNow();
     }
@@ -1833,5 +1835,241 @@ abstract class StorageContractTest {
           return null;
         });
     assertThat(tx(storage(), (UnitOfWork u) -> u.outbox().dueDiscord(now + 2600, 10))).hasSize(1);
+  }
+
+  // ---------------------------------------------------------------- V5: Optionen, Vorlagen, Keyset
+
+  @Test
+  void orderOptionsRoundTripAndDefaultToExact() {
+    UUID a = UUID.randomUUID();
+    long id =
+        tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders().insert(TestData.order(a, "minecraft:diamond", 100, 3), TestData.T0))
+            .id();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().options(id)))
+        .isEqualTo(dev.orderhub.domain.OrderOptions.EXACT);
+    var custom = new dev.orderhub.domain.OrderOptions(60, true, true);
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.orders().saveOptions(id, custom);
+          return null;
+        });
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().options(id))).isEqualTo(custom);
+    var changed = new dev.orderhub.domain.OrderOptions(0, false, false);
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.orders().saveOptions(id, changed);
+          return null;
+        });
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().options(id))).isEqualTo(changed);
+  }
+
+  @Test
+  void checkConstraintRejectsOutOfRangeDurabilityOption() {
+    UUID a = UUID.randomUUID();
+    long id =
+        tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders().insert(TestData.order(a, "minecraft:diamond", 100, 3), TestData.T0))
+            .id();
+    var bad =
+        assertThatThrownBy(() ->
+            rawSql(
+                "INSERT INTO order_options(order_id, tol_durability, tol_ench_min, auto_claim) VALUES ("
+                    + id
+                    + ", 101, 0, 0)"));
+    bad.isInstanceOf(Exception.class);
+  }
+
+  private void rawSql(String sql) throws Exception {
+    try (Connection c = rawDataSource().getConnection();
+        Statement st = c.createStatement()) {
+      st.executeUpdate(sql);
+    }
+  }
+
+  private dev.orderhub.domain.OrderTemplate template(UUID owner, String name, long price) {
+    return new dev.orderhub.domain.OrderTemplate(
+        0,
+        owner,
+        name,
+        TestData.item("minecraft:diamond"),
+        price,
+        64,
+        8,
+        72,
+        new dev.orderhub.domain.OrderOptions(80, true, false),
+        true,
+        TestData.T0);
+  }
+
+  @Test
+  void templatesAreSavedReplacedLimitedAndDeletedPerPlayer() {
+    UUID a = UUID.randomUUID();
+    UUID b = UUID.randomUUID();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().save(template(a, "one", 100), 2)))
+        .isTrue();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().save(template(a, "two", 200), 2)))
+        .isTrue();
+    // Limit erreicht: neue Vorlage abgelehnt, gleichnamige ersetzt
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().save(template(a, "three", 300), 2)))
+        .isFalse();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().save(template(a, "one", 150), 2)))
+        .isTrue();
+    assertThat(
+            tx(storage(), (UnitOfWork u) -> u.templates().find(a, "one")).orElseThrow().unitPrice())
+        .isEqualTo(150);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().list(a)))
+        .extracting(dev.orderhub.domain.OrderTemplate::name)
+        .containsExactly("one", "two");
+    // andere Spieler sehen nichts, Namen sind je Spieler eindeutig
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().list(b))).isEmpty();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().save(template(b, "one", 1), 2)))
+        .isTrue();
+    var loaded = tx(storage(), (UnitOfWork u) -> u.templates().find(a, "two")).orElseThrow();
+    assertThat(loaded.options()).isEqualTo(new dev.orderhub.domain.OrderOptions(80, true, false));
+    assertThat(loaded.autoRenew()).isTrue();
+    assertThat(loaded.item().data()).isEqualTo(TestData.item("minecraft:diamond").data());
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().delete(a, "one"))).isTrue();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.templates().delete(a, "one"))).isFalse();
+  }
+
+  /**
+   * 14 Auftraege mit bewusst gleichen Schluesseln (Preis, Fuellstand), damit Gleichstaende zaehlen.
+   */
+  private void seedForPaging() {
+    UUID a = UUID.randomUUID();
+    String[] keys = {
+      "minecraft:diamond", "minecraft:diamond_sword", "minecraft:iron_ingot", "minecraft:stick"
+    };
+    for (int i = 0; i < 14; i++) {
+      final int n = i;
+      tx(
+          storage(),
+          (UnitOfWork u) -> {
+            Order o =
+                u.orders()
+                    .insert(
+                        new NewOrder(
+                            a,
+                            "srv-a",
+                            TestData.item(keys[n % keys.length]),
+                            100L + (n % 3) * 50,
+                            10 + (n % 2) * 5,
+                            1,
+                            TestData.T0 + 100_000,
+                            false,
+                            n % 2 == 0 ? "ores" : "tools"),
+                        TestData.T0 + (n % 4));
+            int filled = n % 5;
+            if (filled > 0) {
+              u.orders().update(o.afterDelivery(filled, TestData.T0 + 50));
+            }
+            return null;
+          });
+    }
+  }
+
+  @Test
+  void keysetPagesEqualOffsetPagesForEverySortWithTies() {
+    seedForPaging();
+    for (OrderQuery.Sort sort : OrderQuery.Sort.values()) {
+      List<Long> viaOffset = new ArrayList<>();
+      for (int offset = 0; offset < 14; offset += 4) {
+        int off = offset;
+        viaOffset.addAll(
+            tx(
+                    storage(),
+                    (UnitOfWork u) ->
+                        u.orders().search(new OrderQuery(null, null, null, null, sort, off, 4)))
+                .stream()
+                .map(Order::id)
+                .toList());
+      }
+      List<Long> viaKeyset = new ArrayList<>();
+      OrderQuery.Cursor cursor = null;
+      for (int page = 0; page < 10; page++) {
+        OrderQuery.Cursor after = cursor;
+        List<Order> rows =
+            tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders()
+                        .search(new OrderQuery(null, null, null, null, sort, 0, 4, null, after)));
+        if (rows.isEmpty()) {
+          break;
+        }
+        rows.forEach(o -> viaKeyset.add(o.id()));
+        cursor = OrderQuery.Cursor.of(sort, rows.get(rows.size() - 1));
+      }
+      assertThat(viaKeyset).as("keyset %s", sort).containsExactlyElementsOf(viaOffset);
+      assertThat(viaKeyset).as("all rows %s", sort).hasSize(14).doesNotHaveDuplicates();
+    }
+  }
+
+  @Test
+  void textSearchMatchesSubstringsAndCategoryFiltersCombine() {
+    seedForPaging();
+    var diamonds =
+        tx(
+            storage(),
+            (UnitOfWork u) ->
+                u.orders()
+                    .search(new OrderQuery(null, null, null, null, null, 0, 50, "diamond", null)));
+    assertThat(diamonds).isNotEmpty().allMatch(o -> o.item().itemKey().contains("diamond"));
+    var swordsOnly =
+        tx(
+            storage(),
+            (UnitOfWork u) ->
+                u.orders()
+                    .search(
+                        new OrderQuery(
+                            null, null, null, null, null, 0, 50, "Diamond Sword", null)));
+    assertThat(swordsOnly)
+        .isNotEmpty()
+        .allMatch(o -> o.item().itemKey().equals("minecraft:diamond_sword"));
+    var ores =
+        tx(
+            storage(),
+            (UnitOfWork u) ->
+                u.orders()
+                    .search(
+                        new OrderQuery(null, null, "ores", null, null, 0, 50, "diamond", null)));
+    assertThat(ores).allMatch(o -> o.category().equals("ores"));
+  }
+
+  @Test
+  void textSearchTreatsWildcardsAndQuotesAsPlainText() {
+    seedForPaging();
+    // normalizeText entfernt alles ausser a-z, 0-9, Unterstrich: %, ' und ; erreichen SQL nie
+    assertThat(OrderQuery.normalizeText("100%'; DROP TABLE orders;--"))
+        .doesNotContain("%", "'", ";");
+    assertThat(new OrderQuery(null, null, null, null, null, 0, 50, "%", null).text()).isNull();
+    // ein Unterstrich im Suchtext ist kein Platzhalter: "iron_ingot" findet nur Eisenbarren
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders()
+                        .search(
+                            new OrderQuery(
+                                null, null, null, null, null, 0, 50, "iron_ingot", null))))
+        .allMatch(o -> o.item().itemKey().equals("minecraft:iron_ingot"));
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders()
+                        .search(
+                            new OrderQuery(
+                                null, null, null, null, null, 0, 50, "iron_ingo_", null))))
+        .isEmpty();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().count(OrderQuery.firstPage())))
+        .isEqualTo(14);
   }
 }

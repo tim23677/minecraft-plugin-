@@ -27,6 +27,10 @@ public interface UnitOfWork {
   }
 
   /** Discord- und Cache-Outbox. */
+  default TemplateRepository templates() {
+    throw new UnsupportedOperationException("templates not available");
+  }
+
   default OutboxRepository outbox() {
     throw new UnsupportedOperationException("outbox not available");
   }

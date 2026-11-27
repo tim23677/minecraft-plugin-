@@ -83,6 +83,9 @@ public final class InMemoryStorage implements Storage {
     Map<String, Long> returnKeys = new HashMap<>();
     List<dev.orderhub.storage.AuditRepository.Entry> audit = new ArrayList<>();
     Map<UUID, dev.orderhub.storage.HoldRepository.Hold> holds = new LinkedHashMap<>();
+    Map<Long, dev.orderhub.domain.OrderOptions> options = new HashMap<>();
+    Map<String, dev.orderhub.domain.OrderTemplate> templates = new LinkedHashMap<>();
+    long nextTemplateId = 1;
 
     State copy() {
       State s = new State();
@@ -101,6 +104,9 @@ public final class InMemoryStorage implements Storage {
       s.returnKeys = new HashMap<>(returnKeys);
       s.audit = new ArrayList<>(audit);
       s.holds = new LinkedHashMap<>(holds);
+      s.options = new HashMap<>(options);
+      s.templates = new LinkedHashMap<>(templates);
+      s.nextTemplateId = nextTemplateId;
       return s;
     }
   }
@@ -378,6 +384,59 @@ public final class InMemoryStorage implements Storage {
     }
 
     @Override
+    public dev.orderhub.storage.TemplateRepository templates() {
+      return new dev.orderhub.storage.TemplateRepository() {
+        private String key(UUID owner, String name) {
+          return owner + "/" + name;
+        }
+
+        @Override
+        public boolean save(dev.orderhub.domain.OrderTemplate t, int maxPerPlayer) {
+          String k = key(t.owner(), t.name());
+          boolean exists = s.templates.containsKey(k);
+          long own = s.templates.values().stream().filter(x -> x.owner().equals(t.owner())).count();
+          if (!exists && own >= maxPerPlayer) {
+            return false;
+          }
+          long id = exists ? s.templates.get(k).id() : s.nextTemplateId++;
+          s.templates.put(
+              k,
+              new dev.orderhub.domain.OrderTemplate(
+                  id,
+                  t.owner(),
+                  t.name(),
+                  t.item(),
+                  t.unitPrice(),
+                  t.quantity(),
+                  t.minDelivery(),
+                  t.lifetimeHours(),
+                  t.options(),
+                  t.autoRenew(),
+                  t.createdAt()));
+          return true;
+        }
+
+        @Override
+        public java.util.Optional<dev.orderhub.domain.OrderTemplate> find(UUID owner, String name) {
+          return java.util.Optional.ofNullable(s.templates.get(key(owner, name)));
+        }
+
+        @Override
+        public List<dev.orderhub.domain.OrderTemplate> list(UUID owner) {
+          return s.templates.values().stream()
+              .filter(x -> x.owner().equals(owner))
+              .sorted(Comparator.comparing(dev.orderhub.domain.OrderTemplate::name))
+              .toList();
+        }
+
+        @Override
+        public boolean delete(UUID owner, String name) {
+          return s.templates.remove(key(owner, name)) != null;
+        }
+      };
+    }
+
+    @Override
     public dev.orderhub.storage.HoldRepository holds() {
       return new dev.orderhub.storage.HoldRepository() {
         @Override
@@ -484,20 +543,68 @@ public final class InMemoryStorage implements Storage {
 
       @Override
       public List<Order> search(OrderQuery q) {
+        // Reihenfolge und Cursor entsprechen den SQL-Sortierungen in JdbcOrderRepository.
         Comparator<Order> cmp =
             switch (q.sort()) {
-              case NEWEST -> Comparator.comparingLong(Order::createdAt).reversed();
-              case HIGHEST_PRICE -> Comparator.comparingLong(Order::unitPrice).reversed();
-              case LOWEST_PRICE -> Comparator.comparingLong(Order::unitPrice);
-              case ALMOST_COMPLETED -> Comparator.comparingInt(Order::remaining);
-              case HIGHEST_DEMAND -> Comparator.comparingInt(Order::remaining).reversed();
+              case NEWEST ->
+                  Comparator.comparingLong(Order::createdAt)
+                      .thenComparingLong(Order::id)
+                      .reversed();
+              case HIGHEST_PRICE ->
+                  Comparator.comparingLong(Order::unitPrice)
+                      .reversed()
+                      .thenComparingLong(Order::id);
+              case LOWEST_PRICE ->
+                  Comparator.comparingLong(Order::unitPrice).thenComparingLong(Order::id);
+              case ALMOST_COMPLETED ->
+                  Comparator.comparingInt(Order::fillPermille)
+                      .reversed()
+                      .thenComparingLong(Order::id);
+              case HIGHEST_DEMAND ->
+                  Comparator.comparingInt(Order::remaining)
+                      .reversed()
+                      .thenComparing(Comparator.comparingLong(Order::escrowRemaining).reversed())
+                      .thenComparingLong(Order::id);
             };
-        return s.orders.values().stream()
-            .filter(o -> matches(o, q))
-            .sorted(cmp)
-            .skip(q.offset())
-            .limit(q.limit())
-            .toList();
+        List<Order> sorted =
+            s.orders.values().stream().filter(o -> matches(o, q)).sorted(cmp).toList();
+        if (q.after() != null) {
+          OrderQuery.Cursor c = q.after();
+          int from = 0;
+          for (Order o : sorted) {
+            // Erste Zeile, die in der Sortierung hinter dem Cursor liegt.
+            OrderQuery.Cursor oc = OrderQuery.Cursor.of(q.sort(), o);
+            if (isAfter(q.sort(), oc, c)) {
+              break;
+            }
+            from++;
+          }
+          return sorted.stream().skip(from).limit(q.limit()).toList();
+        }
+        return sorted.stream().skip(q.offset()).limit(q.limit()).toList();
+      }
+
+      private boolean isAfter(OrderQuery.Sort sort, OrderQuery.Cursor row, OrderQuery.Cursor c) {
+        return switch (sort) {
+          case NEWEST -> row.k1() < c.k1() || (row.k1() == c.k1() && row.id() < c.id());
+          case HIGHEST_PRICE, ALMOST_COMPLETED ->
+              row.k1() < c.k1() || (row.k1() == c.k1() && row.id() > c.id());
+          case LOWEST_PRICE -> row.k1() > c.k1() || (row.k1() == c.k1() && row.id() > c.id());
+          case HIGHEST_DEMAND ->
+              row.k1() < c.k1()
+                  || (row.k1() == c.k1() && row.k2() < c.k2())
+                  || (row.k1() == c.k1() && row.k2() == c.k2() && row.id() > c.id());
+        };
+      }
+
+      @Override
+      public dev.orderhub.domain.OrderOptions options(long orderId) {
+        return s.options.getOrDefault(orderId, dev.orderhub.domain.OrderOptions.EXACT);
+      }
+
+      @Override
+      public void saveOptions(long orderId, dev.orderhub.domain.OrderOptions options) {
+        s.options.put(orderId, options);
       }
 
       @Override
@@ -509,6 +616,7 @@ public final class InMemoryStorage implements Storage {
         return (q.owner() == null || q.owner().equals(o.owner()))
             && (q.itemKey() == null || q.itemKey().equals(o.item().itemKey()))
             && (q.category() == null || q.category().equals(o.category()))
+            && (q.text() == null || o.item().itemKey().contains(q.text()))
             && o.status() == q.status();
       }
 

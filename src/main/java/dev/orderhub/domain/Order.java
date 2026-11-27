@@ -47,6 +47,11 @@ public record Order(
     return quantityTotal - quantityFilled;
   }
 
+  /** Fuellstand in Promille, ganzzahlig abgerundet (wie die Datenbankspalte fill_permille). */
+  public int fillPermille() {
+    return (int) (quantityFilled * 1000L / quantityTotal);
+  }
+
   /** Erwarteter Escrow aus Restmenge und Stueckpreis. */
   public long expectedEscrow() {
     return Math.multiplyExact(unitPrice, (long) remaining());

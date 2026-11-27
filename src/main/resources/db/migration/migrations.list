@@ -6,3 +6,6 @@ common/V2__delivery_holds.sql
 common/V3__discord_outbox_claim.sql
 sqlite/V4__search_indexes.sql
 mariadb/V4__search_indexes.sql
+common/V5__order_options.sql
+sqlite/V5__search_keyset.sql
+mariadb/V5__search_keyset.sql

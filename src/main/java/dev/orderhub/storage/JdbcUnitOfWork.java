@@ -20,6 +20,7 @@ final class JdbcUnitOfWork implements UnitOfWork {
   private final JdbcHoldRepository holds;
   private final JdbcInsightsRepository insights;
   private final JdbcOutboxRepository outbox;
+  private final JdbcTemplateRepository templates;
 
   JdbcUnitOfWork(Connection connection, Dialect dialect, long now) {
     this.now = now;
@@ -34,6 +35,7 @@ final class JdbcUnitOfWork implements UnitOfWork {
     this.holds = new JdbcHoldRepository(jdbc);
     this.insights = new JdbcInsightsRepository(jdbc);
     this.outbox = new JdbcOutboxRepository(jdbc);
+    this.templates = new JdbcTemplateRepository(jdbc);
   }
 
   @Override
@@ -84,6 +86,11 @@ final class JdbcUnitOfWork implements UnitOfWork {
   @Override
   public OutboxRepository outbox() {
     return outbox;
+  }
+
+  @Override
+  public TemplateRepository templates() {
+    return templates;
   }
 
   @Override

@@ -3,6 +3,7 @@ package dev.orderhub.storage;
 import dev.orderhub.domain.ItemSnapshot;
 import dev.orderhub.domain.NewOrder;
 import dev.orderhub.domain.Order;
+import dev.orderhub.domain.OrderOptions;
 import dev.orderhub.domain.OrderQuery;
 import dev.orderhub.domain.OrderStatus;
 import java.sql.ResultSet;
@@ -150,12 +151,62 @@ final class JdbcOrderRepository implements OrderRepository {
   public List<Order> search(OrderQuery q) {
     Filter f = filter(q);
     List<Object> params = new ArrayList<>(f.params());
+    String where = f.where();
+    if (q.after() != null) {
+      where += " AND " + keysetCondition(q.sort(), params, q.after());
+    }
     params.add(q.limit());
-    params.add(q.offset());
-    return jdbc.list(
-        SELECT + f.where() + " ORDER BY " + orderBy(q.sort()) + " LIMIT ? OFFSET ?",
-        JdbcOrderRepository::map,
-        params.toArray());
+    String sql = SELECT + where + " ORDER BY " + orderBy(q.sort()) + " LIMIT ?";
+    if (q.after() == null) {
+      params.add(q.offset());
+      sql += " OFFSET ?";
+    }
+    return jdbc.list(sql, JdbcOrderRepository::map, params.toArray());
+  }
+
+  /**
+   * Bedingung "Zeile liegt hinter dem Cursor" je Sortierung. Feste Fragmente, Werte werden
+   * gebunden. Reihenfolge der Parameter entspricht der Reihenfolge der Platzhalter.
+   */
+  private static String keysetCondition(
+      OrderQuery.Sort sort, List<Object> params, OrderQuery.Cursor c) {
+    switch (sort) {
+      case NEWEST -> {
+        params.add(c.k1());
+        params.add(c.k1());
+        params.add(c.id());
+        return "(o.created_at < ? OR (o.created_at = ? AND o.id < ?))";
+      }
+      case HIGHEST_PRICE -> {
+        params.add(c.k1());
+        params.add(c.k1());
+        params.add(c.id());
+        return "(o.unit_price < ? OR (o.unit_price = ? AND o.id > ?))";
+      }
+      case LOWEST_PRICE -> {
+        params.add(c.k1());
+        params.add(c.k1());
+        params.add(c.id());
+        return "(o.unit_price > ? OR (o.unit_price = ? AND o.id > ?))";
+      }
+      case ALMOST_COMPLETED -> {
+        params.add(c.k1());
+        params.add(c.k1());
+        params.add(c.id());
+        return "(o.fill_permille < ? OR (o.fill_permille = ? AND o.id > ?))";
+      }
+      case HIGHEST_DEMAND -> {
+        params.add(c.k1());
+        params.add(c.k1());
+        params.add(c.k2());
+        params.add(c.k1());
+        params.add(c.k2());
+        params.add(c.id());
+        return "(o.remaining_qty < ? OR (o.remaining_qty = ? AND o.escrow_remaining < ?) "
+            + "OR (o.remaining_qty = ? AND o.escrow_remaining = ? AND o.id > ?))";
+      }
+      default -> throw new IllegalArgumentException("sort");
+    }
   }
 
   @Override
@@ -220,6 +271,12 @@ final class JdbcOrderRepository implements OrderRepository {
       where.append(" AND o.category = ?");
       params.add(q.category());
     }
+    if (q.text() != null) {
+      // Suchtext ist auf [a-z0-9_] normalisiert, Unterstrich ist im LIKE ein Platzhalter und wird
+      // maskiert.
+      where.append(" AND o.item_key LIKE ? ESCAPE '!'");
+      params.add("%" + q.text().replace("!", "!!").replace("_", "!_") + "%");
+    }
     return new Filter(where.toString(), params);
   }
 
@@ -229,9 +286,30 @@ final class JdbcOrderRepository implements OrderRepository {
       case NEWEST -> "o.created_at DESC, o.id DESC";
       case HIGHEST_PRICE -> "o.unit_price DESC, o.id ASC";
       case LOWEST_PRICE -> "o.unit_price ASC, o.id ASC";
-      case ALMOST_COMPLETED -> "o.fill_ratio DESC, o.id ASC";
+      case ALMOST_COMPLETED -> "o.fill_permille DESC, o.id ASC";
       case HIGHEST_DEMAND -> "o.remaining_qty DESC, o.escrow_remaining DESC, o.id ASC";
     };
+  }
+
+  @Override
+  public OrderOptions options(long orderId) {
+    return jdbc.one(
+            "SELECT tol_durability, tol_ench_min, auto_claim FROM order_options WHERE order_id = ?",
+            rs -> new OrderOptions(rs.getInt(1), rs.getInt(2) != 0, rs.getInt(3) != 0),
+            orderId)
+        .orElse(OrderOptions.EXACT);
+  }
+
+  @Override
+  public void saveOptions(long orderId, OrderOptions options) {
+    jdbc.update("DELETE FROM order_options WHERE order_id = ?", orderId);
+    jdbc.update(
+        "INSERT INTO order_options(order_id, tol_durability, tol_ench_min, auto_claim) "
+            + "VALUES (?,?,?,?)",
+        orderId,
+        options.minDurabilityPercent(),
+        options.enchantmentsAtLeast(),
+        options.autoClaim());
   }
 
   static Order map(ResultSet rs) throws SQLException {

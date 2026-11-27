@@ -2,6 +2,7 @@ package dev.orderhub.storage;
 
 import dev.orderhub.domain.NewOrder;
 import dev.orderhub.domain.Order;
+import dev.orderhub.domain.OrderOptions;
 import dev.orderhub.domain.OrderQuery;
 import java.util.List;
 import java.util.Optional;
@@ -42,4 +43,10 @@ public interface OrderRepository {
 
   /** ACTIVE Auftraege mit {@code expiresAt <= now}, aelteste zuerst. */
   List<Order> findExpired(long now, int limit);
+
+  /** Optionen des Auftrags. Ohne gespeicherte Zeile {@link OrderOptions#EXACT}. */
+  OrderOptions options(long orderId);
+
+  /** Speichert die Optionen eines neuen oder bestehenden Auftrags. */
+  void saveOptions(long orderId, OrderOptions options);
 }
