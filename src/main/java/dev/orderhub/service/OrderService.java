@@ -702,7 +702,7 @@ public final class OrderService {
    * Schaltet die Auto-Verlaengerung eines aktiven oder pausierten Auftrags. Verlaengert wird beim
    * Ablauf nur, wenn der Escrow noch gedeckt ist, es entsteht keine neue Abbuchung.
    */
-  public ActionResult setAutoRenew(long orderId, UUID actor, boolean renew) {
+  public ActionResult changeAutoRenew(long orderId, UUID actor, boolean renew) {
     return TxRunner.run(
         storage,
         uow -> {

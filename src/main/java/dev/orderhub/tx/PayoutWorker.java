@@ -18,7 +18,8 @@ import java.util.Optional;
  */
 public final class PayoutWorker {
 
-  private final Object lock = new Object();
+  private final java.util.concurrent.locks.ReentrantLock lock =
+      new java.util.concurrent.locks.ReentrantLock();
 
   /** Ergebnis eines Laufs. */
   public record RunReport(
@@ -61,8 +62,15 @@ public final class PayoutWorker {
 
   /** Verarbeitet bis zu {@code maxItems} Zeilen nacheinander. */
   public RunReport runOnce(int maxItems) {
-    synchronized (lock) {
+    // A run that is still busy (for example waiting for a slow economy) must not make every new
+    // timer tick queue up another blocked thread: the later call is skipped.
+    if (!lock.tryLock()) {
+      return new RunReport(0, 0, 0, false, true);
+    }
+    try {
       return runLocked(maxItems);
+    } finally {
+      lock.unlock();
     }
   }
 

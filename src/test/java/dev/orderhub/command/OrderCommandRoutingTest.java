@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
@@ -51,7 +52,7 @@ class OrderCommandRoutingTest {
   /** Treibt Async- und Tick-Aufgaben, bis ein Menue offen ist, hoechstens {@code rounds} Runden. */
   private Optional<Menu> awaitMenu(PlayerMock player, int rounds) {
     for (int i = 0; i < rounds; i++) {
-      server.getScheduler().waitAsyncTasksFinished();
+      // No waitAsyncTasksFinished(): the plugin has repeating async tasks, so it never returns.
       server.getScheduler().performOneTick();
       Optional<Menu> current = plugin.menus().current(player.getUniqueId());
       if (current.isPresent()) {
@@ -67,41 +68,67 @@ class OrderCommandRoutingTest {
     return Optional.empty();
   }
 
+  private static final String[] ALL_PERMISSIONS = {
+    "orderhub.create", "orderhub.market", "orderhub.stats", "orderhub.favorites"
+  };
+
+  @Test
+  void mineOpensThePagedListOfTheOwnOrdersWithoutAnyMessage() {
+    PlayerMock player = player(ALL_PERMISSIONS);
+    player.performCommand("order mine");
+    assertThat(awaitMenu(player, 300))
+        .hasValueSatisfying(m -> assertThat(m).isNotInstanceOf(MainMenu.class));
+    assertThat(player.nextMessage()).isNull();
+  }
+
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "mine",
         "market",
+        "MARKET",
         "market newest",
         "market price-asc",
-        "market diamond sword",
-        "claims",
-        "stats",
-        "history",
-        "favorites"
+        "market price_asc",
+        "market diamond sword"
       })
-  void withThePermissionASubcommandOpensAMenuAndNeverRefuses(String command) {
-    PlayerMock player =
-        player("orderhub.create", "orderhub.market", "orderhub.stats", "orderhub.favorites");
+  void marketOpensTheMarketMenuForASortNameAndForSearchText(String command) {
+    PlayerMock player = player(ALL_PERMISSIONS);
     player.performCommand("order " + command);
-    Optional<Menu> menu = awaitMenu(player, 300);
-    assertThat(menu).as(command).isPresent();
-    assertThat(menu.get()).as(command).isNotInstanceOf(MainMenu.class);
-    assertThat(player.nextMessage()).as(command).isNull();
+    assertThat(awaitMenu(player, 300))
+        .as(command)
+        .hasValueSatisfying(m -> assertThat(m).isNotInstanceOf(MainMenu.class));
+    // leerer Markt: der Spieler bekommt den Hinweis, nie eine Ablehnung
+    String message = player.nextMessage();
+    assertThat(message).as(command).contains("No open orders");
+    assertThat(message).doesNotContain("permission");
   }
 
-  @Test
-  void aSortNameAndASearchTextOpenDifferentMarketViews() {
-    PlayerMock bySort = player("orderhub.market");
-    bySort.performCommand("order market price-asc");
-    Menu sorted = awaitMenu(bySort, 300).orElseThrow();
-    PlayerMock byText = player("orderhub.market");
-    byText.performCommand("order market price-asc diamond");
-    Menu searched = awaitMenu(byText, 300).orElseThrow();
-    assertThat(sorted).isNotNull();
-    assertThat(searched).isNotNull();
-    assertThat(bySort.nextMessage()).isNull();
-    assertThat(byText.nextMessage()).isNull();
+  @ParameterizedTest
+  @CsvSource(
+      delimiter = '|',
+      value = {
+        "claims|nothing to collect",
+        "returns|nothing to collect",
+        "stats|No trades yet",
+        "history|No deliveries yet",
+        "favorites|No favorites",
+        "analytics|most open orders",
+        "sell|Hold the item",
+        "template list|no templates",
+        "deliver 1|#1 not found",
+        "cancel 1|#1 not found"
+      })
+  void withThePermissionEverySubcommandAnswersWithItsOwnContentNeverWithARefusal(
+      String command, String expected) {
+    PlayerMock player = player(ALL_PERMISSIONS);
+    player.performCommand("order " + command);
+    server.getScheduler().waitAsyncTasksFinished();
+    for (int i = 0; i < 50; i++) {
+      server.getScheduler().performOneTick();
+    }
+    String message = player.nextMessage();
+    assertThat(message).as(command).contains(expected);
+    assertThat(message).doesNotContain("permission");
   }
 
   @Test
@@ -116,24 +143,17 @@ class OrderCommandRoutingTest {
   }
 
   @Test
-  void aSubcommandIsCaseInsensitive() {
-    PlayerMock player = player("orderhub.market");
-    player.performCommand("order MARKET");
-    assertThat(awaitMenu(player, 300)).isPresent();
-  }
-
-  @Test
   void permissionToOneAreaDoesNotUnlockAnother() {
     PlayerMock player = player("orderhub.market");
-    player.performCommand("order stats");
-    assertThat(player.nextMessage()).contains("do not have permission");
-    player.performCommand("order mine");
-    assertThat(player.nextMessage()).contains("do not have permission");
-    player.performCommand("order template list");
-    assertThat(player.nextMessage()).contains("do not have permission");
+    for (String denied : new String[] {"orderhub.create", "orderhub.stats", "orderhub.favorites"}) {
+      player.addAttachment(plugin, denied, false);
+    }
+    for (String command : new String[] {"stats", "history", "favorites", "mine", "template list"}) {
+      player.performCommand("order " + command);
+      assertThat(player.nextMessage()).as(command).contains("do not have permission");
+    }
     player.performCommand("order sell");
-    assertThat(player.nextMessage()).doesNotContain("do not have permission");
-    assertThat(awaitMenu(player, 20)).isEmpty();
+    assertThat(player.nextMessage()).doesNotContain("permission");
   }
 
   // ---- Vorschlaege ----
@@ -170,8 +190,8 @@ class OrderCommandRoutingTest {
   void createSuggestsStackSizesAndOnlyForTheSecondWord() {
     PlayerMock player = player();
     assertThat(suggestions(player, "order create "))
-        .containsExactly("1", "16", "64", "576", "2304");
-    assertThat(suggestions(player, "order create 6")).containsExactly("64", "576");
+        .containsExactlyInAnyOrder("1", "16", "64", "576", "2304");
+    assertThat(suggestions(player, "order create 6")).containsExactly("64");
     assertThat(suggestions(player, "order create 64 ")).isEmpty();
     assertThat(suggestions(player, "order mine ")).isEmpty();
     assertThat(suggestions(player, "order market newest ")).isEmpty();

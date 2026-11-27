@@ -492,13 +492,14 @@ class OrderServiceTest {
     Harness h = withMoney(Fees.none());
     CreateResult c = h.create(OWNER, 100, 2, 1);
     long id = c.orderId();
-    assertThat(h.orders.setAutoRenew(id, SUPPLIER, true).status())
+    assertThat(h.orders.changeAutoRenew(id, SUPPLIER, true).status())
         .isEqualTo(ActionStatus.NOT_OWNER);
-    assertThat(h.orders.setAutoRenew(9999, OWNER, true).status()).isEqualTo(ActionStatus.NOT_FOUND);
+    assertThat(h.orders.changeAutoRenew(9999, OWNER, true).status())
+        .isEqualTo(ActionStatus.NOT_FOUND);
     assertThat(order(h, id).autoRenew()).isFalse();
-    assertThat(h.orders.setAutoRenew(id, OWNER, true).status()).isEqualTo(ActionStatus.OK);
+    assertThat(h.orders.changeAutoRenew(id, OWNER, true).status()).isEqualTo(ActionStatus.OK);
     assertThat(order(h, id).autoRenew()).isTrue();
-    assertThat(h.orders.setAutoRenew(id, OWNER, true).status())
+    assertThat(h.orders.changeAutoRenew(id, OWNER, true).status())
         .isEqualTo(ActionStatus.ALREADY_DONE);
 
     long before = order(h, id).expiresAt();
@@ -508,10 +509,10 @@ class OrderServiceTest {
     assertThat(order(h, id).expiresAt()).isGreaterThan(before);
     assertThat(order(h, id).escrowRemaining()).isEqualTo(200);
 
-    assertThat(h.orders.setAutoRenew(id, OWNER, false).status()).isEqualTo(ActionStatus.OK);
+    assertThat(h.orders.changeAutoRenew(id, OWNER, false).status()).isEqualTo(ActionStatus.OK);
     h.clock.advance(Duration.ofDays(30).toMillis());
     assertThat(h.orders.expireDue(10).expired()).isEqualTo(1);
-    assertThat(h.orders.setAutoRenew(id, OWNER, true).status())
+    assertThat(h.orders.changeAutoRenew(id, OWNER, true).status())
         .isEqualTo(ActionStatus.INVALID_STATE);
   }
 }

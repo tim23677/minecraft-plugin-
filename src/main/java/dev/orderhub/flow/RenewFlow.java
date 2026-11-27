@@ -31,7 +31,7 @@ public final class RenewFlow {
         s.scheduler(),
         s.logger(),
         player,
-        () -> s.orders().setAutoRenew(id, player.getUniqueId(), on),
+        () -> s.orders().changeAutoRenew(id, player.getUniqueId(), on),
         r ->
             player.sendMessage(
                 switch (r.status()) {

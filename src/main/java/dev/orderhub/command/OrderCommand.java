@@ -67,6 +67,10 @@ public final class OrderCommand implements CommandHandler {
   }
 
   /** Verdrahtet {@code /order template}. */
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification =
+          "Wired once at start, the command only calls the service and never changes or passes it on.")
   public void templates(dev.orderhub.flow.TemplateFlow flow) {
     this.templates = flow;
   }
