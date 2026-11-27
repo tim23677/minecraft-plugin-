@@ -258,3 +258,9 @@ template:
   not-found: "<red>没有名为 <white><name></white> 的模板。"
   limit: "<red>已达到 <max> 个模板的上限，请先删除一个。"
   usage: "<gray>使用 <white>/order template save|use|delete [名称]</white> 或 <white>/order template list</white>。"
+
+renew:
+  on: "<green>订单 #<id> 的自动续期已开启。到期时如果托管款仍在，将获得新的有效期。"
+  off: "<green>订单 #<id> 的自动续期已关闭。"
+  unchanged: "<gray>订单 #<id> 已是此设置。"
+  usage: "<gray>使用 <white>/order renew [id] on|off</white>。"

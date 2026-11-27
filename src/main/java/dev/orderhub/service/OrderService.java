@@ -698,6 +698,34 @@ public final class OrderService {
         });
   }
 
+  /**
+   * Schaltet die Auto-Verlaengerung eines aktiven oder pausierten Auftrags. Verlaengert wird beim
+   * Ablauf nur, wenn der Escrow noch gedeckt ist, es entsteht keine neue Abbuchung.
+   */
+  public ActionResult setAutoRenew(long orderId, UUID actor, boolean renew) {
+    return TxRunner.run(
+        storage,
+        uow -> {
+          Optional<Order> found = uow.orders().findForUpdate(orderId);
+          if (found.isEmpty()) {
+            return new ActionResult(ActionStatus.NOT_FOUND, 0, null);
+          }
+          Order order = found.get();
+          if (!order.owner().equals(actor)) {
+            return new ActionResult(ActionStatus.NOT_OWNER, 0, null);
+          }
+          if (order.status() != OrderStatus.ACTIVE && order.status() != OrderStatus.PAUSED) {
+            return new ActionResult(ActionStatus.INVALID_STATE, 0, null);
+          }
+          if (order.autoRenew() == renew) {
+            return new ActionResult(ActionStatus.ALREADY_DONE, 0, null);
+          }
+          return uow.orders().update(order.withAutoRenew(renew, uow.now()))
+              ? new ActionResult(ActionStatus.OK, 0, null)
+              : new ActionResult(ActionStatus.CONFLICT, 0, null);
+        });
+  }
+
   private ActionResult changeStatus(
       long orderId, UUID actor, boolean admin, OrderStatus from, OrderStatus to) {
     return TxRunner.run(

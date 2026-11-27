@@ -258,3 +258,9 @@ template:
   not-found: "<red>Шаблона с именем <white><name></white> нет."
   limit: "<red>Достигнут лимит в <max> шаблонов. Сначала удалите один."
   usage: "<gray>Используйте <white>/order template save|use|delete [имя]</white> или <white>/order template list</white>."
+
+renew:
+  on: "<green>Автопродление заказа #<id> включено. По истечении срока, если депозит всё ещё удерживается, заказ получает новый срок."
+  off: "<green>Автопродление заказа #<id> выключено."
+  unchanged: "<gray>У заказа #<id> уже такая настройка."
+  usage: "<gray>Используйте <white>/order renew [id] on|off</white>."

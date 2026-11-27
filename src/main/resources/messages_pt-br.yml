@@ -258,3 +258,9 @@ template:
   not-found: "<red>Não existe modelo chamado <white><name></white>."
   limit: "<red>Você atingiu o limite de <max> modelos. Exclua um antes."
   usage: "<gray>Use <white>/order template save|use|delete [nome]</white> ou <white>/order template list</white>."
+
+renew:
+  on: "<green>A renovação automática do pedido #<id> está ativada. Ao expirar, se o depósito ainda estiver retido, ele recebe uma nova duração."
+  off: "<green>A renovação automática do pedido #<id> está desativada."
+  unchanged: "<gray>O pedido #<id> já tem esta configuração."
+  usage: "<gray>Use <white>/order renew [id] on|off</white>."

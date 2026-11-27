@@ -258,3 +258,9 @@ template:
   not-found: "<red>No template named <white><name></white>."
   limit: "<red>You reached the limit of <max> templates. Delete one first."
   usage: "<gray>Use <white>/order template save|use|delete [name]</white> or <white>/order template list</white>."
+
+renew:
+  on: "<green>Auto renew for order #<id> is on. When it expires and the escrow is still held, it gets a new lifetime."
+  off: "<green>Auto renew for order #<id> is off."
+  unchanged: "<gray>Auto renew for order #<id> already has this setting."
+  usage: "<gray>Use <white>/order renew [id] on|off</white>."

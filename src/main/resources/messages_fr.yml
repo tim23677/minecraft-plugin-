@@ -258,3 +258,9 @@ template:
   not-found: "<red>Aucun modèle nommé <white><name></white>."
   limit: "<red>Vous avez atteint la limite de <max> modèles. Supprimez-en un d'abord."
   usage: "<gray>Utilisez <white>/order template save|use|delete [nom]</white> ou <white>/order template list</white>."
+
+renew:
+  on: "<green>Le renouvellement automatique de la commande #<id> est activé. À l'expiration, si le séquestre est toujours détenu, elle reçoit une nouvelle durée."
+  off: "<green>Le renouvellement automatique de la commande #<id> est désactivé."
+  unchanged: "<gray>La commande #<id> a déjà ce réglage."
+  usage: "<gray>Utilisez <white>/order renew [id] on|off</white>."

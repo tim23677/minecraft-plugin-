@@ -29,6 +29,7 @@ public final class OrderCommand implements CommandHandler {
           "market",
           "sell",
           "template",
+          "renew",
           "claims",
           "returns",
           "deliver",
@@ -47,6 +48,7 @@ public final class OrderCommand implements CommandHandler {
   private final dev.orderhub.flow.InsightsFlow insights;
   private volatile dev.orderhub.flow.SellFlow sell;
   private volatile dev.orderhub.flow.TemplateFlow templates;
+  private volatile dev.orderhub.flow.RenewFlow renewal;
   private volatile dev.orderhub.flow.InsightMenus insightMenus;
 
   /** Verdrahtet die Menues fuer Statistik, Verlauf, Favoriten und Analyse. */
@@ -57,6 +59,11 @@ public final class OrderCommand implements CommandHandler {
               + "Er wird weder veraendert noch weitergegeben.")
   public void insightMenus(dev.orderhub.flow.InsightMenus menus) {
     this.insightMenus = menus;
+  }
+
+  /** Verdrahtet {@code /order renew}. */
+  public void renewal(dev.orderhub.flow.RenewFlow flow) {
+    this.renewal = flow;
   }
 
   /** Verdrahtet {@code /order template}. */
@@ -160,6 +167,16 @@ public final class OrderCommand implements CommandHandler {
       case "cancel" -> {
         if (need(player, "orderhub.create")) {
           withId(player, args, menus::cancel);
+        }
+      }
+      case "renew" -> {
+        if (need(player, "orderhub.create")) {
+          dev.orderhub.flow.RenewFlow flow = renewal;
+          if (flow == null) {
+            player.sendMessage(s.messages().prefixed("general.not-available"));
+          } else {
+            flow.handle(player, args);
+          }
         }
       }
       case "stats" -> {

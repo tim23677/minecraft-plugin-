@@ -258,3 +258,9 @@ template:
   not-found: "<red>Nie ma szablonu o nazwie <white><name></white>."
   limit: "<red>Osiągnięto limit <max> szablonów. Najpierw usuń jeden."
   usage: "<gray>Użyj <white>/order template save|use|delete [nazwa]</white> lub <white>/order template list</white>."
+
+renew:
+  on: "<green>Automatyczne odnawianie zlecenia #<id> jest włączone. Po wygaśnięciu, jeśli depozyt nadal jest zatrzymany, zlecenie dostaje nowy czas."
+  off: "<green>Automatyczne odnawianie zlecenia #<id> jest wyłączone."
+  unchanged: "<gray>Zlecenie #<id> ma już to ustawienie."
+  usage: "<gray>Użyj <white>/order renew [id] on|off</white>."

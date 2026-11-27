@@ -258,3 +258,9 @@ template:
   not-found: "<red>Keine Vorlage mit dem Namen <white><name></white>."
   limit: "<red>Du hast das Limit von <max> Vorlagen erreicht. Lösche zuerst eine."
   usage: "<gray>Nutze <white>/order template save|use|delete [name]</white> oder <white>/order template list</white>."
+
+renew:
+  on: "<green>Automatische Verlängerung für Auftrag #<id> ist an. Läuft er ab und ist der Escrow noch gedeckt, bekommt er eine neue Laufzeit."
+  off: "<green>Automatische Verlängerung für Auftrag #<id> ist aus."
+  unchanged: "<gray>Auftrag #<id> hat diese Einstellung bereits."
+  usage: "<gray>Nutze <white>/order renew [id] on|off</white>."

@@ -258,3 +258,9 @@ template:
   not-found: "<red><white><name></white> adlı şablon yok."
   limit: "<red><max> şablon sınırına ulaştın. Önce birini sil."
   usage: "<gray><white>/order template save|use|delete [ad]</white> veya <white>/order template list</white> kullan."
+
+renew:
+  on: "<green>#<id> numaralı siparişin otomatik yenilemesi açık. Süresi dolduğunda emanet hâlâ tutuluyorsa yeni süre alır."
+  off: "<green>#<id> numaralı siparişin otomatik yenilemesi kapalı."
+  unchanged: "<gray>#<id> numaralı sipariş zaten bu ayarda."
+  usage: "<gray><white>/order renew [id] on|off</white> kullan."

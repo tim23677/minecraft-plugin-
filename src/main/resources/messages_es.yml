@@ -258,3 +258,9 @@ template:
   not-found: "<red>No hay ninguna plantilla llamada <white><name></white>."
   limit: "<red>Alcanzaste el límite de <max> plantillas. Elimina una primero."
   usage: "<gray>Usa <white>/order template save|use|delete [nombre]</white> o <white>/order template list</white>."
+
+renew:
+  on: "<green>La renovación automática del pedido #<id> está activada. Al expirar, si el depósito sigue retenido, recibe una nueva duración."
+  off: "<green>La renovación automática del pedido #<id> está desactivada."
+  unchanged: "<gray>El pedido #<id> ya tiene este ajuste."
+  usage: "<gray>Usa <white>/order renew [id] on|off</white>."

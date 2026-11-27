@@ -82,6 +82,27 @@ public record Order(
         category);
   }
 
+  /** Kopie mit geaenderter Auto-Verlaengerung, Version und Zeitstempel fortgeschrieben. */
+  public Order withAutoRenew(boolean renew, long now) {
+    return new Order(
+        id,
+        owner,
+        serverId,
+        item,
+        unitPrice,
+        quantityTotal,
+        quantityFilled,
+        minDelivery,
+        escrowRemaining,
+        status,
+        createdAt,
+        expiresAt,
+        now,
+        version + 1,
+        renew,
+        category);
+  }
+
   /** Lieferung von {@code n} Stueck: Menge und Escrow werden gemeinsam fortgeschrieben. */
   public Order afterDelivery(int n, long now) {
     if (n < 1 || n > remaining()) {
