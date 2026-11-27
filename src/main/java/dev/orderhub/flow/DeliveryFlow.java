@@ -1,9 +1,10 @@
 package dev.orderhub.flow;
 
 import dev.orderhub.bootstrap.Messages;
-import dev.orderhub.domain.ItemSnapshot;
 import dev.orderhub.domain.Order;
 import dev.orderhub.gui.DeliveryMenu;
+import dev.orderhub.item.PreparedTemplate;
+import dev.orderhub.item.Tolerance;
 import dev.orderhub.money.Money;
 import dev.orderhub.tx.DeliveryCommitted;
 import dev.orderhub.tx.DeliveryEngine;
@@ -67,24 +68,32 @@ public final class DeliveryFlow {
       return;
     }
     ItemStack wanted = template.get();
+    // Die Vorlage wird einmal je Menue dekodiert, nicht bei jedem Slot-Vergleich.
+    Optional<PreparedTemplate> prepared = s.matcher().prepare(order.item());
+    if (prepared.isEmpty()) {
+      s.logger().severe("order " + order.id() + " has unreadable item data");
+      player.sendMessage(s.messages().prefixed("general.database-error"));
+      return;
+    }
+    PreparedTemplate tpl = prepared.get();
     DeliveryMenu[] holder = new DeliveryMenu[1];
     DeliveryMenu menu =
         new DeliveryMenu(
             s.messages().get("menu.delivery-title", Messages.number("id", order.id())),
             inputSlots,
-            stack -> s.matcher().matches(stack, order.item()),
-            () -> info(order, wanted, holder[0]),
+            stack -> s.matcher().matches(stack, tpl, Tolerance.EXACT),
+            () -> info(order, wanted, holder[0], tpl),
             named(Material.LIME_STAINED_GLASS_PANE, s.messages().get("menu.deliver")),
             named(Material.RED_STAINED_GLASS_PANE, s.messages().get("menu.cancel")),
             m -> confirm(player, m, order),
             p -> p.closeInventory());
     holder[0] = menu;
+    menu.template(tpl);
     s.menus().open(player, menu);
   }
 
-  private ItemStack info(Order order, ItemStack wanted, DeliveryMenu menu) {
-    int accepted =
-        menu == null ? 0 : Math.min(count(menu.inputContents(), order.item()), order.remaining());
+  private ItemStack info(Order order, ItemStack wanted, DeliveryMenu menu, PreparedTemplate tpl) {
+    int accepted = menu == null ? 0 : Math.min(count(menu.inputContents(), tpl), order.remaining());
     long payout = Money.multiply(order.unitPrice(), accepted);
     ItemStack icon = wanted.clone();
     icon.setAmount(1);
@@ -105,10 +114,10 @@ public final class DeliveryFlow {
     return icon;
   }
 
-  private int count(List<ItemStack> stacks, ItemSnapshot required) {
+  private int count(List<ItemStack> stacks, PreparedTemplate required) {
     int total = 0;
     for (ItemStack stack : stacks) {
-      if (s.matcher().matches(stack, required)) {
+      if (s.matcher().matches(stack, required, Tolerance.EXACT)) {
         total += stack.getAmount();
       }
     }
@@ -123,7 +132,7 @@ public final class DeliveryFlow {
 
   private void confirm(Player player, DeliveryMenu menu, Order order) {
     menu.freeze(); // ab jetzt gehoeren die Items im Menue diesem Ablauf, nicht dem Schliessen-Hook
-    int inMenu = count(menu.inputContents(), order.item());
+    int inMenu = count(menu.inputContents(), menu.template());
     int available = Math.min(inMenu, order.remaining());
     if (available <= 0) {
       player.sendMessage(s.messages().prefixed("delivery.nothing"));
@@ -326,7 +335,7 @@ public final class DeliveryFlow {
     int total = 0;
     ItemStack template = null;
     for (ItemStack stack : drained) {
-      if (s.matcher().matches(stack, order.item())) {
+      if (s.matcher().matches(stack, menu.template(), Tolerance.EXACT)) {
         total += stack.getAmount();
         if (template == null) {
           template = stack.clone();

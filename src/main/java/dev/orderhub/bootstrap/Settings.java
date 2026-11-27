@@ -31,6 +31,8 @@ public record Settings(
     boolean allowDamaged,
     List<String> blockedMaterials,
     List<String> blockedTags,
+    List<String> allowedComponents,
+    List<String> componentPresets,
     int clickDebounceMs,
     int cacheMaxEntries,
     int payoutWorkerIntervalSeconds,
@@ -48,6 +50,8 @@ public record Settings(
   public Settings {
     blockedMaterials = List.copyOf(blockedMaterials);
     blockedTags = List.copyOf(blockedTags);
+    allowedComponents = List.copyOf(allowedComponents);
+    componentPresets = List.copyOf(componentPresets);
     warnings = List.copyOf(warnings);
   }
 
@@ -89,6 +93,8 @@ public record Settings(
         cfg.getBoolean("items.allow-damaged", false),
         List.copyOf(cfg.getStringList("items.blocked-materials")),
         List.copyOf(cfg.getStringList("items.blocked-tags")),
+        List.copyOf(cfg.getStringList("items.allowed-components")),
+        List.copyOf(cfg.getStringList("items.component-presets")),
         range(cfg, "delivery.click-debounce-ms", 150, 0, 5000, warnings),
         range(cfg, "cache.max-entries", 5000, 100, 1_000_000, warnings),
         range(cfg, "payouts.worker-interval-seconds", 2, 1, 600, warnings),
@@ -98,7 +104,7 @@ public record Settings(
         range(cfg, "retention.history-days", 120, 1, 3650, warnings),
         range(cfg, "retention.cleanup-interval-minutes", 30, 1, 1440, warnings),
         cfg.getBoolean("economy.async-safe", false),
-        range(cfg, "economy.timeout-ms", 10_000, 500, 120_000, warnings),
+        range(cfg, "economy.timeout-ms", 3_000, 500, 120_000, warnings),
         cfg.getBoolean("updates.check", false),
         validRepositoryOrEmpty(str(cfg, "updates.repository", ""), warnings),
         List.copyOf(warnings));

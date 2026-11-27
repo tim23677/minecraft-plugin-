@@ -155,4 +155,35 @@ class CreateFlowTest extends FlowTestBase {
     assertThat(menus.openCount()).isZero();
     assertThat(h.economy.mutationCount()).isZero();
   }
+
+  @Test
+  void theCooldownEntryIsRemovedWhenThePlayerQuits() {
+    flow.start(supplier, "5", "100");
+    click(ConfirmMenu.CONFIRM_SLOT);
+    assertThat(flow.cooldownSize()).isEqualTo(1);
+
+    new CooldownListener(flow)
+        .onQuit(
+            new org.bukkit.event.player.PlayerQuitEvent(
+                supplier,
+                net.kyori.adventure.text.Component.empty(),
+                org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
+
+    assertThat(flow.cooldownSize()).isZero();
+  }
+
+  @Test
+  void expiredCooldownEntriesArePurgedOnATimerAndActiveOnesStay() {
+    java.util.concurrent.atomic.AtomicLong clock = new java.util.concurrent.atomic.AtomicLong(0);
+    ChatInput chat = new ChatInput(scheduler, () -> "cancel", nanos::incrementAndGet);
+    CreateFlow timed = new CreateFlow(services, chat, clock::get);
+    timed.start(supplier, "5", "100");
+    click(ConfirmMenu.CONFIRM_SLOT);
+    assertThat(timed.cooldownSize()).isEqualTo(1);
+
+    assertThat(timed.purgeExpiredCooldowns()).isZero(); // Fenster laeuft noch
+    clock.addAndGet(60_000);
+    assertThat(timed.purgeExpiredCooldowns()).isEqualTo(1);
+    assertThat(timed.cooldownSize()).isZero();
+  }
 }

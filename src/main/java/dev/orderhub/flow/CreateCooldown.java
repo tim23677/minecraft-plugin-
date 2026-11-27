@@ -40,6 +40,24 @@ final class CreateCooldown {
     return remaining[0];
   }
 
+  /**
+   * Entfernt Eintraege, deren Fenster abgelaufen ist (zeitgesteuert aufgerufen), damit die Tabelle
+   * nicht mit der Zahl der Spieler waechst, die je erstellt haben.
+   *
+   * @return Anzahl entfernter Eintraege
+   */
+  int purgeExpired(int cooldownSeconds) {
+    long now = clock.getAsLong();
+    long window = Math.max(0, cooldownSeconds) * 1000L;
+    int before = last.size();
+    last.values().removeIf(previous -> now - previous >= window);
+    return before - last.size();
+  }
+
+  int size() {
+    return last.size();
+  }
+
   /** Gibt Speicher frei, wenn der Spieler geht. */
   void forget(UUID player) {
     last.remove(player);

@@ -117,4 +117,50 @@ class ConfigUpdaterTest {
         .extracting(ConfigUpdater.Migration::toVersion)
         .contains(version);
   }
+
+  private static java.io.InputStream bundledConfig() {
+    return ConfigUpdaterTest.class.getClassLoader().getResourceAsStream("config.yml");
+  }
+
+  @Test
+  void versionThreeLowersTheOldDefaultEconomyTimeout(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("config.yml");
+    Files.writeString(
+        file, "config-version: 2\neconomy:\n  async-safe: false\n  timeout-ms: 10000\n");
+    ConfigUpdater.update(
+        file, bundledConfig(), "config-version", ConfigUpdater.migrationsFor("config.yml"));
+    YamlConfiguration migrated = YamlConfiguration.loadConfiguration(file.toFile());
+    assertThat(migrated.getInt("economy.timeout-ms")).isEqualTo(3000);
+    assertThat(migrated.getInt("config-version")).isEqualTo(3);
+  }
+
+  @Test
+  void versionThreeKeepsACustomEconomyTimeout(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("config.yml");
+    Files.writeString(file, "config-version: 2\neconomy:\n  timeout-ms: 7000\n");
+    ConfigUpdater.update(
+        file, bundledConfig(), "config-version", ConfigUpdater.migrationsFor("config.yml"));
+    assertThat(YamlConfiguration.loadConfiguration(file.toFile()).getInt("economy.timeout-ms"))
+        .isEqualTo(7000);
+  }
+
+  @Test
+  void aServerThatAlreadyRunsVersionThreeKeepsTenThousandOnPurpose(@TempDir Path dir)
+      throws Exception {
+    Path file = dir.resolve("config.yml");
+    Files.writeString(file, "config-version: 3\neconomy:\n  timeout-ms: 10000\n");
+    ConfigUpdater.update(
+        file, bundledConfig(), "config-version", ConfigUpdater.migrationsFor("config.yml"));
+    assertThat(YamlConfiguration.loadConfiguration(file.toFile()).getInt("economy.timeout-ms"))
+        .isEqualTo(10000);
+  }
+
+  @Test
+  void aFreshInstallGetsTheNewDefault(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("config.yml");
+    ConfigUpdater.update(
+        file, bundledConfig(), "config-version", ConfigUpdater.migrationsFor("config.yml"));
+    assertThat(YamlConfiguration.loadConfiguration(file.toFile()).getInt("economy.timeout-ms"))
+        .isEqualTo(3000);
+  }
 }

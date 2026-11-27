@@ -26,8 +26,13 @@ public final class CreateFlow {
   private final ChatInput chat;
 
   public CreateFlow(Services services, ChatInput chat) {
+    this(services, chat, System::currentTimeMillis);
+  }
+
+  CreateFlow(Services services, ChatInput chat, java.util.function.LongSupplier clock) {
     this.s = services;
     this.chat = chat;
+    this.cooldown = new CreateCooldown(clock);
   }
 
   /**
@@ -156,7 +161,21 @@ public final class CreateFlow {
     return OptionalInt.of(Integer.parseInt(raw));
   }
 
-  private final CreateCooldown cooldown = new CreateCooldown(System::currentTimeMillis);
+  private final CreateCooldown cooldown;
+
+  /** Gibt den Cooldown-Eintrag frei, wenn der Spieler den Server verlaesst. */
+  public void forget(UUID player) {
+    cooldown.forget(player);
+  }
+
+  /** Zeitgesteuerte Bereinigung abgelaufener Cooldown-Eintraege. Thread-sicher. */
+  public int purgeExpiredCooldowns() {
+    return cooldown.purgeExpired(s.settings().get().createCooldownSeconds());
+  }
+
+  int cooldownSize() {
+    return cooldown.size();
+  }
 
   private void submit(
       Player player,

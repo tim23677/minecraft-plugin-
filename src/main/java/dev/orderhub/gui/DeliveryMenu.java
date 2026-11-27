@@ -1,5 +1,6 @@
 package dev.orderhub.gui;
 
+import dev.orderhub.item.PreparedTemplate;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -18,6 +19,17 @@ public final class DeliveryMenu extends Menu {
   public static final int INFO_SLOT = 49;
   public static final int CONFIRM_SLOT = 53;
   public static final int CANCEL_SLOT = 45;
+
+  private volatile PreparedTemplate template;
+
+  /** Die einmal je Menue dekodierte Vorlage des Auftrags (gesetzt vor dem Oeffnen). */
+  public PreparedTemplate template() {
+    return template;
+  }
+
+  public void template(PreparedTemplate value) {
+    this.template = value;
+  }
 
   public DeliveryMenu(
       Component title,

@@ -1,6 +1,6 @@
 # OrderHub: Datenbank
 
-Zwei Dialekte: SQLite (Einzelserver, Standard) und MariaDB/MySQL (Netzwerk). Verbindungspool über HikariCP, Zugriff nur über `Storage.transact`. Migrationen sind versionierte SQL-Dateien unter `src/main/resources/db/migration/{common,sqlite,mariadb}/V<nr>__<name>.sql`. Platzhalter `${AUTO_ID}` (SQLite `INTEGER PRIMARY KEY AUTOINCREMENT`, MariaDB `BIGINT PRIMARY KEY AUTO_INCREMENT`), `${BLOB}` (BLOB, LONGBLOB) und `${TABLE_OPTS}` (SQLite leer, MariaDB `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`). Angewendete Versionen stehen mit SHA-256 der Datei in `schema_version`. Ein veränderter Hash einer bereits angewendeten Migration bricht den Start ab.
+Zwei Dialekte: SQLite (Einzelserver, Standard) und MariaDB (Netzwerk, MySQL wird nicht unterstützt). Verbindungspool über HikariCP, Zugriff nur über `Storage.transact`. Migrationen sind versionierte SQL-Dateien unter `src/main/resources/db/migration/{common,sqlite,mariadb}/V<nr>__<name>.sql`. Platzhalter `${AUTO_ID}` (SQLite `INTEGER PRIMARY KEY AUTOINCREMENT`, MariaDB `BIGINT PRIMARY KEY AUTO_INCREMENT`), `${BLOB}` (BLOB, LONGBLOB) und `${TABLE_OPTS}` (SQLite leer, MariaDB `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`). Angewendete Versionen stehen mit SHA-256 der Datei in `schema_version`. Ein veränderter Hash einer bereits angewendeten Migration bricht den Start ab.
 
 ## Tabellen
 

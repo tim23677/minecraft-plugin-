@@ -19,7 +19,7 @@ Files live in `plugins/OrderHub`. New options of later versions are added automa
 | items.blocked-materials, blocked-tags | empty | extra blocked items (`minecraft:elytra`, tags) |
 | delivery.click-debounce-ms | 150 | minimum time between menu clicks |
 | cache.max-entries | 5000 | size of the PlaceholderAPI value cache (the database is always the truth, there is no cross-server cache) |
-| economy.async-safe, timeout-ms | false, 10000 | false: all Vault calls run on the global server thread and wait up to timeout-ms; a timeout on withdraw/deposit counts as unknown outcome (MANUAL_REVIEW), never retried |
+| economy.async-safe, timeout-ms | false, 3000 | false: all Vault calls run on the global server thread and wait up to timeout-ms; a call that never started before the timeout is safe to retry (UNAVAILABLE, backoff), a call that started and did not finish counts as unknown outcome (MANUAL_REVIEW), never retried |
 | payouts.worker-interval-seconds, max-attempts | 2, 5 | payout worker |
 | market.min-trades-for-recommendation | 5 | price recommendation needs real trades |
 | notifications.cooldown-seconds | 60 | price alert spam protection |

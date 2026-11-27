@@ -368,12 +368,27 @@ class ItemMatcherTest {
   }
 
   @Test
-  void toleratedDifferencesStillMatchOnMaterial() throws ItemCodecException {
+  void admittedDifferencesStillMustMatchExactly() throws ItemCodecException {
+    // Aufgeteilt aus toleratedDifferencesStillMatchOnMaterial: allow-damaged laesst beschaedigte
+    // Items in Auftraegen zu, der Abgleich bleibt exakt (Toleranz siehe ItemMatcherToleranceTest).
     ItemStack damaged = sword();
     damaged.setData(DataComponentTypes.DAMAGE, 10);
     ItemMatcher matcher = with(MatchPolicy.strict().allowing(RejectionReason.DAMAGED));
-    assertThat(matcher.matches(damaged, snapshotOf(Material.DIAMOND_SWORD))).isTrue();
+    assertThat(matcher.matches(damaged, snapshotOf(Material.DIAMOND_SWORD))).isFalse();
+    assertThat(matcher.matches(sword(), snapshotOf(Material.DIAMOND_SWORD))).isTrue();
     assertThat(matcher.matches(damaged, snapshotOf(Material.IRON_SWORD))).isFalse();
+  }
+
+  @Test
+  void aToleranceCarriedByTheOrderMatchesDamagedItemsOfTheSameMaterial() throws ItemCodecException {
+    ItemStack damaged = sword();
+    damaged.setData(DataComponentTypes.DAMAGE, 10);
+    ItemMatcher matcher = with(MatchPolicy.strict().allowing(RejectionReason.DAMAGED));
+    assertThat(
+            matcher.matches(damaged, snapshotOf(Material.DIAMOND_SWORD), new Tolerance(50, false)))
+        .isTrue();
+    assertThat(matcher.matches(damaged, snapshotOf(Material.IRON_SWORD), new Tolerance(50, false)))
+        .isFalse();
   }
 
   @Test

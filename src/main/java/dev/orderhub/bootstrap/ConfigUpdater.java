@@ -43,6 +43,10 @@ public final class ConfigUpdater {
           "sounds",
           "commands");
 
+  private static final String ECONOMY_TIMEOUT_KEY = "economy.timeout-ms";
+  private static final int OLD_ECONOMY_TIMEOUT_MS = 10_000;
+  private static final int NEW_ECONOMY_TIMEOUT_MS = 3_000;
+
   /** Migrationsschritte je Dateiname. */
   public static List<Migration> migrationsFor(String fileName) {
     if (fileName.equals("config.yml")) {
@@ -52,6 +56,16 @@ public final class ConfigUpdater {
               cfg -> {
                 for (String key : REMOVED_IN_V2) {
                   cfg.set(key, null);
+                }
+              }),
+          new Migration(
+              3,
+              cfg -> {
+                // Nur der alte Standardwert wird gesenkt. Wer einen eigenen Wert gesetzt hat,
+                // behaelt ihn.
+                if (cfg.isSet(ECONOMY_TIMEOUT_KEY)
+                    && cfg.getInt(ECONOMY_TIMEOUT_KEY) == OLD_ECONOMY_TIMEOUT_MS) {
+                  cfg.set(ECONOMY_TIMEOUT_KEY, NEW_ECONOMY_TIMEOUT_MS);
                 }
               }));
     }

@@ -1,13 +1,13 @@
 # OrderHub: Hauptkonfiguration / main configuration
 # config-version wird vom Plugin verwaltet. Nicht aendern. / Managed by the plugin, do not edit.
-config-version: 2
+config-version: 3
 
 # Eindeutige Kennung dieses Servers. Bei mehreren Servern an einer gemeinsamen Datenbank
 # muss jeder Server eine andere Kennung haben. Erlaubt: a-z, 0-9, Bindestrich, max. 32 Zeichen.
 # Unique id of this server. Every server sharing a database needs its own id.
 server-id: "main"
 
-# Sprache der Spielertexte: en oder de (Dateien in plugins/OrderHub/lang). / Message language.
+# Sprache der Spielertexte: en oder de (Dateien messages_<sprache>.yml direkt in plugins/OrderHub). / Message language.
 language: "en"
 
 # Debug-Ausgaben in der Konsole (keine vertraulichen Daten). / Extra console output.
@@ -61,6 +61,29 @@ items:
   allow-lore: false
   allow-enchanted: false
   allow-damaged: false
+  # Voreinstellungen fuer Items, deren Besonderheit in einer Datenkomponente liegt. Sie lassen diese
+  # Items in Auftraegen zu. Geliefert werden muss weiter exakt das Bestellte (gleicher Effekt,
+  # gleiche Form, gleiches Muster). Verfuegbar:
+  #   potions          Traenke, Wurftraenke, Verweiltraenke (minecraft:potion_contents)
+  #   arrows           Pfeile mit Effekt (minecraft:potion_contents)
+  #   fireworks        Feuerwerksraketen und -sterne (minecraft:fireworks, firework_explosion)
+  #   goat-horns       Ziegenhoerner (minecraft:instrument)
+  #   banners          gemusterte Banner (minecraft:banner_patterns)
+  #   ominous-bottles  unheilvolle Flaschen (minecraft:ominous_bottle_amplifier)
+  #   player-heads     Spielerkoepfe (minecraft:profile)
+  #   all              alle oben genannten
+  # Eine Voreinstellung entfernen, damit diese Items wieder abgelehnt werden. [] = alles abgelehnt.
+  component-presets:
+    - potions
+    - arrows
+    - fireworks
+    - goat-horns
+    - banners
+    - ominous-bottles
+    - player-heads
+  # Weitere einzeln zugelassene Datenkomponenten (Schluessel wie minecraft:repair_cost). Auch hier
+  # wird exakt verglichen.
+  allowed-components: []
   # Zusaetzlich gesperrte Items (Material-Keys wie minecraft:elytra).
   blocked-materials: []
   # Zusaetzlich gesperrte Item-Tags (z. B. minecraft:banners).
@@ -78,8 +101,10 @@ economy:
   # false (Standard): Vault-Aufrufe laufen auf dem globalen Server-Thread, wie es EssentialsX, CMI
   # und die meisten Economy-Plugins erwarten. true nur, wenn der Provider nachweislich threadsicher ist.
   async-safe: false
-  # Wartezeit auf eine Vault-Antwort. Danach gilt eine Zahlung als unklar (MANUAL_REVIEW).
-  timeout-ms: 10000
+  # Wartezeit auf eine Vault-Antwort. Wurde der Aufruf bis dahin nie gestartet (z. B. Lag-Spike),
+  # ist sicher kein Geld geflossen und die Zahlung wird mit Backoff wiederholt. Wurde er gestartet
+  # und nicht beendet, gilt die Zahlung als unklar (MANUAL_REVIEW).
+  timeout-ms: 3000
 
 payouts:
   # Wie oft die Auszahlungswarteschlange abgearbeitet wird.

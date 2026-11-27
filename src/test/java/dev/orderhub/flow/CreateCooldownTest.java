@@ -40,4 +40,31 @@ class CreateCooldownTest {
     cooldown.forget(A);
     assertThat(cooldown.tryAcquire(A, 60)).isZero();
   }
+
+  @Test
+  void purgeRemovesOnlyExpiredEntriesAndKeepsTheTableBounded() {
+    AtomicLong clock = new AtomicLong(0);
+    CreateCooldown cooldown = new CreateCooldown(clock::get);
+    UUID active = UUID.randomUUID();
+    for (int i = 0; i < 10_000; i++) {
+      cooldown.tryAcquire(UUID.randomUUID(), 5);
+    }
+    assertThat(cooldown.size()).isEqualTo(10_000);
+    clock.addAndGet(4_000);
+    cooldown.tryAcquire(active, 5);
+    clock.addAndGet(2_000); // die 10.000 aelteren Eintraege sind abgelaufen, active noch nicht
+    int removed = cooldown.purgeExpired(5);
+    assertThat(removed).isEqualTo(10_000);
+    assertThat(cooldown.size()).isEqualTo(1);
+    assertThat(cooldown.tryAcquire(active, 5)).isPositive();
+  }
+
+  @Test
+  void purgeWithCooldownDisabledClearsEverything() {
+    AtomicLong clock = new AtomicLong(0);
+    CreateCooldown cooldown = new CreateCooldown(clock::get);
+    cooldown.tryAcquire(A, 60);
+    assertThat(cooldown.purgeExpired(0)).isEqualTo(1);
+    assertThat(cooldown.size()).isZero();
+  }
 }

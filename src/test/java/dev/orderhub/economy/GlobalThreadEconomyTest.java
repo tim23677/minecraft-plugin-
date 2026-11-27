@@ -8,8 +8,10 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.bukkit.Location;
@@ -136,7 +138,7 @@ class GlobalThreadEconomyTest {
   }
 
   @Test
-  void timeoutOnWithdrawIsAnUnknownOutcome() throws Exception {
+  void neverStartedTimeoutOnWithdrawAndDepositIsUnavailable() throws Exception {
     AtomicBoolean release = new AtomicBoolean();
     globalThread.execute(() -> {
       while (!release.get()) {
@@ -144,14 +146,106 @@ class GlobalThreadEconomyTest {
       }
     });
     GlobalThreadEconomy eco = wrap(Duration.ofMillis(100));
-    assertThatThrownBy(() -> eco.withdraw(P, 5, "tx"))
-        .isInstanceOf(EconomyOutcomeUnknownException.class);
-    assertThatThrownBy(() -> eco.deposit(P, 5, "tx"))
-        .isInstanceOf(EconomyOutcomeUnknownException.class);
+    // Der Task wurde nie gestartet: sicher ist kein Geld geflossen, der Aufrufer darf wiederholen.
+    assertThat(eco.withdraw(P, 5, "tx")).isEqualTo(EconomyResult.UNAVAILABLE);
+    assertThat(eco.deposit(P, 5, "tx")).isEqualTo(EconomyResult.UNAVAILABLE);
     release.set(true);
     globalThread.submit(() -> {}).get();
     // Abgebrochene Tasks haben den Provider nie aufgerufen.
     assertThat(threadsSeen).isEmpty();
+  }
+
+  @Test
+  void startedButUnfinishedCallOnWithdrawAndDepositIsAnUnknownOutcome() throws Exception {
+    CountDownLatch inside = new CountDownLatch(2);
+    CountDownLatch release = new CountDownLatch(1);
+    EconomyBridge blocking =
+        new EconomyBridge() {
+          @Override
+          public EconomyResult has(UUID player, long minor) {
+            return EconomyResult.OK;
+          }
+
+          @Override
+          public EconomyResult withdraw(UUID player, long minor, String reference) {
+            return block();
+          }
+
+          @Override
+          public EconomyResult deposit(UUID player, long minor, String reference) {
+            return block();
+          }
+
+          private EconomyResult block() {
+            inside.countDown();
+            try {
+              release.await();
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+            return EconomyResult.OK;
+          }
+        };
+    ExecutorService twoThreads = Executors.newFixedThreadPool(2);
+    PluginScheduler parallel =
+        new PluginScheduler() {
+          @Override
+          public void runGlobal(Runnable task) {
+            twoThreads.execute(task);
+          }
+
+          @Override
+          public void runAt(Location location, Runnable task) {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public boolean runOn(Entity entity, Runnable task) {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void runLater(Runnable task, long delayTicks) {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void runTimer(Runnable task, long initialDelayTicks, long periodTicks) {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void runAsync(Runnable task) {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void runAsyncRepeating(Runnable task, long initialDelayMillis, long periodMillis) {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void cancelAll() {}
+        };
+    try {
+      GlobalThreadEconomy eco =
+          new GlobalThreadEconomy(blocking, parallel, () -> false, Duration.ofMillis(300));
+      ExecutorService callers = Executors.newFixedThreadPool(2);
+      try {
+        var w = callers.submit(() -> eco.withdraw(P, 5, "tx"));
+        var d = callers.submit(() -> eco.deposit(P, 5, "tx"));
+        assertThat(inside.await(5, TimeUnit.SECONDS)).isTrue();
+        assertThatThrownBy(() -> w.get(5, TimeUnit.SECONDS))
+            .hasCauseInstanceOf(EconomyOutcomeUnknownException.class);
+        assertThatThrownBy(() -> d.get(5, TimeUnit.SECONDS))
+            .hasCauseInstanceOf(EconomyOutcomeUnknownException.class);
+      } finally {
+        release.countDown();
+        callers.shutdownNow();
+      }
+    } finally {
+      twoThreads.shutdownNow();
+    }
   }
 
   @Test

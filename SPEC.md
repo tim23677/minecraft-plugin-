@@ -27,7 +27,7 @@ Beträge sind intern `long` in Minor Units (zwei Nachkommastellen, 1,00 = 100). 
 4. Item-Matcher mit Standard-Ablehnung (benannt, Lore, verzaubert, beschädigt, Container-Inhalt, unerwartete Datenkomponenten) und konfigurierbarer Sperrliste.
 5. Delivery-Menü mit eigenem InventoryHolder, serverseitiger Prüfung, persistenter Rückgabewarteschlange.
 6. Claim-System mit persistenten Restmengen, ohne Drops.
-7. Mehrserverbetrieb über gemeinsame MariaDB/MySQL, Versionsspalten, `SELECT ... FOR UPDATE`, Outbox mit Polling für Cache-Invalidierung. SQLite im Einzelserverbetrieb.
+7. Mehrserverbetrieb über gemeinsame MariaDB (MySQL wird nicht unterstützt), Versionsspalten, `SELECT ... FOR UPDATE`, Outbox mit Polling für Cache-Invalidierung. SQLite im Einzelserverbetrieb.
 8. Marktanalyse aus echten Abschlüssen (Preisverlauf 24h/7d/30d/90d, Median, Volumen), Preisempfehlung nur bei ausreichender Datenlage.
 9. Favoriten, Preisalarme, Benachrichtigungen mit Spam-Schutz.
 10. Spielerstatistiken aus nachvollziehbaren Journaldaten.

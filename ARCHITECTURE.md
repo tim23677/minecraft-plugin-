@@ -51,7 +51,7 @@ Grenze: Zwischen erfolgreichem Vault-Aufruf und dem Speichern von `PAYOUT_COMPLE
 
 ## Multi-Server
 
-Gemeinsame MariaDB/MySQL. Jede Instanz hat `server-id`. Cache-Invalidierung über `outbox`-Tabelle (`channel`, `payload`, `id` aufsteigend), Polling im Konfigurationsintervall, Cursor pro Server in `server_registry`. Der Cache ist nie Wahrheit: Mutierende Operationen lesen immer in der Transaktion.
+Gemeinsame MariaDB (MySQL wird nicht unterstützt). Jede Instanz hat `server-id`. Cache-Invalidierung über `outbox`-Tabelle (`channel`, `payload`, `id` aufsteigend), Polling im Konfigurationsintervall, Cursor pro Server in `server_registry`. Der Cache ist nie Wahrheit: Mutierende Operationen lesen immer in der Transaktion.
 
 ## Items
 

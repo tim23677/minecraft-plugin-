@@ -4,7 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.file.Path;
 
-/** Erzeugt HikariCP-Pools fuer SQLite und MariaDB/MySQL. */
+/** Erzeugt HikariCP-Pools fuer SQLite und MariaDB (MySQL wird nicht unterstuetzt). */
 public final class DataSourceFactory {
 
   /** Wartezeit auf eine gesperrte SQLite-Datei, bevor SQLITE_BUSY gemeldet wird. */

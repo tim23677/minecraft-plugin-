@@ -12,8 +12,11 @@ import io.papermc.paper.datacomponent.item.WritableBookContent;
 import io.papermc.paper.datacomponent.item.WrittenBookContent;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 
 /**
@@ -177,19 +180,49 @@ public final class ItemMatcher {
   }
 
   /**
-   * Kanonischer Vergleich: {@code candidate} muss selbst zugelassen sein, dasselbe Material wie die
-   * Vorlage haben und in allen nicht ausdruecklich tolerierten Komponenten gleich sein. Die Menge
-   * bleibt unberuecksichtigt. Eine nicht lesbare Vorlage ergibt {@code false}.
+   * Dekodiert die Vorlage einmal. Eine nicht lesbare Vorlage ergibt {@link Optional#empty()}, ein
+   * Abgleich mit ihr ist dann nie moeglich.
+   */
+  public Optional<PreparedTemplate> prepare(ItemSnapshot required) {
+    Objects.requireNonNull(required, "required");
+    try {
+      return Optional.of(new PreparedTemplate(codec.decode(required)));
+    } catch (ItemCodecException e) {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Exakter Vergleich ({@link Tolerance#EXACT}), siehe {@link #matches(ItemStack, ItemSnapshot,
+   * Tolerance)}.
    */
   public boolean matches(ItemStack candidate, ItemSnapshot required) {
-    Objects.requireNonNull(required, "required");
+    return matches(candidate, required, Tolerance.EXACT);
+  }
+
+  /** Vergleich mit Toleranz, dekodiert die Vorlage bei jedem Aufruf (fuer Einzelpruefungen). */
+  public boolean matches(ItemStack candidate, ItemSnapshot required, Tolerance tolerance) {
+    return prepare(required).map(t -> matches(candidate, t, tolerance)).orElse(false);
+  }
+
+  /**
+   * Vergleich gegen eine bereits dekodierte Vorlage, siehe {@link #matches(ItemStack, ItemStack,
+   * Tolerance)}.
+   */
+  public boolean matches(ItemStack candidate, PreparedTemplate template, Tolerance tolerance) {
+    Objects.requireNonNull(template, "template");
+    return matches(candidate, template.stack(), tolerance);
+  }
+
+  /**
+   * Kanonischer Vergleich: {@code candidate} muss selbst zugelassen sein, dasselbe Material wie die
+   * Vorlage haben und in jeder Komponente gleich sein. Zulassen (policy) und Tolerieren sind
+   * getrennt: Abweichungen sind nur im Rahmen der {@link Tolerance} des Auftrags erlaubt, nie wegen
+   * {@code allow-*}. Die Menge bleibt unberuecksichtigt.
+   */
+  boolean matches(ItemStack candidate, ItemStack template, Tolerance tolerance) {
+    Objects.requireNonNull(tolerance, "tolerance");
     if (!validateForOrder(candidate).valid()) {
-      return false;
-    }
-    ItemStack template;
-    try {
-      template = codec.decode(required);
-    } catch (ItemCodecException e) {
       return false;
     }
     if (template.getType() != candidate.getType()) {
@@ -198,21 +231,59 @@ public final class ItemMatcher {
     Set<DataComponentType> types = overriddenTypes(candidate);
     types.addAll(overriddenTypes(template));
     for (DataComponentType type : types) {
-      if (!isTolerated(type) && !sameComponent(candidate, template, type)) {
+      if (!componentMatches(candidate, template, type, tolerance)) {
         return false;
       }
     }
     return true;
   }
 
-  private boolean isTolerated(DataComponentType type) {
-    return isComponentAllowed(type)
-        || (policy.allows(RejectionReason.CUSTOM_NAME) && type == DataComponentTypes.CUSTOM_NAME)
-        || (policy.allows(RejectionReason.LORE) && type == DataComponentTypes.LORE)
-        || (policy.allows(RejectionReason.DAMAGED) && type == DataComponentTypes.DAMAGE)
-        || (policy.allows(RejectionReason.ENCHANTED) && ENCHANT_TYPES.contains(type))
-        || (policy.allows(RejectionReason.CONTAINER_CONTENTS) && CONTAINER_TYPES.contains(type))
-        || (policy.allows(RejectionReason.UNEXPECTED_COMPONENT) && !HANDLED_TYPES.contains(type));
+  private static boolean componentMatches(
+      ItemStack candidate, ItemStack template, DataComponentType type, Tolerance tolerance) {
+    if (type == DataComponentTypes.DAMAGE && tolerance.minDurabilityPercent() < 100) {
+      return durabilityAtLeast(candidate, tolerance.minDurabilityPercent());
+    }
+    if (tolerance.enchantmentsAtLeast() && ENCHANT_TYPES.contains(type)) {
+      return enchantmentsAtLeast(candidate, template, type);
+    }
+    return sameComponent(candidate, template, type);
+  }
+
+  private static boolean durabilityAtLeast(ItemStack candidate, int minPercent) {
+    Integer maxData = candidate.getData(DataComponentTypes.MAX_DAMAGE);
+    int max = maxData != null ? maxData : candidate.getType().getMaxDurability();
+    if (max <= 0) {
+      return false;
+    }
+    Integer damage = candidate.getData(DataComponentTypes.DAMAGE);
+    int remaining = max - (damage == null ? 0 : damage);
+    // remaining/max >= minPercent/100, ganzzahlig ohne Rundungsfehler
+    return remaining >= 0 && (long) remaining * 100 >= (long) minPercent * max;
+  }
+
+  private static boolean enchantmentsAtLeast(
+      ItemStack candidate, ItemStack template, DataComponentType type) {
+    if (!(type instanceof DataComponentType.Valued<?> valued)) {
+      return false;
+    }
+    Object wanted = template.getData(valued);
+    Object offered = candidate.getData(valued);
+    Map<Enchantment, Integer> required = enchantmentsOf(wanted);
+    Map<Enchantment, Integer> present = enchantmentsOf(offered);
+    for (Map.Entry<Enchantment, Integer> entry : required.entrySet()) {
+      Integer level = present.get(entry.getKey());
+      if (level == null || level < entry.getValue()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static Map<Enchantment, Integer> enchantmentsOf(Object data) {
+    if (data instanceof ItemEnchantments enchantments) {
+      return enchantments.enchantments();
+    }
+    return Map.of();
   }
 
   private static boolean sameComponent(ItemStack a, ItemStack b, DataComponentType type) {

@@ -247,6 +247,15 @@ public class OrderHubPlugin extends JavaPlugin {
     if (!allowed.isEmpty()) {
       policy = policy.allowing(allowed.toArray(new RejectionReason[0]));
     }
+    var presets = dev.orderhub.item.ComponentPresets.resolve(st.componentPresets());
+    presets.warnings().forEach(w -> getLogger().warning("items.component-presets: " + w));
+    var explicit = MatchPolicy.parse(List.of(), st.allowedComponents());
+    explicit.warnings().forEach(w -> getLogger().warning("items.allowed-components: " + w));
+    List<String> componentKeys = new ArrayList<>(presets.componentKeys());
+    componentKeys.addAll(explicit.policy().allowedComponents());
+    if (!componentKeys.isEmpty()) {
+      policy = policy.allowingComponents(componentKeys.toArray(new String[0]));
+    }
     ItemMatcher matcher = new ItemMatcher(codec, policy, blocklist.blocklist());
 
     EconomyBridge economy = new UnavailableEconomy();
@@ -373,6 +382,7 @@ public class OrderHubPlugin extends JavaPlugin {
     var pm = getServer().getPluginManager();
     pm.registerEvents(new MenuListener(menus, getLogger()), this);
     pm.registerEvents(chat, this);
+    pm.registerEvents(new dev.orderhub.flow.CooldownListener(create), this);
     pm.registerEvents(new JoinListener(services, returnFlow, claimFlow), this);
 
     // Recovery zuerst, die periodischen Worker starten erst danach (auch wenn Recovery
@@ -397,6 +407,8 @@ public class OrderHubPlugin extends JavaPlugin {
               60_000);
           scheduler.runAsyncRepeating(
               () -> guarded("recovery sweep", recovery::sweep), 300_000, 300_000);
+          scheduler.runAsyncRepeating(
+              () -> guarded("cooldown purge", create::purgeExpiredCooldowns), 60_000, 60_000);
           DiscordWorker discordWorker =
               new DiscordWorker(storage, new WebhookSender(), discordWorkerConfig(), getLogger());
           scheduler.runAsyncRepeating(

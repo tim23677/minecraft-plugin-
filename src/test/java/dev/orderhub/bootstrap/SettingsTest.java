@@ -61,4 +61,29 @@ class SettingsTest {
         .containsExactlyInAnyOrder("sounds.enabled", "fees.craete-fee-bp");
     assertThat(Settings.unknownKeys(defaults, defaults)).isEmpty();
   }
+
+  @Test
+  void bundledConfigEnablesTheVariantPresetsAndStaysStrictOtherwise() throws Exception {
+    YamlConfiguration yaml = new YamlConfiguration();
+    try (var in = getClass().getClassLoader().getResourceAsStream("config.yml")) {
+      yaml.load(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+    }
+    Settings s = Settings.from(yaml);
+    assertThat(s.componentPresets())
+        .containsExactlyInAnyOrderElementsOf(dev.orderhub.item.ComponentPresets.names());
+    assertThat(s.allowedComponents()).isEmpty();
+    assertThat(s.allowEnchanted()).isFalse();
+    assertThat(s.allowDamaged()).isFalse();
+    assertThat(s.economyTimeoutMs()).isEqualTo(3000);
+  }
+
+  @Test
+  void componentListsAreReadFromTheConfig() {
+    YamlConfiguration yaml = new YamlConfiguration();
+    yaml.set("items.component-presets", java.util.List.of("potions"));
+    yaml.set("items.allowed-components", java.util.List.of("minecraft:repair_cost"));
+    Settings s = Settings.from(yaml);
+    assertThat(s.componentPresets()).containsExactly("potions");
+    assertThat(s.allowedComponents()).containsExactly("minecraft:repair_cost");
+  }
 }

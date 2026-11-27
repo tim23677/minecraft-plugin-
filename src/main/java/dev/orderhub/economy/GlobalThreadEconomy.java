@@ -17,10 +17,12 @@ import java.util.function.Supplier;
  * fuer Async-Aufrufe gebaut.
  *
  * <p>Laeuft der Aufrufer schon auf dem globalen Thread, wird direkt aufgerufen (Warten wuerde
- * blockieren). Eine Zeitueberschreitung bei {@code withdraw} oder {@code deposit} gilt als {@link
- * EconomyOutcomeUnknownException}, weil der Provider die Operation spaeter noch ausfuehren kann.
- * Bei {@code has} fliesst kein Geld, dort ist das Ergebnis {@link EconomyResult#UNAVAILABLE}. Wurde
- * der Task vor dem Timeout nicht gestartet, wird er verworfen und ruft den Provider nie auf.
+ * blockieren). Wurde der Task bis zum Timeout nie gestartet (Zustand ABANDONED), wird er verworfen,
+ * ruft den Provider nie auf und das Ergebnis ist {@link EconomyResult#UNAVAILABLE}: Es ist sicher
+ * kein Geld geflossen, der Aufrufer darf wiederholen. Nur ein gestarteter, aber nicht beendeter
+ * {@code withdraw} oder {@code deposit} gilt als {@link EconomyOutcomeUnknownException}, weil der
+ * Provider die Operation noch ausfuehren kann. Bei {@code has} fliesst nie Geld, dort ist ein
+ * Timeout immer {@link EconomyResult#UNAVAILABLE}.
  */
 public final class GlobalThreadEconomy implements EconomyBridge {
 
@@ -95,14 +97,17 @@ public final class GlobalThreadEconomy implements EconomyBridge {
       return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
       if (state.compareAndSet(PENDING, ABANDONED)) {
-        // Nie gestartet: sicher nicht ausgefuehrt. Trotzdem wie vereinbart als unklar melden.
-        return failTimeout(onTimeout, unknownMessage, e);
+        // Nie gestartet: der Provider wurde sicher nicht aufgerufen, es ist kein Geld geflossen.
+        // UNAVAILABLE laesst den Aufrufer mit Backoff wiederholen, statt in die manuelle Pruefung
+        // zu eskalieren.
+        return EconomyResult.UNAVAILABLE;
       }
+      // Gestartet, aber nicht beendet: der Provider kann die Operation noch ausfuehren.
       return failTimeout(onTimeout, unknownMessage, e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       if (state.compareAndSet(PENDING, ABANDONED)) {
-        return onTimeout != null ? onTimeout : EconomyResult.UNAVAILABLE;
+        return EconomyResult.UNAVAILABLE;
       }
       return failTimeout(onTimeout, unknownMessage, e);
     } catch (ExecutionException e) {
