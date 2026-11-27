@@ -265,26 +265,47 @@ public final class AdminService {
       int paymentsInProgress,
       int manualReview,
       long lastRecoveryAt,
-      String lastRecovery) {}
+      String lastRecovery,
+      long oldestOpenPaymentAgeMillis,
+      dev.orderhub.economy.EconomyLatency.Snapshot economy) {}
+
+  private volatile java.util.function.Supplier<dev.orderhub.economy.EconomyLatency.Snapshot>
+      economyLatency = () -> dev.orderhub.economy.EconomyLatency.Snapshot.EMPTY;
+
+  /** Quelle der Economy-Latenz fuer {@link #health()}. */
+  public void economyLatency(
+      java.util.function.Supplier<dev.orderhub.economy.EconomyLatency.Snapshot> source) {
+    this.economyLatency = source;
+  }
 
   public Health health() {
-    int[] counts =
+    long[] counts =
         storage
-            .transact(uow ->
-                new int[] {
-                  uow.payouts().findByState(PayoutRepository.State.PENDING, 10_000).size(),
-                  uow.payouts().findByState(PayoutRepository.State.IN_PROGRESS, 10_000).size(),
-                  uow.journal().findByStates(EnumSet.of(TxState.MANUAL_REVIEW), 10_000).size()
-                })
+            .transact(uow -> {
+              var pending = uow.payouts().findByState(PayoutRepository.State.PENDING, 10_000);
+              long oldest =
+                  pending.stream()
+                      .mapToLong(dev.orderhub.storage.PayoutRepository.Item::updatedAt)
+                      .min()
+                      .orElse(Long.MAX_VALUE);
+              return new long[] {
+                pending.size(),
+                uow.payouts().findByState(PayoutRepository.State.IN_PROGRESS, 10_000).size(),
+                uow.journal().findByStates(EnumSet.of(TxState.MANUAL_REVIEW), 10_000).size(),
+                oldest == Long.MAX_VALUE ? 0 : Math.max(0, uow.now() - oldest)
+              };
+            })
             .join();
     RecoveryReport last = recovery.lastReport();
     return new Health(
         storage.health(),
-        counts[0],
-        counts[1],
-        counts[2],
+        (int) counts[0],
+        (int) counts[1],
+        (int) counts[2],
         recovery.lastRunAt(),
-        last == null ? null : last.summary());
+        last == null ? null : last.summary(),
+        counts[3],
+        economyLatency.get());
   }
 
   /** Ergebnis von Sicherung oder Export. */

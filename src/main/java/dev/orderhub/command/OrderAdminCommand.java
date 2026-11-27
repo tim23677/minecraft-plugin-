@@ -377,6 +377,16 @@ public final class OrderAdminCommand implements CommandHandler {
                 Messages.number("review", h.manualReview())));
     reply(
         sender,
+        s.messages()
+            .get(
+                "admin.health-economy",
+                Messages.number("samples", h.economy().samples()),
+                Messages.number("median", h.economy().medianMillis()),
+                Messages.number("max", h.economy().maxMillis()),
+                Messages.number("last", h.economy().lastMillis()),
+                Messages.number("oldest", h.oldestOpenPaymentAgeMillis() / 1000)));
+    reply(
+        sender,
         h.lastRecovery() == null
             ? s.messages().get("admin.health-recovery-none")
             : s.messages()

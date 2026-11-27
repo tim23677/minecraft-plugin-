@@ -124,6 +124,34 @@ notifications:
   # Ton bei der Zusammenfassung, zum Beispiel entity.experience_orb.pickup. Leer = kein Ton.
   sound: ""
 
+logging:
+  # Eine strukturierte Zeile je Geld- und Item-Bewegung (Transaktions-Id, Spieler-UUID, Betrag,
+  # Zustand). Die Datei liegt in plugins/OrderHub/logs und rotiert. Neustart noetig.
+  transactions:
+    # Zeilen zusaetzlich in die Serverkonsole schreiben.
+    console: false
+    # Zeilen in logs/transactions.<n>.log schreiben.
+    file: true
+    file-max-mb: 10
+    file-count: 5
+
+health:
+  # Warnung im Log (einmal beim Ueberschreiten, nicht bei jeder Pruefung). 0 schaltet eine Pruefung ab.
+  warn:
+    economy-latency-ms: 1000
+    open-payments: 50
+    oldest-payment-minutes: 10
+    manual-review: 1
+
+backup:
+  # Zeitgesteuerte Sicherung der SQLite-Datenbank nach plugins/OrderHub/backups (VACUUM INTO).
+  # Bei MariaDB ohne Wirkung: dort mysqldump oder einen Snapshot des Datenbankservers verwenden.
+  # Neustart noetig.
+  auto:
+    enabled: true
+    interval-hours: 24
+    keep: 7
+
 retention:
   # Aufbewahrung von Preisverlauf und Markt-Snapshots in Tagen.
   history-days: 120

@@ -116,6 +116,7 @@ admin:
   order-line: "<gray>#<id> <white><item></white> <filled>/<total> at <unit>, owner <owner>, <status>"
   health-db: "<gray>Database pool: <white><active></white> active, <white><idle></white> idle, <white><waiting></white> waiting, <white><total></white> total. Executor: <white><running></white> running, <white><queued></white> queued."
   health-payments: "<gray>Payments: <white><open></white> open, <white><progress></white> in progress, <white><review></white> in manual review."
+  health-economy: "<gray>Economy: <white><samples></white> measured calls, median <white><median></white> ms, maximum <white><max></white> ms, last <white><last></white> ms. Oldest open payment: <white><oldest></white> s."
   health-recovery: "<gray>Last recovery <white><at></white>: <summary>"
   health-recovery-none: "<gray>No recovery run yet since start."
   backup-done: "<green>Backup written: <file>"

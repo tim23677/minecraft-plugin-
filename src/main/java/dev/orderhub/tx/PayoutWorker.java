@@ -85,14 +85,18 @@ public final class PayoutWorker {
         result = economy.deposit(item.player(), item.amount(), "payout:" + item.id());
       } catch (RuntimeException e) {
         // jede Ausnahme nach dem Aufruf: Ausgang unklar
+        TransactionLog.money(event(item), item.txId(), item.player(), item.amount(), "UNKNOWN");
         escalate(item, "deposit outcome unknown: " + e.getClass().getSimpleName());
         escalated++;
         continue;
       }
+      TransactionLog.money(event(item), item.txId(), item.player(), item.amount(), result.name());
       if (result == EconomyResult.OK) {
         consecutiveFailures = 0;
         if (complete(item)) {
           completed++;
+          TransactionLog.money(
+              event(item) + "_COMPLETED", item.txId(), item.player(), item.amount(), "COMPLETED");
         }
       } else {
         if (releaseOrEscalate(item, result)) {
@@ -111,6 +115,10 @@ public final class PayoutWorker {
       }
     }
     return new RunReport(completed, released, escalated, problem, false);
+  }
+
+  private static String event(PayoutRepository.Item item) {
+    return item.kind() == PayoutRepository.Kind.PAYOUT ? "PAYOUT_DEPOSIT" : "REFUND_DEPOSIT";
   }
 
   /** Beansprucht eine Zeile und setzt bei Auszahlungen das Journal auf PAYOUT_IN_PROGRESS. */

@@ -285,4 +285,25 @@ class GlobalThreadEconomyTest {
     assertThatThrownBy(() -> eco.withdraw(P, 5, "tx"))
         .isInstanceOf(EconomyOutcomeUnknownException.class);
   }
+
+  @Test
+  void callsAndTimeoutsAreMeasuredForTheHealthReport() throws Exception {
+    GlobalThreadEconomy eco = wrap(Duration.ofSeconds(5));
+    assertThat(eco.latency().snapshot().samples()).isZero();
+    Thread worker = new Thread(() -> eco.withdraw(P, 5, "tx"), "orderhub-worker");
+    worker.start();
+    worker.join();
+    assertThat(eco.latency().snapshot().samples()).isEqualTo(1);
+
+    AtomicBoolean release = new AtomicBoolean();
+    globalThread.execute(() -> {
+      while (!release.get()) {
+        Thread.onSpinWait();
+      }
+    });
+    GlobalThreadEconomy lagging = wrap(Duration.ofMillis(120));
+    assertThat(lagging.has(P, 1)).isEqualTo(EconomyResult.UNAVAILABLE);
+    release.set(true);
+    assertThat(lagging.latency().snapshot().maxMillis()).isGreaterThanOrEqualTo(120);
+  }
 }

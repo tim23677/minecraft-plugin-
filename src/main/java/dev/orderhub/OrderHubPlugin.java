@@ -225,6 +225,7 @@ public class OrderHubPlugin extends JavaPlugin {
 
   private void wire() {
     Settings st = settings;
+    installTransactionLog(st);
     ItemCodec codec = new ItemCodec();
     List<String> blocked = new ArrayList<>(st.blockedMaterials());
     blocked.addAll(st.blockedTags());
@@ -269,12 +270,14 @@ public class OrderHubPlugin extends JavaPlugin {
     }
 
     if (!(economy instanceof UnavailableEconomy) && !st.economyAsyncSafe()) {
-      economy =
+      var wrapped =
           new dev.orderhub.economy.GlobalThreadEconomy(
               economy,
               scheduler,
               Bukkit::isGlobalTickThread,
               Duration.ofMillis(st.economyTimeoutMs()));
+      economyLatency = wrapped.latency();
+      economy = wrapped;
     }
 
     AuditSink audit =
@@ -370,6 +373,11 @@ public class OrderHubPlugin extends JavaPlugin {
             services, chat, deliveryFlow, menuViews::orderIcon, () -> layoutOf("market", 6)));
 
     AdminService admin = new AdminService(storage, orders, recovery);
+    admin.economyLatency(() ->
+        economyLatency == null
+            ? dev.orderhub.economy.EconomyLatency.Snapshot.EMPTY
+            : economyLatency.snapshot());
+    dev.orderhub.service.HealthMonitor healthMonitor = new dev.orderhub.service.HealthMonitor();
     OrderCommand orderCommand =
         new OrderCommand(
             services, create, deliveryFlow, menuViews, claimFlow, returnFlow, insightsFlow);
@@ -395,6 +403,7 @@ public class OrderHubPlugin extends JavaPlugin {
 
     // Recovery zuerst, die periodischen Worker starten erst danach (auch wenn Recovery
     // fehlschlaegt).
+    final dev.orderhub.storage.Storage db = storage;
     Runnable startWorkers =
         () -> {
           scheduler.runAsyncRepeating(
@@ -419,6 +428,38 @@ public class OrderHubPlugin extends JavaPlugin {
               () -> guarded("recovery sweep", recovery::sweep), 300_000, 300_000);
           scheduler.runAsyncRepeating(
               () -> guarded("cooldown purge", create::purgeExpiredCooldowns), 60_000, 60_000);
+          scheduler.runAsyncRepeating(
+              () ->
+                  guarded(
+                      "health check",
+                      () ->
+                          healthMonitor
+                              .check(
+                                  admin.health(),
+                                  new dev.orderhub.service.HealthMonitor.Thresholds(
+                                      settings.healthWarnEconomyMs(),
+                                      settings.healthWarnOpenPayments(),
+                                      settings.healthWarnOldestPaymentMinutes(),
+                                      settings.healthWarnManualReview()))
+                              .forEach(w -> getLogger().warning("health: " + w))),
+              90_000,
+              60_000);
+          if (st.backupAutoEnabled() && db.dialect() == dev.orderhub.storage.Dialect.SQLITE) {
+            scheduler.runAsyncRepeating(
+                () ->
+                    guarded(
+                        "automatic backup",
+                        () -> {
+                          try {
+                            dev.orderhub.service.AutoBackup.run(
+                                db, getDataFolder().toPath(), st.backupKeep());
+                          } catch (java.sql.SQLException | java.io.IOException e) {
+                            getLogger().log(Level.WARNING, "automatic backup failed", e);
+                          }
+                        }),
+                300_000,
+                st.backupIntervalHours() * 3_600_000L);
+          }
           DiscordWorker discordWorker =
               new DiscordWorker(storage, new WebhookSender(), discordWorkerConfig(), getLogger());
           scheduler.runAsyncRepeating(
@@ -444,7 +485,7 @@ public class OrderHubPlugin extends JavaPlugin {
         getLogger().log(Level.SEVERE, "startup recovery failed", e);
       } finally {
         try {
-          int changed = dev.orderhub.service.CategoryBackfill.run(storage);
+          int changed = dev.orderhub.service.CategoryBackfill.run(db);
           if (changed > 0) {
             getLogger().info("Reassigned " + changed + " open orders to the 2.0 categories");
           }
@@ -537,6 +578,34 @@ public class OrderHubPlugin extends JavaPlugin {
         Math.max(5, discordYml().getLong("delivery.max-backoff-seconds", 300)));
   }
 
+  private volatile dev.orderhub.bootstrap.TransactionLogFile txLogFile;
+  private volatile dev.orderhub.economy.EconomyLatency economyLatency;
+
+  /**
+   * Richtet das Protokoll der Geld- und Item-Bewegungen ein (Datei mit Rotation, optional Konsole).
+   */
+  private void installTransactionLog(Settings st) {
+    java.util.List<dev.orderhub.tx.TransactionLog.Sink> sinks = new ArrayList<>();
+    if (st.txLogConsole()) {
+      java.util.logging.Logger txLogger = java.util.logging.Logger.getLogger("OrderHub.tx");
+      sinks.add(line -> txLogger.info(line));
+    }
+    if (st.txLogFile()) {
+      try {
+        txLogFile =
+            new dev.orderhub.bootstrap.TransactionLogFile(
+                getDataFolder().toPath().resolve("logs"),
+                st.txLogFileMb() * 1024L * 1024L,
+                st.txLogFileCount());
+        sinks.add(txLogFile.sink());
+      } catch (java.io.IOException | RuntimeException e) {
+        getLogger().log(Level.WARNING, "transaction log file could not be opened", e);
+      }
+    }
+    dev.orderhub.tx.TransactionLog.install(
+        sinks.isEmpty() ? null : line -> sinks.forEach(sink -> sink.write(line)));
+  }
+
   private volatile YamlConfiguration menusYml;
 
   /** Liest menus.yml neu ein (beim Start und bei reload) und meldet ungueltige Angaben. */
@@ -627,6 +696,11 @@ public class OrderHubPlugin extends JavaPlugin {
   @Override
   public void onDisable() {
     ready = false;
+    dev.orderhub.tx.TransactionLog.install(null);
+    if (txLogFile != null) {
+      txLogFile.close();
+      txLogFile = null;
+    }
     if (expansion != null) {
       expansion.unregister();
       expansion = null;

@@ -34,6 +34,12 @@ public final class GlobalThreadEconomy implements EconomyBridge {
   private final PluginScheduler scheduler;
   private final BooleanSupplier onGlobalThread;
   private final Duration timeout;
+  private final EconomyLatency latency = new EconomyLatency(200);
+
+  /** Dauer der letzten Aufrufe, fuer {@code /orderadmin health}. */
+  public EconomyLatency latency() {
+    return latency;
+  }
 
   /**
    * @param onGlobalThread liefert {@code true}, wenn der aktuelle Thread der globale (Paper: Main)
@@ -78,13 +84,16 @@ public final class GlobalThreadEconomy implements EconomyBridge {
     }
     AtomicInteger state = new AtomicInteger(PENDING);
     CompletableFuture<EconomyResult> future = new CompletableFuture<>();
+    long startedAt = System.nanoTime();
     try {
       scheduler.runGlobal(() -> {
         if (!state.compareAndSet(PENDING, STARTED)) {
           return;
         }
         try {
-          future.complete(op.get());
+          EconomyResult result = op.get();
+          latency.record((System.nanoTime() - startedAt) / 1_000_000);
+          future.complete(result);
         } catch (RuntimeException e) {
           future.completeExceptionally(e);
         }
@@ -96,6 +105,7 @@ public final class GlobalThreadEconomy implements EconomyBridge {
     try {
       return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
+      latency.record(timeout.toMillis());
       if (state.compareAndSet(PENDING, ABANDONED)) {
         // Nie gestartet: der Provider wurde sicher nicht aufgerufen, es ist kein Geld geflossen.
         // UNAVAILABLE laesst den Aufrufer mit Backoff wiederholen, statt in die manuelle Pruefung

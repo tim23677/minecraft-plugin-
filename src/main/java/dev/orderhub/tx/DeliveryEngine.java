@@ -230,7 +230,21 @@ public final class DeliveryEngine {
    * in derselben Transaktion an den Lieferanten zurueckgegeben.
    */
   public CommitResult commit(UUID journalId) {
-    return TxRunner.run(storage, uow -> commitTx(uow, journalId));
+    CommitResult result = TxRunner.run(storage, uow -> commitTx(uow, journalId));
+    DeliveryCommitted event = result.event();
+    if (result.status() == CommitStatus.COMMITTED && event != null) {
+      // Erst nach dem Festschreiben: eine zurueckgerollte Transaktion hinterlaesst keine Zeile.
+      TransactionLog.items(
+          "DELIVERY_COMMIT",
+          event.journalId(),
+          event.supplier(),
+          event.itemKey(),
+          event.quantity(),
+          event.gross(),
+          "COMMITTED",
+          event.orderId());
+    }
+    return result;
   }
 
   private CommitResult commitTx(UnitOfWork uow, UUID journalId) {

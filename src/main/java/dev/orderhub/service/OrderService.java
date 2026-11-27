@@ -18,6 +18,7 @@ import dev.orderhub.storage.Storage;
 import dev.orderhub.storage.UnitOfWork;
 import dev.orderhub.tx.JournalEntry;
 import dev.orderhub.tx.JournalSteps;
+import dev.orderhub.tx.TransactionLog;
 import dev.orderhub.tx.TxRunner;
 import dev.orderhub.tx.TxState;
 import dev.orderhub.tx.TxType;
@@ -245,9 +246,16 @@ public final class OrderService {
     try {
       withdrawn = economy.withdraw(r.owner(), total, "escrow:" + entry.id());
     } catch (RuntimeException e) {
+      TransactionLog.money("ESCROW_WITHDRAW", entry.id(), r.owner(), total, "UNKNOWN");
       markReview(entry, "withdraw outcome unknown");
       return new CreateResult(CreateStatus.ECONOMY_UNCERTAIN, null, entry.id(), escrow, fee);
     }
+    TransactionLog.money(
+        "ESCROW_WITHDRAW",
+        entry.id(),
+        r.owner(),
+        total,
+        withdrawn == EconomyResult.OK ? "OK" : "FAILED_" + withdrawn);
     if (withdrawn != EconomyResult.OK) {
       failJournal(entry, "withdraw " + withdrawn);
       CreateStatus status =
@@ -261,7 +269,12 @@ public final class OrderService {
 
     // Geld ist abgebucht. Ab hier darf nichts mehr verloren gehen.
     try {
-      return TxRunner.run(storage, uow -> phase3(uow, r, entry, escrow, fee, total));
+      CreateResult created =
+          TxRunner.run(storage, uow -> phase3(uow, r, entry, escrow, fee, total));
+      if (created.status() == CreateStatus.CREATED) {
+        TransactionLog.money("ORDER_CREATED", entry.id(), r.owner(), escrow, "COMMITTED");
+      }
+      return created;
     } catch (RuntimeException e) {
       return resolveAfterFailure(entry, escrow, fee, total);
     }
