@@ -1,4 +1,6 @@
 import java.security.MessageDigest
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 
 plugins {
     java
@@ -115,10 +117,11 @@ tasks.shadowJar {
     archiveClassifier.set("")
     relocate("org.bstats", "dev.orderhub.libs.bstats")
 }
-// Variante mit eingebetteten Treibern (HikariCP, SQLite, MariaDB) fuer Server ohne Zugriff auf
-// Maven Central. plugin.yml dieser Variante hat keinen "libraries"-Abschnitt. HikariCP und der
-// MariaDB-Treiber werden verschoben. Der SQLite-Treiber bleibt unverschoben, weil seine nativen
-// Methoden an den Paketnamen gebunden sind.
+// Variante mit eingebetteten Bibliotheken (HikariCP, SQLite-Treiber) fuer Server ohne Zugriff auf
+// Maven Central. plugin.yml dieser Variante hat keinen "libraries"-Abschnitt. HikariCP wird
+// verschoben. Der SQLite-Treiber bleibt unverschoben, weil seine nativen Methoden an den
+// Paketnamen gebunden sind. Der MariaDB-Treiber (LGPL-2.1-or-later) wird bewusst nicht in ein
+// proprietaeres Jar eingebettet, siehe docs/adr/0005-treiber-variante.md.
 val bundledDrivers by configurations.creating {
     isCanBeConsumed = false
     isCanBeResolved = true
@@ -126,7 +129,6 @@ val bundledDrivers by configurations.creating {
 dependencies {
     bundledDrivers(libs.hikaricp)
     bundledDrivers(libs.sqlite.jdbc)
-    bundledDrivers(libs.mariadb.jdbc)
 }
 
 val bundledPluginYml by tasks.registering {
@@ -168,10 +170,151 @@ val bundledJar by tasks.registering(com.github.jengelman.gradle.plugins.shadow.t
     mergeServiceFiles()
     relocate("org.bstats", "dev.orderhub.libs.bstats")
     relocate("com.zaxxer.hikari", "dev.orderhub.libs.hikari")
-    relocate("org.mariadb.jdbc", "dev.orderhub.libs.mariadb.jdbc")
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
 }
-tasks.build { dependsOn(tasks.shadowJar, bundledJar, ":orderhub-api:build") }
+// SHA-256-Pruefsummen der Jars im Verkaufs-ZIP.
+val salesChecksums by tasks.registering {
+    description = "Writes SHA256SUMS for the jars of the sales ZIP."
+    group = "distribution"
+    dependsOn(tasks.shadowJar, bundledJar, ":orderhub-api:jar", ":orderhub-api:javadocJar")
+    val out = layout.buildDirectory.file("sales/SHA256SUMS")
+    val jars =
+        files(
+            tasks.shadowJar.flatMap { it.archiveFile },
+            bundledJar.flatMap { it.archiveFile },
+            project(":orderhub-api").tasks.named("jar"),
+            project(":orderhub-api").tasks.named("javadocJar"),
+        )
+    inputs.files(jars)
+    outputs.file(out)
+    doLast {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val lines =
+            jars.files.sortedBy { it.name }.map { f ->
+                val hex = digest.digest(f.readBytes()).joinToString("") { "%02x".format(it) }
+                "$hex  ${f.name}"
+            }
+        out
+            .get()
+            .asFile.parentFile
+            .mkdirs()
+        out.get().asFile.writeText(lines.joinToString("\n") + "\n")
+    }
+}
+
+// Verkaufs-ZIP: nur Auslieferungsdateien. Intern bleiben .claude/, tools/, Berichte, Plaene,
+// Sicherheitsanalyse, Quellcode und Tests.
+val salesZip by tasks.registering(Zip::class) {
+    description = "Builds the sales ZIP (jars, default configuration, README, changelog, licenses)."
+    group = "distribution"
+    dependsOn(tasks.shadowJar, bundledJar, ":orderhub-api:jar", ":orderhub-api:javadocJar", salesChecksums)
+    archiveFileName.set("OrderHub-${project.version}.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+    val root = "OrderHub-${project.version}"
+    into(root) {
+        from(tasks.shadowJar)
+        from(bundledJar)
+        from(project(":orderhub-api").tasks.named("jar"))
+        from(project(":orderhub-api").tasks.named("javadocJar"))
+        from("README.md", "CHANGELOG.md", "LICENSE.txt", "THIRD_PARTY_NOTICES.md")
+        from(layout.buildDirectory.file("sales/SHA256SUMS"))
+        from("src/main/resources") {
+            include("config.yml", "menus.yml", "discord.yml", "messages_*.yml")
+            into("config")
+        }
+    }
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+}
+
+// Prueft den Inhalt des Verkaufs-ZIPs: erlaubte Dateien, Pflichtdateien, keine internen Dateien und
+// Drittanbieter-Hinweis fuer jede eingebettete Bibliothek.
+val verifySalesZip by tasks.registering {
+    description = "Fails if the sales ZIP contains anything but delivery files or lacks required ones."
+    group = "verification"
+    dependsOn(salesZip)
+    val zipFile = salesZip.flatMap { it.archiveFile }
+    val version = project.version.toString()
+    doLast {
+        val root = "OrderHub-$version/"
+        val names = mutableListOf<String>()
+        ZipFile(zipFile.get().asFile).use { zip ->
+            zip
+                .entries()
+                .asSequence()
+                .filter { !it.isDirectory }
+                .forEach { names += it.name }
+        }
+        val allowed =
+            listOf(
+                Regex("""OrderHub-$version/OrderHub-$version\.jar"""),
+                Regex("""OrderHub-$version/OrderHub-$version-bundled\.jar"""),
+                Regex("""OrderHub-$version/orderhub-api-[0-9.]+\.jar"""),
+                Regex("""OrderHub-$version/orderhub-api-[0-9.]+-javadoc\.jar"""),
+                Regex("""OrderHub-$version/(README\.md|CHANGELOG\.md|LICENSE\.txt|THIRD_PARTY_NOTICES\.md|SHA256SUMS)"""),
+                Regex("""OrderHub-$version/config/(config|menus|discord)\.yml"""),
+                Regex("""OrderHub-$version/config/messages_[a-z]{2}(-[A-Za-z]{2})?\.yml"""),
+            )
+        val unexpected = names.filter { n -> allowed.none { it.matches(n) } }
+        check(unexpected.isEmpty()) { "Unexpected files in the sales ZIP: $unexpected" }
+        val required =
+            listOf(
+                "OrderHub-$version.jar",
+                "OrderHub-$version-bundled.jar",
+                "README.md",
+                "CHANGELOG.md",
+                "LICENSE.txt",
+                "THIRD_PARTY_NOTICES.md",
+                "SHA256SUMS",
+                "config/config.yml",
+                "config/menus.yml",
+                "config/messages_en.yml",
+                "config/messages_de.yml",
+            )
+        val missing = required.filter { (root + it) !in names }
+        check(missing.isEmpty()) { "Missing files in the sales ZIP: $missing" }
+        check(names.any { Regex("""$root""" + """orderhub-api-[0-9.]+\.jar""").matches(it) }) { "API jar missing" }
+        val forbidden = listOf(".claude", "tools/", "RELEASE_REPORT", "PLAN.md", "SPEC.md", "TESTPLAN.md", "SECURITY.md", "src/", ".github")
+        val leaked = names.filter { n -> forbidden.any { n.contains(it) } }
+        check(leaked.isEmpty()) { "Internal files in the sales ZIP: $leaked" }
+        // Jede eingebettete Bibliothek muss im Drittanbieter-Hinweis stehen.
+        val notices =
+            ZipFile(zipFile.get().asFile).use { zip ->
+                zip.getInputStream(zip.getEntry(root + "THIRD_PARTY_NOTICES.md")).bufferedReader().readText()
+            }
+        val embeddedChecks =
+            mapOf(
+                "com/zaxxer" to "HikariCP",
+                "dev/orderhub/libs/hikari" to "HikariCP",
+                "org/sqlite" to "SQLite JDBC",
+                "dev/orderhub/libs/bstats" to "bStats",
+            )
+        for (jarName in listOf("OrderHub-$version.jar", "OrderHub-$version-bundled.jar")) {
+            ZipFile(zipFile.get().asFile).use { outer ->
+                val entry = outer.getEntry(root + jarName)
+                ZipInputStream(outer.getInputStream(entry)).use { jar ->
+                    var e = jar.nextEntry
+                    val seen = mutableSetOf<String>()
+                    while (e != null) {
+                        embeddedChecks.forEach { (prefix, library) ->
+                            if (e!!.name.startsWith(prefix)) seen += library
+                        }
+                        check(!e!!.name.contains(".claude") && !e!!.name.startsWith("tools/")) {
+                            "Internal file inside $jarName: ${e!!.name}"
+                        }
+                        e = jar.nextEntry
+                    }
+                    seen.forEach { library ->
+                        check(notices.contains(library)) { "$library is embedded in $jarName but not listed in THIRD_PARTY_NOTICES.md" }
+                    }
+                }
+            }
+        }
+        println("Sales ZIP ok: ${names.size} files")
+    }
+}
+
+tasks.build { dependsOn(tasks.shadowJar, bundledJar, ":orderhub-api:build", verifySalesZip) }
 
 // Kopiert das fertige Plugin-Jar nach release/ und schreibt die SHA-256-Pruefsumme.
 val release by tasks.registering {

@@ -52,6 +52,9 @@ permissions:
   orderhub.admin.backup:
     description: Back up the SQLite database and export orders or the ledger as CSV
     default: op
+  orderhub.admin.dump:
+    description: Write a support file with version, plugins, configuration without secrets and recent errors
+    default: op
   orderhub.admin.view:
     description: List orders, statistics and debug info
     default: op
@@ -68,3 +71,4 @@ permissions:
       orderhub.admin.transactions: true
       orderhub.admin.recovery: true
       orderhub.admin.backup: true
+      orderhub.admin.dump: true

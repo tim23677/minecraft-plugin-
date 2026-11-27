@@ -7,9 +7,10 @@ This license describes what you may do with the OrderHub plugin ("the Software")
 1. What you may do
 
    a) Install and run the Software on Minecraft servers that you own or operate.
-   b) Use it inside your own network of servers, as long as the network belongs to you or your organization.
+   b) Use it inside your own network of servers (proxy and backend servers sharing one database), as long as the network belongs to you or your organization. One license covers one such network.
    c) Edit the configuration files, language files and menu files that come with the Software.
    d) Use the public API described in API.md to write your own plugins that work together with the Software.
+   e) Read and change the source code that comes with your purchase, for your own use on servers covered by your license.
 
 2. What you may not do
 
@@ -18,6 +19,8 @@ This license describes what you may do with the OrderHub plugin ("the Software")
    c) Publish the source code, or parts of it, without written permission from the author.
    d) Present the Software, or a modified version of it, as your own product.
    e) Remove or change copyright notices or this license.
+   f) Hand on changed source code or changed builds to other people.
+   g) Provide the Software to customers or other parties who run their own servers with it. Each such party needs its own license.
 
 3. Support and updates
 
@@ -33,7 +36,7 @@ This license describes what you may do with the OrderHub plugin ("the Software")
 
 6. Third-party components
 
-   The Software bundles open-source libraries under their own licenses (for example HikariCP, SQLite JDBC and MariaDB Connector/J). Their licenses remain in force for those components. The list is in COMPATIBILITY.md.
+   The Software bundles or loads open-source libraries under their own licenses (HikariCP and SQLite JDBC under Apache-2.0, bStats under MIT, MariaDB Connector/J under LGPL-2.1-or-later). Their licenses remain in force for those components and are listed with their texts in THIRD_PARTY_NOTICES.md. Nothing in this license restricts the rights those licenses give you for those components. In particular, MariaDB Connector/J is not part of the Software's own jar: it is downloaded separately at first start (standard jar) and you may replace it with another compatible version.
 
 7. Termination
 

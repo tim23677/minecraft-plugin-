@@ -38,6 +38,7 @@ public final class OrderAdminCommand implements CommandHandler {
           "health",
           "backup",
           "export",
+          "dump",
           "debug");
 
   private final Services s;
@@ -153,6 +154,11 @@ public final class OrderAdminCommand implements CommandHandler {
       case "health" -> {
         if (need(sender, "orderhub.admin.view")) {
           async(sender, () -> health(sender));
+        }
+      }
+      case "dump" -> {
+        if (need(sender, "orderhub.admin.dump")) {
+          async(sender, () -> dump(sender));
         }
       }
       case "backup" -> {
@@ -349,6 +355,87 @@ public final class OrderAdminCommand implements CommandHandler {
             });
       }
       default -> sender.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
+    }
+  }
+
+  /** Schreibt die Support-Datei nach {@code <dataDir>/dumps} (Async-Thread). */
+  private void dump(CommandSender sender) {
+    var plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("OrderHub");
+    java.util.Map<String, String> facts = new java.util.LinkedHashMap<>();
+    facts.put("orderhub", plugin == null ? "?" : plugin.getPluginMeta().getVersion());
+    facts.put("server", org.bukkit.Bukkit.getVersion());
+    facts.put("java", System.getProperty("java.version") + " " + System.getProperty("java.vendor"));
+    facts.put("os", System.getProperty("os.name") + " " + System.getProperty("os.arch"));
+    facts.put(
+        "folia",
+        String.valueOf(
+            org.bukkit.Bukkit.getVersion().toLowerCase(java.util.Locale.ROOT).contains("folia")));
+    facts.put("database", String.valueOf(s.storage().dialect()));
+    facts.put("server-id", s.storage().serverId());
+    var health = admin.health();
+    facts.put(
+        "payments",
+        health.openPayments()
+            + " open, "
+            + health.paymentsInProgress()
+            + " in progress, "
+            + health.manualReview()
+            + " in manual review");
+    facts.put(
+        "economy latency ms",
+        "median " + health.economy().medianMillis() + ", max " + health.economy().maxMillis());
+    List<String> plugins = new java.util.ArrayList<>();
+    for (var p : org.bukkit.Bukkit.getPluginManager().getPlugins()) {
+      plugins.add(
+          p.getName()
+              + " "
+              + p.getPluginMeta().getVersion()
+              + (p.isEnabled() ? "" : " (disabled)"));
+    }
+    java.util.Map<String, Object> flat = new java.util.LinkedHashMap<>();
+    var cfg =
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+            dataDir.resolve("config.yml").toFile());
+    for (String key : cfg.getKeys(true)) {
+      if (!cfg.isConfigurationSection(key)) {
+        flat.put(key, cfg.get(key));
+      }
+    }
+    List<String> log = List.of();
+    try {
+      java.nio.file.Path latest =
+          dataDir.getParent().getParent().resolve("logs").resolve("latest.log");
+      if (java.nio.file.Files.isRegularFile(latest)) {
+        log = java.nio.file.Files.readAllLines(latest, java.nio.charset.StandardCharsets.UTF_8);
+      }
+    } catch (java.io.IOException | RuntimeException e) {
+      // Ohne lesbares Log bleibt der Abschnitt leer.
+    }
+    String text =
+        dev.orderhub.bootstrap.SupportDump.compose(
+            facts,
+            plugins,
+            dev.orderhub.bootstrap.SupportDump.configLines(flat),
+            dev.orderhub.bootstrap.SupportDump.relevantLogLines(log, 200));
+    try {
+      java.nio.file.Path dir = dataDir.resolve("dumps");
+      java.nio.file.Files.createDirectories(dir);
+      java.nio.file.Path file =
+          dir.resolve(
+              "dump-"
+                  + java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
+                      .withZone(java.time.ZoneOffset.UTC)
+                      .format(java.time.Instant.now())
+                  + ".txt");
+      java.nio.file.Files.writeString(file, text, java.nio.charset.StandardCharsets.UTF_8);
+      reply(
+          sender, s.messages().prefixed("admin.dump-done", Messages.text("file", file.toString())));
+    } catch (java.io.IOException e) {
+      reply(
+          sender,
+          s.messages()
+              .prefixed(
+                  "admin.backup-failed", Messages.text("reason", String.valueOf(e.getMessage()))));
     }
   }
 
