@@ -53,8 +53,33 @@ JUnit Jupiter 6.0.3, MockBukkit 4.116.3, AssertJ 3.27.7, Testcontainers 2.0.5. J
 | MariaDB 10.11 | tested in an earlier build only, not repeated for 1.0.0 |
 | MySQL | not supported. OrderHub stops with `MySQL is not supported` |
 
-Schema changes are versioned migrations V1 to V4 and run once at start against SQLite and MariaDB. Before a migration on an existing SQLite database OrderHub copies the database to `backups/`.
+Schema changes are versioned migrations V1 to V5 and run once at start against SQLite and MariaDB. Before a migration on an existing SQLite database OrderHub copies the database to `backups/`.
 
 ## Dependency vulnerability scan
 
 `./gradlew dependencyCheckAnalyze` needs an `NVD_API_KEY`. No key was available when 1.0.0 was built, so the scan was not run. The CI job `dependency-check` runs it when the repository secret exists.
+
+## Results of 2.0.0 (measured in this build)
+
+| Measurement | Result |
+|---|---|
+| SQLite, 100,000 orders, 480 parallel queries on 8 threads | p50 17 ms, p95 153 ms, max 1,782 ms (insert 7,568 orders/s) |
+| MariaDB 11.4, 100,000 orders, two simulated servers, 480 queries | offset page p50 4 / p95 19 ms, keyset page p50 4 / p95 8 ms, text search p50 44 / p95 96 ms, category filter p50 4 / p95 11 ms (insert 1,578 orders/s) |
+| Two servers delivering to the same order, crash with recovery on the other server | covered by integration tests against MariaDB 11.4 |
+| Upgrade from a real 1.1.0 database | `UpgradeFrom110Test` |
+
+## Languages
+
+en, de, fr, es, pl, pt-br, ru, tr, zh-cn. A test checks keys and placeholders of every file against English. The seven new languages were not reviewed by native speakers.
+
+## Not tested
+
+| Item | Status |
+|---|---|
+| Paper 1.21.11 and Folia 1.21.11 server runs of 2.0.0, bot play-through of 2.0.0 | not run in this build (the Minecraft EULA is not accepted by the assistant) |
+| Economy plugins other than EssentialsX with VaultUnlocked, Folia with an economy | not tested |
+| Geyser and Bedrock clients | not tested |
+| PlaceholderAPI on a live server | unit tests only |
+| `OrderHub-<version>-bundled.jar` loaded on a server | built and content checked, not started on a server |
+| `dependencyCheckAnalyze` | not run, needs `NVD_API_KEY` |
+| PIT mutation thresholds per package | not reached, see RELEASE_REPORT.md |

@@ -216,7 +216,7 @@ val salesZip by tasks.registering(Zip::class) {
         from(bundledJar)
         from(project(":orderhub-api").tasks.named("jar"))
         from(project(":orderhub-api").tasks.named("javadocJar"))
-        from("README.md", "CHANGELOG.md", "LICENSE.txt", "THIRD_PARTY_NOTICES.md")
+        from("README.md", "CHANGELOG.md", "UPGRADE.md", "COMPATIBILITY.md", "LICENSE.txt", "THIRD_PARTY_NOTICES.md")
         from(layout.buildDirectory.file("sales/SHA256SUMS"))
         from("src/main/resources") {
             include("config.yml", "menus.yml", "discord.yml", "messages_*.yml")
@@ -251,7 +251,7 @@ val verifySalesZip by tasks.registering {
                 Regex("""OrderHub-$version/OrderHub-$version-bundled\.jar"""),
                 Regex("""OrderHub-$version/orderhub-api-[0-9.]+\.jar"""),
                 Regex("""OrderHub-$version/orderhub-api-[0-9.]+-javadoc\.jar"""),
-                Regex("""OrderHub-$version/(README\.md|CHANGELOG\.md|LICENSE\.txt|THIRD_PARTY_NOTICES\.md|SHA256SUMS)"""),
+                Regex("""OrderHub-$version/(README\.md|CHANGELOG\.md|UPGRADE\.md|COMPATIBILITY\.md|LICENSE\.txt|THIRD_PARTY_NOTICES\.md|SHA256SUMS)"""),
                 Regex("""OrderHub-$version/config/(config|menus|discord)\.yml"""),
                 Regex("""OrderHub-$version/config/messages_[a-z]{2}(-[A-Za-z]{2})?\.yml"""),
             )

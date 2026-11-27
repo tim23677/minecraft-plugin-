@@ -1,6 +1,6 @@
 # BuiltByBit listing (English)
 
-Listing text for the resource page. Version 1.1.0.
+Listing text for the resource page. Version 2.0.0. Only claims that the release report backs.
 
 ## Title
 
@@ -22,21 +22,20 @@ OrderHub gives your server a player to player buy order market. A player holds a
 - Admin tools: health overview, SQLite backup (also automatic before a schema migration), CSV export of orders and ledger
 - Delivery, claim and return menus built on a hardened inventory framework that cancels shift clicks, number keys, offhand swaps, double clicks, drags and drops
 - Transaction journal with idempotency keys and a state machine, crash recovery at startup, a MANUAL_REVIEW state for cases that cannot be decided safely
-- Marketplace and my orders menus, statistics, trade history, favorites with price alerts, market analytics from real completed trades (median, average, volume, price range once enough trades exist)
+- Marketplace with search, categories, sorting and stable pages, `/order sell` for the item in hand, my orders menus, statistics, trade history, favorites with price alerts, market analytics from real completed trades (median, average, volume, price range once enough trades exist)
 - SQLite for one server, MariaDB for several servers sharing one marketplace (row locks and version checks)
 - Discord webhook notifications with retry and rate limit handling, never containing player names
 - PlaceholderAPI placeholders, developer API with six services and six events
-- English and German language files, MiniMessage formatting, all texts editable
+- Nine languages (en, de, fr, es, pl, pt-br, ru, tr, zh-cn), MiniMessage formatting, all texts editable. The seven newer languages were not reviewed by native speakers
 - Folia ready: all tasks run through region, entity, global or async schedulers
 
 ### Honest limits
 
 - Vault has no transaction ids. If the server crashes in the exact moment between the economy plugin paying and OrderHub saving that fact, OrderHub cannot know whether the payment happened. It does not pay twice automatically. It marks the case MANUAL_REVIEW for an administrator.
 - No software can promise zero dupes. OrderHub is designed so that item and money movements are journaled, checked and idempotent, and it ships with automated tests for these paths, but you should still test it on your server setup first.
-- Statistics, history, favorites, analytics and the admin tools are chat based in this version (no inventory menus for them).
-- Not included in this version: order templates, bulk order creation, auto renew and minimum delivery in the create menu, reputation system, per group or per world orders, configurable sounds, a cross-server cache.
+- Not included in this version: order templates in menus, create menu with all options, bulk sell, auto renew, import from other order plugins, reputation system, per group or per world orders.
 - Tested with MariaDB 11.4 (through Testcontainers). MySQL is not supported, OrderHub refuses to start against it.
-- Played through on a real Paper 1.21.11 server with VaultUnlocked and EssentialsX by two bot players (create, deliver, pay, collect, refund, hard kill during a delivery, recovery). On Folia 1.21.11 the plugin loads and recovers cleanly, a play-through there was not done because EssentialsX does not run on Folia. Other economy plugins are untested, test it on your own setup first.
+- Version 1.1.0 was played through on a real Paper 1.21.11 server with VaultUnlocked and EssentialsX by two bot players (create, deliver, pay, collect, refund, hard kill during a delivery, recovery). On Folia 1.21.11 the plugin loads and recovers cleanly, a play-through there was not done because EssentialsX does not run on Folia. Other economy plugins are untested, test it on your own setup first.
 - Needs internet access to Maven Central on the first start: Paper downloads the database libraries once.
 
 ## Compatible versions

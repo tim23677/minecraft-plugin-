@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.0.0
+
+Added
+
+- Marketplace menu with search by item name, categories, sorting and keyset pagination (stable pages while orders change), layout and texts in `menus.yml`
+- `/order sell [amount]`: finds the open order with the best price for the item in hand and opens the delivery menu as a preview, delivery happens only after confirming
+- Per order options stored in the database: minimum remaining durability and "enchantments at least" tolerance for deliveries, auto-claim flag (stored, not used yet)
+- Component presets in `items.component-presets` (potions, arrows, fireworks, goat horns, banners, ominous bottles, player heads): these items can be ordered, delivery still has to match every component exactly
+- Menus for statistics, history, favorites and market analytics
+- Login summary of delivered items and expired orders, shown as chat, actionbar or title, optional sound (`notifications.*`); cross-server notes through the shared database
+- Seven new languages: French, Spanish, Polish, Brazilian Portuguese, Russian, Turkish, Simplified Chinese (a test checks that every language file has all keys and placeholders)
+- Structured transaction log file with rotation (`logging.transactions.*`)
+- Economy latency measurement, extended `/orderadmin health` with warnings (`health.warn.*`)
+- Scheduled SQLite backups (`backup.auto.*`)
+- bStats (`metrics.enabled`), inactive until a plugin id is registered, can be turned off
+- `/orderadmin dump`: support bundle without secrets (new permission `orderhub.admin.dump`)
+- Developer API as its own module `orderhub-api` with Javadoc and `@since`, input validation, an example plugin in `examples/order-listener`, binary compatibility check against 1.1.0 (japicmp)
+- Sales package with `SHA256SUMS`, SBOM (CycloneDX), reproducible jars, and a second jar with HikariCP and SQLite included
+- Database migration V5 for SQLite and MariaDB (order options, templates table, keyset column), upgrade test with a real 1.1.0 database
+
+Changed
+
+- Vault calls have a timeout (`economy.timeout-ms`, default 3000). A call that was never started during a lag spike is retried later, a call that was started and did not finish counts as unclear (MANUAL_REVIEW) and is never repeated automatically
+- `config.yml` is written in English, `config-version` 3 (the updater adds new options and keeps your values)
+- Items with their own data components (potions, banners and so on) are accepted by default through the presets, they were rejected before
+- Create cooldown for orders (`orders.create-cooldown-seconds`)
+- GitHub Actions are pinned to commit SHAs, the Gradle wrapper is the official one with a checksum
+
+Fixed
+
+- A delivery of an item that differs from the order only in a tolerated trait now matches according to the order options instead of being rejected without a reason
+- Duplicate key `admin.transaction` in the German message file, missing German admin texts
+
+Not included in 2.0.0 (see RELEASE_REPORT.md): order templates in menus, create menu, bulk sell, auto-renew fee, review menu, import from other plugins, offline MariaDB driver.
+
 ## 1.1.0 (2026-11-26)
 
 Added

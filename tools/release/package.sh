@@ -1,24 +1,18 @@
 #!/usr/bin/env bash
-# Baut die beiden Abgabepakete nach dist/:
-#   OrderHub-<version>.zip         Kaeuferpaket (Jar, SHA256SUMS, README, CONFIGURATION, COMPATIBILITY, CHANGELOG, LICENSE)
-#   OrderHub-<version>-source.zip  vollstaendiger Quellstand (git archive, ohne build und Caches)
-# Voraussetzung: ./gradlew build ist gelaufen, der Stand ist committet.
+# Builds the delivery packages into dist/ with the Gradle tasks (sales ZIP with content check, source ZIP).
+# Prerequisite: the state is committed.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts | head -1)"
-JAR="build/libs/OrderHub-${VERSION}.jar"
-[ -f "$JAR" ] || { echo "Jar fehlt: $JAR (erst ./gradlew build)" >&2; exit 2; }
 if [ -n "$(git status --porcelain)" ]; then
-  echo "Warnung: Arbeitsverzeichnis nicht sauber, das Quellpaket enthaelt nur den committeten Stand." >&2
+  echo "Warning: working tree is not clean, the source package contains only the committed state." >&2
 fi
+./gradlew build -x dependencyCheckAnalyze --max-workers=1
 OUT="$ROOT/dist"
 rm -rf "$OUT"
-mkdir -p "$OUT/OrderHub-${VERSION}"
-cp "$JAR" README.md CONFIGURATION.md COMPATIBILITY.md CHANGELOG.md LICENSE.txt "$OUT/OrderHub-${VERSION}/"
-( cd "$OUT/OrderHub-${VERSION}" && sha256sum "OrderHub-${VERSION}.jar" > SHA256SUMS )
-( cd "$OUT" && zip -qr "OrderHub-${VERSION}.zip" "OrderHub-${VERSION}" )
+mkdir -p "$OUT"
+cp build/distributions/OrderHub-"${VERSION}"*.zip "$OUT"/ 2>/dev/null || cp build/sales/*.zip "$OUT"/
 git archive --prefix="OrderHub-${VERSION}-source/" -o "$OUT/OrderHub-${VERSION}-source.zip" HEAD
-cp "$OUT/OrderHub-${VERSION}/SHA256SUMS" "$OUT/SHA256SUMS"
-echo "gebaut in $OUT:"
-ls -la "$OUT"/*.zip "$OUT/SHA256SUMS"
+( cd "$OUT" && sha256sum *.zip > SHA256SUMS )
+ls -la "$OUT"

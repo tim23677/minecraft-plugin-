@@ -6,13 +6,13 @@ This README is written for server owners. No Java knowledge is needed.
 
 ## Status of this version
 
-OrderHub 1.1.0 was built with automated tests (unit, MockBukkit, SQLite, MariaDB 11.4 through Testcontainers) and started on a real Paper 1.21.11 and Folia 1.21.11 server, where the plugin loads, enables and recovers cleanly. A full play-through with two bot players on a real Paper 1.21.11 server with VaultUnlocked and EssentialsX (create, deliver, pay, collect, cancel with refund, hard kill in the middle of a delivery, recovery) passed. Other economy plugins and Folia with an economy were not part of the release checks, so run OrderHub on a test server with your own setup before you use it on a live server. COMPATIBILITY.md lists exactly what was tested.
+OrderHub 2.0.0 is built with automated unit, MockBukkit, SQLite and MariaDB 11.4 tests (Testcontainers). The checks that were run for this release, and those that were not, are listed with their commands in RELEASE_REPORT.md. COMPATIBILITY.md lists what was tested on which platform. Real server runs of 2.0.0 (Paper, Folia, bots) were not repeated for this version, run OrderHub on a test server with your own economy plugin before you use it on a live server.
 
 ## Requirements
 
 - Paper or Folia 1.21.x (built against Paper API 1.21.11), Java 21
 - Vault and an economy plugin that registers with Vault (required to create orders and to pay out)
-- Internet access to Maven Central on the first start: Paper downloads the database libraries (HikariCP, SQLite and MariaDB drivers) once into its `libraries` folder. The plugin jar itself is small (about 0.5 MB)
+- Internet access to Maven Central on the first start: Paper downloads the database libraries (HikariCP, SQLite and MariaDB drivers) once into its `libraries` folder. The plugin jar itself is small. The sales package also contains a second jar `OrderHub-<version>-bundled.jar` with HikariCP and SQLite included for servers without internet access (SQLite only, MariaDB still needs the download because its driver is LGPL licensed, see THIRD_PARTY_NOTICES.md)
 - Optional: PlaceholderAPI
 - Optional: MariaDB 11.4 for several servers sharing one marketplace (SQLite is the default for a single server). MySQL is not supported.
 
@@ -21,8 +21,8 @@ OrderHub 1.1.0 was built with automated tests (unit, MockBukkit, SQLite, MariaDB
 1. Stop the server.
 2. Put `OrderHub-<version>.jar` into the `plugins` folder.
 3. Install Vault and an economy plugin if you do not have them yet.
-4. Start the server once. OrderHub creates `plugins/OrderHub` with `config.yml`, `discord.yml`, `menus.yml` and `messages_en.yml`, `messages_de.yml`.
-5. Adjust prices, fees and limits in `config.yml`, set `language: "de"` for German, then run `/orderadmin reload` (database and payout worker settings need a restart).
+4. Start the server once. OrderHub creates `plugins/OrderHub` with `config.yml`, `discord.yml`, `menus.yml` and `menus.yml` and the language files `messages_<language>.yml`.
+5. Adjust prices, fees and limits in `config.yml`, set `language` (en, de, fr, es, pl, pt-br, ru, tr, zh-cn), then run `/orderadmin reload` (database and payout worker settings need a restart).
 
 ## Commands
 
@@ -31,7 +31,8 @@ Players:
 - `/order` opens the main menu
 - `/order create [quantity] [price]` creates an order for the item in your hand (prices accept `k`, `m`, `b`, for example `1.5k`)
 - `/order mine` lists your orders (left click cancels, right click pauses or resumes)
-- `/order market [newest|highest-price|lowest-price|almost-completed|highest-demand]` opens the marketplace
+- `/order market [newest|highest-price|lowest-price|almost-completed|highest-demand]` opens the marketplace. The menu has a search by item name, categories and sorting, and pages through large markets with keyset pagination
+- `/order sell [amount]` finds the open order with the best price for the item in your hand and opens the delivery menu with the items as a preview. Nothing is delivered before you confirm
 - `/order deliver <id>` opens the delivery menu for an order
 - `/order claims` collects items delivered to your orders, `/order returns` collects items that could not be handed back earlier
 - `/order cancel <id>` cancels one of your orders
