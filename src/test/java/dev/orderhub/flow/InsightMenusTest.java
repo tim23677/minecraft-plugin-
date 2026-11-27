@@ -91,7 +91,9 @@ class InsightMenusTest extends FlowTestBase {
     assertThat(top().getItem(0)).isNotNull();
     assertThat(top().getItem(1)).isNotNull();
     assertThat(top().getItem(2)).isNull();
-    String removedKey = plain(top().getItem(0).displayName()).replaceAll("[\\[\\]]", "");
+    String removedKey =
+        plain(java.util.Objects.requireNonNull(top().getItem(0)).displayName())
+            .replaceAll("[\\[\\]]", "");
     assertThat(removedKey).startsWith("minecraft:");
 
     var view = supplier.getOpenInventory();
@@ -122,7 +124,8 @@ class InsightMenusTest extends FlowTestBase {
     ItemStack icon = top().getItem(13);
     assertThat(icon).isNotNull();
     StringBuilder lore = new StringBuilder();
-    icon.lore().forEach(line -> lore.append(plain(line)).append('\n'));
+    java.util.Objects.requireNonNull(icon.lore())
+        .forEach(line -> lore.append(plain(line)).append('\n'));
     assertThat(lore.toString())
         .contains("No open orders for this item")
         .contains("no completed trades")

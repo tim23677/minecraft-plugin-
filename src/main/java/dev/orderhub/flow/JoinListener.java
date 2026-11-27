@@ -79,16 +79,16 @@ public final class JoinListener implements Listener {
                 "");
             return;
           }
-          for (String[] parts : summary.alerts()) {
+          for (LoginSummary.Alert alert : summary.alerts()) {
             Notifier.show(
                 player,
                 s.messages()
                     .prefixed(
                         "notify.price-alert",
-                        Messages.text("item", parts[0]),
-                        Messages.text("quantity", parts[1]),
-                        Messages.text("unit", parts[2]),
-                        Messages.text("id", parts[3])),
+                        Messages.text("item", alert.item()),
+                        Messages.text("quantity", alert.quantity()),
+                        Messages.text("unit", alert.unit()),
+                        Messages.text("id", alert.orderId())),
                 display,
                 summary.deliveries() == 0 && summary.expiredOrders() == 0 ? sound : "");
           }

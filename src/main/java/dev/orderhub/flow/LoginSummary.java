@@ -11,11 +11,18 @@ import java.util.List;
  * @param deliveredItems gelieferte Items an eigene Auftraege
  * @param deliveries Anzahl der Lieferungen
  * @param expiredOrders abgelaufene Auftraege
- * @param alerts Preisalarme (Item, Menge, Stueckpreis, Auftrags-Id)
+ * @param alerts Preisalarme
  * @since 2.0.0
  */
 public record LoginSummary(
-    long deliveredItems, int deliveries, int expiredOrders, List<String[]> alerts) {
+    long deliveredItems, int deliveries, int expiredOrders, List<Alert> alerts) {
+
+  /** Ein Preisalarm. */
+  public record Alert(String item, String quantity, String unit, String orderId) {}
+
+  public LoginSummary {
+    alerts = List.copyOf(alerts);
+  }
 
   /** Kleine Summe: Alarme werden einzeln gezeigt, mehr als diese Zahl nur als Anzahl. */
   public static final int MAX_ALERTS_SHOWN = 3;
@@ -24,7 +31,7 @@ public record LoginSummary(
     long items = 0;
     int deliveries = 0;
     int expired = 0;
-    List<String[]> alerts = new ArrayList<>();
+    List<Alert> alerts = new ArrayList<>();
     for (InsightsRepository.Note note : notes) {
       String[] parts = note.payload().split("\\|");
       switch (note.kind()) {
@@ -41,7 +48,7 @@ public record LoginSummary(
         case "expired" -> expired++;
         case "price-alert" -> {
           if (parts.length == 4) {
-            alerts.add(parts);
+            alerts.add(new Alert(parts[0], parts[1], parts[2], parts[3]));
           }
         }
         default -> {
@@ -49,7 +56,7 @@ public record LoginSummary(
         }
       }
     }
-    return new LoginSummary(items, deliveries, expired, List.copyOf(alerts));
+    return new LoginSummary(items, deliveries, expired, alerts);
   }
 
   public boolean isEmpty() {

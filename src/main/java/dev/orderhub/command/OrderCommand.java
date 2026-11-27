@@ -48,6 +48,11 @@ public final class OrderCommand implements CommandHandler {
   private volatile dev.orderhub.flow.InsightMenus insightMenus;
 
   /** Verdrahtet die Menues fuer Statistik, Verlauf, Favoriten und Analyse. */
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification =
+          "Die Menues sind ein einmal beim Start verdrahteter Dienst, den der Befehl nur aufruft. "
+              + "Er wird weder veraendert noch weitergegeben.")
   public void insightMenus(dev.orderhub.flow.InsightMenus menus) {
     this.insightMenus = menus;
   }
