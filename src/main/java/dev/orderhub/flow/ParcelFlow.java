@@ -60,13 +60,20 @@ public final class ParcelFlow {
 
   /** Holt alle verfuegbaren Pakete nacheinander ab (bis Inventar voll ist). */
   public void claimAll(Player player) {
+    claimAll(player, false);
+  }
+
+  /** Wie {@link #claimAll(Player)}, mit {@code quiet} ohne Meldung, wenn nichts abzuholen ist. */
+  public void claimAll(Player player, boolean quiet) {
     list(
         player,
         0,
         50,
         parcels -> {
           if (parcels.isEmpty()) {
-            player.sendMessage(s.messages().prefixed("claim.nothing"));
+            if (!quiet) {
+              player.sendMessage(s.messages().prefixed("claim.nothing"));
+            }
             return;
           }
           claimSequential(player, parcels, 0);

@@ -25,7 +25,7 @@ public final class JoinListener implements Listener {
         .tryRunOn(
             player,
             () -> {
-              returns.claimAll(player);
+              returns.claimAll(player, true);
               notes(player);
               claims.list(
                   player,

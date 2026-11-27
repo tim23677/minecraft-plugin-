@@ -94,7 +94,7 @@ public final class GlobalThreadEconomy implements EconomyBridge {
           EconomyResult result = op.get();
           latency.record((System.nanoTime() - startedAt) / 1_000_000);
           future.complete(result);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | Error e) {
           future.completeExceptionally(e);
         }
       });
@@ -106,6 +106,10 @@ public final class GlobalThreadEconomy implements EconomyBridge {
       return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
       latency.record(timeout.toMillis());
+      if (future.isDone() && !future.isCompletedExceptionally()) {
+        // Der Aufruf ist zwischen Zeitablauf und Pruefung fertig geworden.
+        return future.join();
+      }
       if (state.compareAndSet(PENDING, ABANDONED)) {
         // Nie gestartet: der Provider wurde sicher nicht aufgerufen, es ist kein Geld geflossen.
         // UNAVAILABLE laesst den Aufrufer mit Backoff wiederholen, statt in die manuelle Pruefung

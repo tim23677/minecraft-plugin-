@@ -21,6 +21,10 @@ public final class SupportDump {
       Pattern.compile(
           "(?i).*(password|passwd|pwd|secret|token|webhook|api-?key|license|credential).*");
   private static final Pattern URL_USERINFO = Pattern.compile("(?i)(//)[^/@\\s]+:[^/@\\s]*@");
+  private static final Pattern URL_SECRET_PARAM =
+      Pattern.compile("(?i)([?&;](?:password|passwd|pwd|user|username|token|secret)=)[^&;\\s]*");
+  private static final Pattern IPV6 =
+      Pattern.compile("(?i)\\b(?:[0-9a-f]{1,4}:){2,7}[0-9a-f]{0,4}\\b|\\[(?:[0-9a-f:]{3,})\\]");
   private static final Pattern UUID_PATTERN =
       Pattern.compile(
           "\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b");
@@ -39,8 +43,10 @@ public final class SupportDump {
   public static String scrub(String text) {
     String out = WEBHOOK.matcher(text).replaceAll("<webhook>");
     out = URL_USERINFO.matcher(out).replaceAll("$1<credentials>@");
+    out = URL_SECRET_PARAM.matcher(out).replaceAll("$1<hidden>");
     out = UUID_PATTERN.matcher(out).replaceAll("<uuid>");
-    return IPV4.matcher(out).replaceAll("<ip>");
+    out = IPV4.matcher(out).replaceAll("<ip>");
+    return IPV6.matcher(out).replaceAll("<ip>");
   }
 
   /**

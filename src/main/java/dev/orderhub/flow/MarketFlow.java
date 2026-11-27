@@ -76,6 +76,8 @@ public final class MarketFlow {
     OrderQuery.Cursor start;
     OrderQuery.Cursor next;
     ControlledMenu menu;
+    final java.util.concurrent.atomic.AtomicInteger generation =
+        new java.util.concurrent.atomic.AtomicInteger();
 
     State(Filter filter) {
       this.filter = filter;
@@ -90,6 +92,7 @@ public final class MarketFlow {
   private void load(Player player, State st) {
     OrderQuery.Cursor start = st.start;
     Filter f = st.filter;
+    int gen = st.generation.incrementAndGet();
     Async.supply(
         s.scheduler(),
         s.logger(),
@@ -110,7 +113,12 @@ public final class MarketFlow {
                                 f.text(),
                                 start)))
                 .join(),
-        rows -> show(player, st, rows),
+        rows -> {
+          // Ignore answers of an older filter or page that arrive after a newer request.
+          if (gen == st.generation.get()) {
+            show(player, st, rows);
+          }
+        },
         orphan -> {},
         () -> player.sendMessage(s.messages().prefixed("general.database-error")));
   }

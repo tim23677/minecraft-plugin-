@@ -131,11 +131,35 @@ public final class DatabaseSetup {
     return Objects.requireNonNullElse(section.getString(path), def);
   }
 
+  static boolean isLocalHost(String lowerUrl) {
+    int start = lowerUrl.indexOf("//");
+    if (start < 0) {
+      return false;
+    }
+    String rest = lowerUrl.substring(start + 2);
+    int end = rest.length();
+    for (char c : new char[] {'/', '?', ';'}) {
+      int i = rest.indexOf(c);
+      if (i >= 0) {
+        end = Math.min(end, i);
+      }
+    }
+    String authority = rest.substring(0, end);
+    int at = authority.lastIndexOf('@');
+    if (at >= 0) {
+      authority = authority.substring(at + 1);
+    }
+    String host =
+        authority.startsWith("[")
+            ? authority.substring(0, authority.indexOf(']') + 1)
+            : authority.replaceFirst(":\\d+$", "");
+    return host.equals("localhost") || host.equals("127.0.0.1") || host.equals("[::1]");
+  }
+
   /** Warnt vor unverschluesselten oder ungeprueften Verbindungen zu nicht lokalen Servern. */
   static void warnAboutTransport(String url) {
     String lower = url.toLowerCase(Locale.ROOT);
-    boolean local =
-        lower.contains("//localhost") || lower.contains("//127.0.0.1") || lower.contains("//[::1]");
+    boolean local = isLocalHost(lower);
     if (local) {
       return;
     }

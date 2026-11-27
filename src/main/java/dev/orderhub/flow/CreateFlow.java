@@ -227,6 +227,16 @@ public final class CreateFlow {
       OrderService.CreateResult result) {
     var item = Messages.component("item", ItemService.nameOf(template));
     switch (result.status()) {
+      case INSUFFICIENT_FUNDS,
+          LIMIT_REACHED,
+          FEE_CHANGED,
+          INVALID_PRICE,
+          INVALID_QUANTITY,
+          INVALID_AMOUNT,
+          DB_UNAVAILABLE -> cooldown.release(player.getUniqueId());
+      default -> {}
+    }
+    switch (result.status()) {
       case CREATED, ALREADY_CREATED -> {
         if (result.status() == OrderService.CreateStatus.CREATED && result.orderId() != null) {
           afterCreated(player, template, snapshot, quantity, unit, result);

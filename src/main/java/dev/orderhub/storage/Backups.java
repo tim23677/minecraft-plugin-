@@ -33,10 +33,14 @@ public final class Backups {
       throws SQLException, IOException {
     Files.createDirectories(dir);
     Path target = dir.resolve(prefix + "-" + STAMP.format(Instant.now()) + ".db");
+    Path temp = dir.resolve(target.getFileName() + ".tmp");
     try (Connection c = dataSource.getConnection();
         PreparedStatement ps = c.prepareStatement("VACUUM INTO ?")) {
-      ps.setString(1, target.toAbsolutePath().toString());
+      ps.setString(1, temp.toAbsolutePath().toString());
       ps.execute();
+      Files.move(temp, target, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+    } finally {
+      Files.deleteIfExists(temp);
     }
     prune(dir, prefix, keep);
     return target;

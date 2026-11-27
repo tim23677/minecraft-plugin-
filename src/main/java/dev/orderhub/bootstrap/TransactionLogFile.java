@@ -27,7 +27,9 @@ public final class TransactionLogFile implements Closeable {
     Files.createDirectories(dir);
     this.handler =
         new FileHandler(
-            dir.resolve("transactions.%g.log").toAbsolutePath().toString(),
+            dir.toAbsolutePath().toString().replace("%", "%%")
+                + java.io.File.separator
+                + "transactions.%g.log",
             (int) Math.min(Integer.MAX_VALUE, limitBytes),
             count,
             true);

@@ -726,11 +726,6 @@ public class OrderHubPlugin extends JavaPlugin {
   @Override
   public void onDisable() {
     ready = false;
-    dev.orderhub.tx.TransactionLog.install(null);
-    if (txLogFile != null) {
-      txLogFile.close();
-      txLogFile = null;
-    }
     if (expansion != null) {
       expansion.unregister();
       expansion = null;
@@ -745,6 +740,12 @@ public class OrderHubPlugin extends JavaPlugin {
     storage = null;
     if (closing != null) {
       closing.close();
+    }
+    // Last, so lines written while the workers stop still reach the file.
+    dev.orderhub.tx.TransactionLog.install(null);
+    if (txLogFile != null) {
+      txLogFile.close();
+      txLogFile = null;
     }
   }
 

@@ -149,11 +149,16 @@ public final class ConfigUpdater {
       }
     }
     if (added > 0 || migrated) {
-      Files.copy(
-          target,
-          target.resolveSibling(target.getFileName() + ".bak"),
-          StandardCopyOption.REPLACE_EXISTING);
-      current.save(target.toFile());
+      if (!target.getFileName().toString().startsWith("discord")) {
+        // discord.yml can hold a webhook token, a second plain text copy is not made.
+        Files.copy(
+            target,
+            target.resolveSibling(target.getFileName() + ".bak"),
+            StandardCopyOption.REPLACE_EXISTING);
+      }
+      Path temp = target.resolveSibling(target.getFileName() + ".tmp");
+      current.save(temp.toFile());
+      Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     }
     return new Result(added, removed, fromVersion, bundledVersion, false);
   }

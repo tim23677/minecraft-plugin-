@@ -48,6 +48,9 @@ public final class UpdateChecker {
    * Liefert den Tag der neuesten Version, wenn er neuer ist als {@code current}. Fehler (Netz,
    * Format) ergeben leer und stoeren den Betrieb nie.
    */
+  private static final java.util.regex.Pattern SAFE_TAG =
+      java.util.regex.Pattern.compile("[vV]?\\d{1,6}(\\.\\d{1,6}){0,3}([-+][A-Za-z0-9.]{1,32})?");
+
   public Optional<String> newerVersion(URI releaseUrl, String current) {
     try {
       HttpRequest request =
@@ -63,6 +66,9 @@ public final class UpdateChecker {
       }
       JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
       String tag = json.get("tag_name").getAsString();
+      if (!SAFE_TAG.matcher(tag).matches()) {
+        return Optional.empty();
+      }
       return isNewer(current, tag) ? Optional.of(tag) : Optional.empty();
     } catch (IOException | RuntimeException e) {
       return Optional.empty();

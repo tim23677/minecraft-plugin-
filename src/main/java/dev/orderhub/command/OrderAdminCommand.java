@@ -162,7 +162,8 @@ public final class OrderAdminCommand implements CommandHandler {
         }
       }
       case "backup" -> {
-        if (!need(sender, "orderhub.admin.backup")) {
+        if (!need(sender, "orderhub.admin.backup",
+            "orderhub.admin.dump")) {
           return true;
         }
         String reason = confirmedReason(sender, args, 1);

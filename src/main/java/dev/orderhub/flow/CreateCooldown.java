@@ -40,6 +40,11 @@ final class CreateCooldown {
     return remaining[0];
   }
 
+  /** Gibt den Slot frei, wenn die Erstellung ohne Wirkung abgelehnt wurde. */
+  void release(UUID player) {
+    last.remove(player);
+  }
+
   /**
    * Entfernt Eintraege, deren Fenster abgelaufen ist (zeitgesteuert aufgerufen), damit die Tabelle
    * nicht mit der Zahl der Spieler waechst, die je erstellt haben.

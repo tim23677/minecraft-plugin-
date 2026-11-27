@@ -36,6 +36,7 @@ import java.util.function.Supplier;
 public final class ApiImpl implements OrderHubApi {
 
   private static final int MAX_PAGE = 100;
+  private static final int MAX_OFFSET = 100_000;
 
   private final Services s;
   private final Executor async;
@@ -254,7 +255,7 @@ public final class ApiImpl implements OrderHubApi {
                                   null,
                                   OrderStatus.ACTIVE,
                                   OrderQuery.Sort.NEWEST,
-                                  Math.max(0, f.offset()),
+                                  Math.min(MAX_OFFSET, Math.max(0, f.offset())),
                                   Math.min(MAX_PAGE, Math.max(1, f.limit())))))
                   .join()
                   .stream()
@@ -270,8 +271,14 @@ public final class ApiImpl implements OrderHubApi {
           if (orderId < 1) {
             return CompletableFuture.completedFuture(new CancelResult(CancelStatus.NOT_FOUND, 0));
           }
+          final String caller = callerPlugin();
           return run(() -> {
             var r = s.orders().cancelOrder(orderId, actor, false);
+            auditApi(
+                caller,
+                "api.order.cancel",
+                String.valueOf(orderId),
+                r.status().name() + " actor=" + actor);
             if (r.ok()) {
               Events.fire(new OrderCancelEvent(orderId, actor, r.refunded()));
             }
@@ -392,7 +399,7 @@ public final class ApiImpl implements OrderHubApi {
                                   null,
                                   OrderStatus.ACTIVE,
                                   OrderQuery.Sort.NEWEST,
-                                  Math.max(0, offset),
+                                  Math.min(MAX_OFFSET, Math.max(0, offset)),
                                   Math.min(MAX_PAGE, Math.max(1, limit)))))
                   .join()
                   .stream()
