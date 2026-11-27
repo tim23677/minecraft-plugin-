@@ -82,4 +82,4 @@ en, de, fr, es, pl, pt-br, ru, tr, zh-cn. A test checks keys and placeholders of
 | PlaceholderAPI on a live server | unit tests only |
 | `OrderHub-<version>-bundled.jar` loaded on a server | built and content checked, not started on a server |
 | `dependencyCheckAnalyze` | not run, needs `NVD_API_KEY` |
-| PIT mutation thresholds per package | not reached, see RELEASE_REPORT.md |
+| PIT mutation thresholds | tx 85.1 %, item 94.2 %, economy 76.6 %, storage 82.7 % measured; other packages not measured, see RELEASE_REPORT.md |
