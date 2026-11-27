@@ -15,7 +15,10 @@ class ReviewFixesTest {
     String out =
         SupportDump.scrub(
             "jdbc:mariadb://db.example.com/orderhub?user=oh&password=geheim&sslMode=verify-full");
-    assertThat(out).doesNotContain("geheim").doesNotContain("user=oh").contains("sslMode=verify-full");
+    assertThat(out)
+        .doesNotContain("geheim")
+        .doesNotContain("user=oh")
+        .contains("sslMode=verify-full");
   }
 
   @Test
@@ -25,11 +28,17 @@ class ReviewFixesTest {
   }
 
   @Test
+  void dumpKeepsTimestamps() {
+    assertThat(SupportDump.scrub("[11:12:17 INFO]: ready")).isEqualTo("[11:12:17 INFO]: ready");
+  }
+
+  @Test
   void localHostIsParsedNotSearched() {
     assertThat(DatabaseSetup.isLocalHost("jdbc:mariadb://localhost:3306/x")).isTrue();
     assertThat(DatabaseSetup.isLocalHost("jdbc:mariadb://127.0.0.1/x")).isTrue();
     assertThat(DatabaseSetup.isLocalHost("jdbc:mariadb://[::1]:3306/x")).isTrue();
-    assertThat(DatabaseSetup.isLocalHost("jdbc:mariadb://db.example.com/x?a=//localhost")).isFalse();
+    assertThat(DatabaseSetup.isLocalHost("jdbc:mariadb://db.example.com/x?a=//localhost"))
+        .isFalse();
     assertThat(DatabaseSetup.isLocalHost("jdbc:mariadb://localhost.evil.com/x")).isFalse();
     assertThat(DatabaseSetup.isLocalHost("jdbc:mariadb://u:p@db.example.com/x")).isFalse();
   }
@@ -41,7 +50,7 @@ class ReviewFixesTest {
       file.sink().write("line");
     }
     try (var files = Files.list(dir)) {
-      assertThat(files.map(p -> p.getFileName().toString()))
+      assertThat(files.map(p -> String.valueOf(p.getFileName())))
           .anyMatch(n -> n.startsWith("transactions."));
     }
   }

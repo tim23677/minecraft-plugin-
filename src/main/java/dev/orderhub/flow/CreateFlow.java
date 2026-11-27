@@ -233,7 +233,8 @@ public final class CreateFlow {
           INVALID_PRICE,
           INVALID_QUANTITY,
           INVALID_AMOUNT,
-          DB_UNAVAILABLE -> cooldown.release(player.getUniqueId());
+          DB_UNAVAILABLE ->
+          cooldown.release(player.getUniqueId());
       default -> {}
     }
     switch (result.status()) {
