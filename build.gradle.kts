@@ -376,11 +376,16 @@ dependencyCheck {
 pitest {
     junit5PluginVersion.set(libs.versions.pitestJunit5)
     pitestVersion.set(libs.versions.pitest)
-    targetClasses.set(listOf("dev.orderhub.*"))
+    // -PpitTarget=dev.orderhub.tx.* limits a run to one package (a full run takes over an hour).
+    targetClasses.set(
+        ((findProperty("pitTarget") as String?)?.split(",") ?: listOf("dev.orderhub.*")),
+    )
     // Nur Testklassen als Tests: Ohne diese Angabe hielt PIT Hauptklassen mit Vault-Abhaengigkeit fuer Tests.
     targetTests.set(listOf("dev.orderhub.*Test", "dev.orderhub.*Tests"))
-    excludedGroups.set(listOf("integration"))
+    excludedGroups.set(listOf("integration", "load"))
     threads.set(2)
+    timeoutConstInMillis.set(10000)
+    timeoutFactor.set(java.math.BigDecimal("2.0"))
     outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
 }
