@@ -97,7 +97,7 @@ notify:
 
 admin:
   transaction-not-found: "<yellow>Keine Transaktion mit dieser ID."
-  transaction: "<gray><entry>"
+  entry: "<gray><entry>"
   ledger-line: "<gray>  <kind> <white><amount></white> <player>"
   warning: "<red>[OrderHub] <message>"
   help: "<gray>reload | list [Status] | cancel <id> confirm <Grund> | purge-expired confirm <Grund> | transactions [Spieler-UUID] | transaction <uuid> | inspect <id> | recovery confirm <Grund> | review list|show|resolve | health | dump | backup confirm <Grund> | export orders|ledger confirm <Grund> | statistics | debug"
@@ -108,6 +108,24 @@ admin:
   recovery-report: "<gray>Recovery beendet: <fixed> behoben, <review> brauchen manuelle Prüfung."
   purge-done: "<green><count> abgelaufene Aufträge verarbeitet."
   header: "<gradient:#4ea8de:#7b6cf6>OrderHub Admin</gradient>"
+  backup-done: "<green>Sicherung geschrieben: <file>"
+  backup-failed: "<red><reason>"
+  debug: "<gray>Server <white><server></white>, Datenbank <white><dialect></white>, offene Menüs <white><menus></white>."
+  dump-done: "<green>Support-Datei geschrieben: <file>. Prüfe sie vor dem Weitergeben, Geheimnisse, UUIDs und IP-Adressen sind entfernt."
+  export-done: "<green><rows> Zeilen nach <file> exportiert"
+  export-usage: "<yellow>Verwendung: /orderadmin export orders|ledger confirm <Grund>"
+  health-db: "<gray>Datenbank-Pool: <white><active></white> aktiv, <white><idle></white> frei, <white><waiting></white> wartend, <white><total></white> gesamt. Executor: <white><running></white> laufen, <white><queued></white> in der Warteschlange."
+  health-economy: "<gray>Economy: <white><samples></white> gemessene Aufrufe, Median <white><median></white> ms, Maximum <white><max></white> ms, zuletzt <white><last></white> ms. Älteste offene Zahlung: <white><oldest></white> s."
+  health-payments: "<gray>Zahlungen: <white><open></white> offen, <white><progress></white> in Bearbeitung, <white><review></white> in manueller Prüfung."
+  health-recovery: "<gray>Letzte Recovery <white><at></white>: <summary>"
+  health-recovery-none: "<gray>Seit dem Start lief noch keine Recovery."
+  order-line: "<gray>#<id> <white><item></white> <filled>/<total> zu <unit>, Besitzer <owner>, <status>"
+  recovery-summary: "<gray><summary>"
+  review-header: "<gradient:#4ea8de:#7b6cf6>Manuelle Prüfung</gradient> <gray>(<count>)"
+  review-line: "<gray><white><id></white> <type> <amount> Spieler <player> <detail>"
+  review-result: "<gray>Prüfung <white><tx></white> <how>: <white><status></white> (Erstattungstransaktion <refund>)"
+  review-usage: "<yellow>Verwendung: /orderadmin review resolve <tx> paid|refund|discard confirm <Grund>"
+  statistics: "<gray>Aktiv <white><active></white>, pausiert <white><paused></white>, abgeschlossen <white><completed></white>, storniert <white><cancelled></white>, abgelaufen <white><expired></white>, manuelle Prüfung <white><review></white>."
   transaction: "<gray>Transaktion <white><id></white> <state> <amount> Spieler <player>"
 
 menu:

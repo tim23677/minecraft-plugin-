@@ -64,7 +64,19 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class OrderHubPlugin extends JavaPlugin {
 
   private static final List<String> RESOURCES =
-      List.of("config.yml", "discord.yml", "menus.yml", "messages_en.yml", "messages_de.yml");
+      List.of(
+          "config.yml",
+          "discord.yml",
+          "menus.yml",
+          "messages_en.yml",
+          "messages_de.yml",
+          "messages_fr.yml",
+          "messages_es.yml",
+          "messages_pl.yml",
+          "messages_pt-br.yml",
+          "messages_ru.yml",
+          "messages_tr.yml",
+          "messages_zh-cn.yml");
 
   private volatile Settings settings;
   private final java.util.concurrent.atomic.AtomicReference<dev.orderhub.config.Rates> rates =

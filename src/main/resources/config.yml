@@ -7,7 +7,7 @@ config-version: 3
 # Unique id of this server. Every server sharing a database needs its own id.
 server-id: "main"
 
-# Sprache der Spielertexte: en oder de (Dateien messages_<sprache>.yml direkt in plugins/OrderHub). / Message language.
+# Sprache der Spielertexte: en, de, fr, es, pl, pt-br, ru, tr oder zh-cn (Dateien messages_<sprache>.yml direkt in plugins/OrderHub). / Message language.
 language: "en"
 
 # Debug-Ausgaben in der Konsole (keine vertraulichen Daten). / Extra console output.

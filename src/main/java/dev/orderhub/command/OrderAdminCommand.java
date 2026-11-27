@@ -608,7 +608,7 @@ public final class OrderAdminCommand implements CommandHandler {
       reply(
           sender,
           order
-              .map(o -> s.messages().get("admin.transaction", Messages.text("entry", o.toString())))
+              .map(o -> s.messages().get("admin.entry", Messages.text("entry", o.toString())))
               .orElseGet(
                   () -> s.messages().prefixed("order.not-found", Messages.text("id", args[1]))));
       return;
@@ -619,7 +619,7 @@ public final class OrderAdminCommand implements CommandHandler {
       reply(
           sender,
           entry
-              .map(e -> s.messages().get("admin.transaction", Messages.text("entry", e.toString())))
+              .map(e -> s.messages().get("admin.entry", Messages.text("entry", e.toString())))
               .orElseGet(() -> s.messages().prefixed("admin.transaction-not-found")));
       for (var l : admin.ledgerOf(id)) {
         reply(
