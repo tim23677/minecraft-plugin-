@@ -8,6 +8,7 @@ Added
 - `/order sell [amount]`: finds the open order with the best price for the item in hand and opens the delivery menu as a preview, delivery happens only after confirming
 - Per order options stored in the database: minimum remaining durability and "enchantments at least" tolerance for deliveries, auto-claim flag (stored, not used yet)
 - Component presets in `items.component-presets` (potions, arrows, fireworks, goat horns, banners, ominous bottles, player heads): these items can be ordered, delivery still has to match every component exactly
+- `/order template` (save, list, use, delete; 10 per player) and `/order renew <id>` (automatic renewal on or off)
 - Menus for statistics, history, favorites and market analytics
 - Login summary of delivered items and expired orders, shown as chat, actionbar or title, optional sound (`notifications.*`); cross-server notes through the shared database
 - Seven new languages: French, Spanish, Polish, Brazilian Portuguese, Russian, Turkish, Simplified Chinese (a test checks that every language file has all keys and placeholders)
@@ -33,7 +34,7 @@ Fixed
 - A delivery of an item that differs from the order only in a tolerated trait now matches according to the order options instead of being rejected without a reason
 - Duplicate key `admin.transaction` in the German message file, missing German admin texts
 
-Not included in 2.0.0 (see RELEASE_REPORT.md): order templates in menus, create menu, bulk sell, auto-renew fee, review menu, import from other plugins, offline MariaDB driver.
+Not included in 2.0.0 (see RELEASE_REPORT.md): menus for order templates, create menu, bulk sell, auto-renew fee, review menu, import from other plugins, offline MariaDB driver.
 
 ## 1.1.0 (2026-11-26)
 

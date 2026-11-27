@@ -76,7 +76,7 @@ en, de, fr, es, pl, pt-br, ru, tr, zh-cn. A test checks keys and placeholders of
 
 | Item | Status |
 |---|---|
-| Paper 1.21.11 and Folia 1.21.11 server runs of 2.0.0, bot play-through of 2.0.0 | not run in this build (the Minecraft EULA is not accepted by the assistant) |
+| Folia bot play-through of 2.0.0 | not run (Paper: 17 of 17 checks, Paper and Folia start via mcstage: 2 passed) |
 | Economy plugins other than EssentialsX with VaultUnlocked, Folia with an economy | not tested |
 | Geyser and Bedrock clients | not tested |
 | PlaceholderAPI on a live server | unit tests only |

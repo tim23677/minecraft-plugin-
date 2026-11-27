@@ -33,6 +33,8 @@ Players:
 - `/order mine` lists your orders (left click cancels, right click pauses or resumes)
 - `/order market [newest|highest-price|lowest-price|almost-completed|highest-demand]` opens the marketplace. The menu has a search by item name, categories and sorting, and pages through large markets with keyset pagination
 - `/order sell [amount]` finds the open order with the best price for the item in your hand and opens the delivery menu with the items as a preview. Nothing is delivered before you confirm
+- `/order template [save <name>|list|use <name>|delete <name>]` stores and reuses order settings (at most 10 per player)
+- `/order renew <id>` switches automatic renewal of one of your orders on or off
 - `/order deliver <id>` opens the delivery menu for an order
 - `/order claims` collects items delivered to your orders, `/order returns` collects items that could not be handed back earlier
 - `/order cancel <id>` cancels one of your orders
