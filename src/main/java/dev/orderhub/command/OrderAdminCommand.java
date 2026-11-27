@@ -403,8 +403,12 @@ public final class OrderAdminCommand implements CommandHandler {
     }
     List<String> log = List.of();
     try {
+      java.nio.file.Path pluginsDir = dataDir.toAbsolutePath().getParent();
+      java.nio.file.Path serverDir = pluginsDir == null ? null : pluginsDir.getParent();
       java.nio.file.Path latest =
-          dataDir.getParent().getParent().resolve("logs").resolve("latest.log");
+          serverDir == null
+              ? dataDir.resolve("latest.log")
+              : serverDir.resolve("logs").resolve("latest.log");
       if (java.nio.file.Files.isRegularFile(latest)) {
         log = java.nio.file.Files.readAllLines(latest, java.nio.charset.StandardCharsets.UTF_8);
       }
