@@ -56,6 +56,7 @@ public record Settings(
     boolean backupAutoEnabled,
     int backupIntervalHours,
     int backupKeep,
+    boolean metricsEnabled,
     boolean updateCheck,
     String updateRepository,
     List<String> warnings) {
@@ -131,6 +132,7 @@ public record Settings(
         cfg.getBoolean("backup.auto.enabled", true),
         range(cfg, "backup.auto.interval-hours", 24, 1, 24 * 30, warnings),
         range(cfg, "backup.auto.keep", 7, 1, 1000, warnings),
+        cfg.getBoolean("metrics.enabled", true),
         cfg.getBoolean("updates.check", false),
         validRepositoryOrEmpty(str(cfg, "updates.repository", ""), warnings),
         List.copyOf(warnings));

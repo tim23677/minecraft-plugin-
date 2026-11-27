@@ -152,6 +152,12 @@ backup:
     interval-hours: 24
     keep: 7
 
+metrics:
+  # Anonyme Nutzungsstatistik ueber bStats (Version, Datenbanktyp, Sprache). Keine Spielerdaten.
+  # false schaltet sie fuer OrderHub ab, serverweit geht das in plugins/bStats/config.yml.
+  # Neustart noetig.
+  enabled: true
+
 retention:
   # Aufbewahrung von Preisverlauf und Markt-Snapshots in Tagen.
   history-days: 120

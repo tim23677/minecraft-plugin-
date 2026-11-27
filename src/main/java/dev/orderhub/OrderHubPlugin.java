@@ -525,6 +525,20 @@ public class OrderHubPlugin extends JavaPlugin {
                               + current
                               + ")")));
     }
+    var metricsResult =
+        dev.orderhub.bootstrap.MetricsSetup.start(
+            st.metricsEnabled(),
+            dev.orderhub.bootstrap.MetricsSetup.PLUGIN_ID,
+            () -> {
+              var metrics =
+                  new org.bstats.bukkit.Metrics(
+                      this, dev.orderhub.bootstrap.MetricsSetup.PLUGIN_ID);
+              metrics.addCustomChart(
+                  new org.bstats.charts.SimplePie(
+                      "storage_type", () -> String.valueOf(db.dialect())));
+              metrics.addCustomChart(new org.bstats.charts.SimplePie("language", st::language));
+            });
+    getLogger().fine("bStats: " + metricsResult);
     getLogger()
         .info("OrderHub enabled (server-id " + st.serverId() + ", " + storage.dialect() + ")");
   }

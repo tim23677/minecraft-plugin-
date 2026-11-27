@@ -26,6 +26,8 @@ dependencies {
     // sein eigenes slf4j. Das Jar bleibt klein, Treiber kollidieren nicht mit anderen Plugins.
     compileOnly(libs.hikaricp)
     compileOnly(libs.slf4j.api)
+    // bStats wird eingebettet und verschoben (shadowJar), damit es nie mit anderen Plugins kollidiert.
+    implementation(libs.bstats.bukkit)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(platform(libs.testcontainers.bom))
@@ -100,6 +102,7 @@ val loadTest by tasks.registering(Test::class) {
 
 tasks.shadowJar {
     archiveClassifier.set("")
+    relocate("org.bstats", "dev.orderhub.libs.bstats")
 }
 tasks.build { dependsOn(tasks.shadowJar) }
 
