@@ -44,7 +44,7 @@ Die Spalte "Sonstige" fasst Zeitüberschreitungen, nicht lauffähige Mutanten un
 | dev.orderhub.storage | 467 | 341 | 74 | 44 | 8 | 73.0 % |
 | dev.orderhub.tx | 371 | 294 | 36 | 34 | 7 | 79.2 % |
 
-Die Schwellen aus Phase 6 (tx, economy, item, storage mindestens 85 %, übrige mindestens 70 %) sind auf dem Ausgangsstand in keinem Paket außer teilweise `market` erreicht. `tx` liegt bei 79,2 %, `item` bei 81,2 %, `storage` bei 73,0 %, `economy` bei 44,4 %.
+Die Schwellen aus Phase 6 (tx, economy, item, storage mindestens 85 %, übrige mindestens 70 %) sind auf dem Ausgangsstand nur teilweise erreicht. Die 70 % erreichen bootstrap (79,5 %), config (92,9 %), discord (80,0 %), domain (87,9 %) und market (93,3 %). Von den vier Kernpaketen liegt keines bei 85 %: tx 79,2 %, item 81,2 %, storage 73,0 %, economy 44,4 %. Unter 70 % liegen unter anderem flow (24,3 %), command (26,2 %), gui (64,9 %), service (67,0 %) und integration (26,3 %).
 
 ## Behobene Widersprüche in der Dokumentation
 
