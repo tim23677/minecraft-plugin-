@@ -248,3 +248,13 @@ insight:
     title: "<yellow>Pedido n.º <order>"
   favorites:
     hint: "<dark_gray>Clic izquierdo: análisis de mercado, clic derecho: quitar"
+
+template:
+  saved: "<green>Plantilla <white><name></white> guardada."
+  list-header: "<gold>Tus plantillas:"
+  list-entry: "<gray>- <white><name></white>: <quantity>x <item> a <unit> cada uno"
+  empty: "<gray>No tienes plantillas. Guarda una con <white>/order template save [nombre] [cantidad] [precio]</white>."
+  deleted: "<green>Plantilla <white><name></white> eliminada."
+  not-found: "<red>No hay ninguna plantilla llamada <white><name></white>."
+  limit: "<red>Alcanzaste el límite de <max> plantillas. Elimina una primero."
+  usage: "<gray>Usa <white>/order template save|use|delete [nombre]</white> o <white>/order template list</white>."

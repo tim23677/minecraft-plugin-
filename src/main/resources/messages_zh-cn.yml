@@ -248,3 +248,13 @@ insight:
     title: "<yellow>订单 #<order>"
   favorites:
     hint: "<dark_gray>左键：市场分析，右键：移除"
+
+template:
+  saved: "<green>已保存模板 <white><name></white>。"
+  list-header: "<gold>你的模板："
+  list-entry: "<gray>- <white><name></white>：<quantity>x <item>，每个 <unit>"
+  empty: "<gray>你还没有模板。使用 <white>/order template save [名称] [数量] [价格]</white> 保存一个。"
+  deleted: "<green>已删除模板 <white><name></white>。"
+  not-found: "<red>没有名为 <white><name></white> 的模板。"
+  limit: "<red>已达到 <max> 个模板的上限，请先删除一个。"
+  usage: "<gray>使用 <white>/order template save|use|delete [名称]</white> 或 <white>/order template list</white>。"

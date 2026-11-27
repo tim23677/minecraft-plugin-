@@ -248,3 +248,13 @@ insight:
     title: "<yellow>Auftrag #<order>"
   favorites:
     hint: "<dark_gray>Linksklick: Marktanalyse, Rechtsklick: entfernen"
+
+template:
+  saved: "<green>Vorlage <white><name></white> gespeichert."
+  list-header: "<gold>Deine Vorlagen:"
+  list-entry: "<gray>- <white><name></white>: <quantity>x <item> zu je <unit>"
+  empty: "<gray>Du hast keine Vorlagen. Speichere eine mit <white>/order template save [name] [menge] [preis]</white>."
+  deleted: "<green>Vorlage <white><name></white> gelöscht."
+  not-found: "<red>Keine Vorlage mit dem Namen <white><name></white>."
+  limit: "<red>Du hast das Limit von <max> Vorlagen erreicht. Lösche zuerst eine."
+  usage: "<gray>Nutze <white>/order template save|use|delete [name]</white> oder <white>/order template list</white>."

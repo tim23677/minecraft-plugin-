@@ -394,6 +394,7 @@ public class OrderHubPlugin extends JavaPlugin {
         new OrderCommand(
             services, create, deliveryFlow, menuViews, claimFlow, returnFlow, insightsFlow);
     orderCommand.sell(new dev.orderhub.flow.SellFlow(services, deliveryFlow));
+    orderCommand.templates(new dev.orderhub.flow.TemplateFlow(services, create));
     orderCommand.insightMenus(new dev.orderhub.flow.InsightMenus(services));
     commands.setOrder(orderCommand);
     OrderAdminCommand adminCommand =

@@ -108,6 +108,36 @@ public final class CreateFlow {
           s.messages().prefixed("general.invalid-amount", Messages.text("input", pRaw)));
       return;
     }
+    review(player, snapshot, template, q.getAsInt(), unit);
+  }
+
+  /** Startet die Erstellung aus einer Vorlage: gleiche Pruefungen, Zusammenfassung, Bestaetigen. */
+  public void startFromTemplate(
+      Player player, ItemSnapshot snapshot, ItemStack template, int quantity, long unit) {
+    ValidationResult check = s.matcher().validateForOrder(template);
+    if (!check.valid()) {
+      player.sendMessage(
+          s.messages()
+              .prefixed(
+                  "create.item-rejected",
+                  Messages.text(
+                      "reason",
+                      s.messages()
+                          .raw(
+                              "reject."
+                                  + check
+                                      .reason()
+                                      .name()
+                                      .toLowerCase(java.util.Locale.ROOT)
+                                      .replace('_', '-')))));
+      return;
+    }
+    review(player, snapshot, template, quantity, unit);
+  }
+
+  private void review(
+      Player player, ItemSnapshot snapshot, ItemStack template, int quantityValue, long unit) {
+    OptionalInt q = OptionalInt.of(quantityValue);
     if (unit < s.limits().minPrice() || unit > s.limits().maxPrice()) {
       player.sendMessage(
           s.messages()

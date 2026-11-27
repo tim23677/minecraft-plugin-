@@ -248,3 +248,13 @@ insight:
     title: "<yellow>Sipariş #<order>"
   favorites:
     hint: "<dark_gray>Sol tık: piyasa analizi, sağ tık: kaldır"
+
+template:
+  saved: "<green><white><name></white> şablonu kaydedildi."
+  list-header: "<gold>Şablonların:"
+  list-entry: "<gray>- <white><name></white>: <quantity>x <item>, tanesi <unit>"
+  empty: "<gray>Hiç şablonun yok. <white>/order template save [ad] [miktar] [fiyat]</white> ile bir tane kaydet."
+  deleted: "<green><white><name></white> şablonu silindi."
+  not-found: "<red><white><name></white> adlı şablon yok."
+  limit: "<red><max> şablon sınırına ulaştın. Önce birini sil."
+  usage: "<gray><white>/order template save|use|delete [ad]</white> veya <white>/order template list</white> kullan."

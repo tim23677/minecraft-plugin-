@@ -248,3 +248,13 @@ insight:
     title: "<yellow>Pedido nº <order>"
   favorites:
     hint: "<dark_gray>Clique esquerdo: análise de mercado, clique direito: remover"
+
+template:
+  saved: "<green>Modelo <white><name></white> salvo."
+  list-header: "<gold>Seus modelos:"
+  list-entry: "<gray>- <white><name></white>: <quantity>x <item> por <unit> cada"
+  empty: "<gray>Você não tem modelos. Salve um com <white>/order template save [nome] [quantidade] [preço]</white>."
+  deleted: "<green>Modelo <white><name></white> excluído."
+  not-found: "<red>Não existe modelo chamado <white><name></white>."
+  limit: "<red>Você atingiu o limite de <max> modelos. Exclua um antes."
+  usage: "<gray>Use <white>/order template save|use|delete [nome]</white> ou <white>/order template list</white>."

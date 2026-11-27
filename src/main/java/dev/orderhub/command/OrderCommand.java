@@ -28,6 +28,7 @@ public final class OrderCommand implements CommandHandler {
           "mine",
           "market",
           "sell",
+          "template",
           "claims",
           "returns",
           "deliver",
@@ -45,6 +46,7 @@ public final class OrderCommand implements CommandHandler {
   private final ParcelFlow returns;
   private final dev.orderhub.flow.InsightsFlow insights;
   private volatile dev.orderhub.flow.SellFlow sell;
+  private volatile dev.orderhub.flow.TemplateFlow templates;
   private volatile dev.orderhub.flow.InsightMenus insightMenus;
 
   /** Verdrahtet die Menues fuer Statistik, Verlauf, Favoriten und Analyse. */
@@ -55,6 +57,11 @@ public final class OrderCommand implements CommandHandler {
               + "Er wird weder veraendert noch weitergegeben.")
   public void insightMenus(dev.orderhub.flow.InsightMenus menus) {
     this.insightMenus = menus;
+  }
+
+  /** Verdrahtet {@code /order template}. */
+  public void templates(dev.orderhub.flow.TemplateFlow flow) {
+    this.templates = flow;
   }
 
   /** Verdrahtet {@code /order sell}. */
@@ -121,6 +128,16 @@ public final class OrderCommand implements CommandHandler {
       case "market" -> {
         if (need(player, "orderhub.market")) {
           openMarket(player, args);
+        }
+      }
+      case "template" -> {
+        if (need(player, "orderhub.create")) {
+          dev.orderhub.flow.TemplateFlow flow = templates;
+          if (flow == null) {
+            player.sendMessage(s.messages().prefixed("general.not-available"));
+          } else {
+            flow.handle(player, java.util.Arrays.copyOfRange(args, 1, args.length));
+          }
         }
       }
       case "sell" -> {

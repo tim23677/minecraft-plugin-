@@ -248,3 +248,13 @@ insight:
     title: "<yellow>Заказ №<order>"
   favorites:
     hint: "<dark_gray>ЛКМ: анализ рынка, ПКМ: убрать"
+
+template:
+  saved: "<green>Шаблон <white><name></white> сохранён."
+  list-header: "<gold>Ваши шаблоны:"
+  list-entry: "<gray>- <white><name></white>: <quantity>x <item> по <unit> за штуку"
+  empty: "<gray>У вас нет шаблонов. Сохраните шаблон командой <white>/order template save [имя] [количество] [цена]</white>."
+  deleted: "<green>Шаблон <white><name></white> удалён."
+  not-found: "<red>Шаблона с именем <white><name></white> нет."
+  limit: "<red>Достигнут лимит в <max> шаблонов. Сначала удалите один."
+  usage: "<gray>Используйте <white>/order template save|use|delete [имя]</white> или <white>/order template list</white>."

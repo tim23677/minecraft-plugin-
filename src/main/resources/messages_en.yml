@@ -248,3 +248,13 @@ insight:
     title: "<yellow>Order #<order>"
   favorites:
     hint: "<dark_gray>Left click: market analysis, right click: remove"
+
+template:
+  saved: "<green>Saved template <white><name></white>."
+  list-header: "<gold>Your templates:"
+  list-entry: "<gray>- <white><name></white>: <quantity>x <item> at <unit> each"
+  empty: "<gray>You have no templates. Save one with <white>/order template save [name] [quantity] [price]</white>."
+  deleted: "<green>Deleted template <white><name></white>."
+  not-found: "<red>No template named <white><name></white>."
+  limit: "<red>You reached the limit of <max> templates. Delete one first."
+  usage: "<gray>Use <white>/order template save|use|delete [name]</white> or <white>/order template list</white>."

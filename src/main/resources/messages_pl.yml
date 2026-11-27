@@ -248,3 +248,13 @@ insight:
     title: "<yellow>Zlecenie nr <order>"
   favorites:
     hint: "<dark_gray>LPM: analiza rynku, PPM: usuń"
+
+template:
+  saved: "<green>Zapisano szablon <white><name></white>."
+  list-header: "<gold>Twoje szablony:"
+  list-entry: "<gray>- <white><name></white>: <quantity>x <item> po <unit> za sztukę"
+  empty: "<gray>Nie masz szablonów. Zapisz jeden poleceniem <white>/order template save [nazwa] [ilość] [cena]</white>."
+  deleted: "<green>Usunięto szablon <white><name></white>."
+  not-found: "<red>Nie ma szablonu o nazwie <white><name></white>."
+  limit: "<red>Osiągnięto limit <max> szablonów. Najpierw usuń jeden."
+  usage: "<gray>Użyj <white>/order template save|use|delete [nazwa]</white> lub <white>/order template list</white>."

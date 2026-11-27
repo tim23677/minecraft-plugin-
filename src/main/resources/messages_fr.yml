@@ -248,3 +248,13 @@ insight:
     title: "<yellow>Commande n°<order>"
   favorites:
     hint: "<dark_gray>Clic gauche : analyse du marché, clic droit : retirer"
+
+template:
+  saved: "<green>Modèle <white><name></white> enregistré."
+  list-header: "<gold>Vos modèles :"
+  list-entry: "<gray>- <white><name></white> : <quantity>x <item> à <unit> pièce"
+  empty: "<gray>Vous n'avez aucun modèle. Enregistrez-en un avec <white>/order template save [nom] [quantité] [prix]</white>."
+  deleted: "<green>Modèle <white><name></white> supprimé."
+  not-found: "<red>Aucun modèle nommé <white><name></white>."
+  limit: "<red>Vous avez atteint la limite de <max> modèles. Supprimez-en un d'abord."
+  usage: "<gray>Utilisez <white>/order template save|use|delete [nom]</white> ou <white>/order template list</white>."

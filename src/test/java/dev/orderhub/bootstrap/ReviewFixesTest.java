@@ -28,6 +28,15 @@ class ReviewFixesTest {
   }
 
   @Test
+  void dumpHidesIpv6WithPortOrPrefix() {
+    assertThat(SupportDump.scrub("db:2001:db8::5 down"))
+        .doesNotContain("2001:db8")
+        .doesNotContain("::5");
+    assertThat(SupportDump.scrub("2001:db8:0:0:0:0:0:5:3306")).doesNotContain("2001:db8");
+    assertThat(SupportDump.scrub("from ::1 ok")).doesNotContain("::1");
+  }
+
+  @Test
   void dumpKeepsTimestamps() {
     assertThat(SupportDump.scrub("[11:12:17 INFO]: ready")).isEqualTo("[11:12:17 INFO]: ready");
   }

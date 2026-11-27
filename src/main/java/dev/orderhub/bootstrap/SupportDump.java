@@ -25,9 +25,9 @@ public final class SupportDump {
       Pattern.compile("(?i)([?&;](?:password|passwd|pwd|user|username|token|secret)=)[^&;\\s]*");
   private static final Pattern IPV6 =
       Pattern.compile(
-          "(?i)(?<![\\w:])(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}(?![\\w:])"
-              + "|(?<![\\w:])(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?::"
-              + "(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?(?![\\w:])"
+          "(?i)(?<!\\w)(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}(?!\\w)"
+              + "|(?<!\\w)(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?::"
+              + "(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?(?!\\w)"
               + "|\\[[0-9a-f:]{3,}\\]");
   private static final Pattern UUID_PATTERN =
       Pattern.compile(
