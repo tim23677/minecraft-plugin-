@@ -43,34 +43,54 @@ public final class JoinListener implements Listener {
             });
   }
 
-  /** Zeigt offene Benachrichtigungen gesammelt: wenige einzeln, viele als Zusammenfassung. */
+  /** Zeigt offene Hinweise seit dem letzten Besuch als eine Zusammenfassung. */
   private void notes(org.bukkit.entity.Player player) {
     Async.supply(
         s.scheduler(),
         s.logger(),
         player,
-        () -> s.insights().takeNotes(player.getUniqueId(), 50),
+        () -> s.insights().takeNotes(player.getUniqueId(), 200),
         notes -> {
-          if (notes.isEmpty()) {
+          LoginSummary summary = LoginSummary.of(notes);
+          if (summary.isEmpty()) {
             return;
           }
-          if (notes.size() > 3) {
-            player.sendMessage(
-                s.messages().prefixed("notify.summary", Messages.number("count", notes.size())));
+          var settings = s.settings().get();
+          Notifier.Display display = Notifier.Display.parse(settings.notificationDisplay());
+          String sound = settings.notificationSound();
+          if (summary.deliveries() > 0 || summary.expiredOrders() > 0) {
+            Notifier.show(
+                player,
+                s.messages()
+                    .prefixed(
+                        "notify.login-summary",
+                        Messages.number("items", summary.deliveredItems()),
+                        Messages.number("deliveries", summary.deliveries()),
+                        Messages.number("expired", summary.expiredOrders())),
+                display,
+                sound);
+          }
+          if (summary.alerts().size() > LoginSummary.MAX_ALERTS_SHOWN) {
+            Notifier.show(
+                player,
+                s.messages()
+                    .prefixed("notify.summary", Messages.number("count", summary.alerts().size())),
+                display,
+                "");
             return;
           }
-          for (var note : notes) {
-            String[] parts = note.payload().split("\\|");
-            if (note.kind().equals("price-alert") && parts.length == 4) {
-              player.sendMessage(
-                  s.messages()
-                      .prefixed(
-                          "notify.price-alert",
-                          Messages.text("item", parts[0]),
-                          Messages.text("quantity", parts[1]),
-                          Messages.text("unit", parts[2]),
-                          Messages.text("id", parts[3])));
-            }
+          for (String[] parts : summary.alerts()) {
+            Notifier.show(
+                player,
+                s.messages()
+                    .prefixed(
+                        "notify.price-alert",
+                        Messages.text("item", parts[0]),
+                        Messages.text("quantity", parts[1]),
+                        Messages.text("unit", parts[2]),
+                        Messages.text("id", parts[3])),
+                display,
+                summary.deliveries() == 0 && summary.expiredOrders() == 0 ? sound : "");
           }
         },
         orphan -> {});

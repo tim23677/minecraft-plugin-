@@ -87,6 +87,7 @@ favorites:
   alert-set: "<green>Preisalarm für <item> bei <price> gesetzt."
 
 notify:
+  login-summary: "<aqua>Während du weg warst: <items> Items in <deliveries> Lieferungen, <expired> deiner Aufträge sind abgelaufen."
   price-alert: "<aqua>Preisalarm: <quantity>x <item> gesucht zu je <unit> (Auftrag #<id>)."
   claims-waiting: "<aqua>Es warten <count> Itempakete auf dich. Nutze <white>/order claims</white>."
   delivered: "<aqua>Auftrag #<id>: <quantity>x <item> geliefert."

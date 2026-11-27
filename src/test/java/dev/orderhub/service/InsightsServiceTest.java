@@ -132,4 +132,56 @@ class InsightsServiceTest {
                 .doesNotContainPattern(
                     "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"));
   }
+
+  @Test
+  void anOfflineOwnerGetsADeliveryNoteExactlyOnce() {
+    UUID owner = UUID.randomUUID();
+    UUID journal = UUID.randomUUID();
+    insights.deliveryCommitted(delivery(journal, UUID.randomUUID(), owner, 10, 100, false));
+    insights.deliveryCommitted(delivery(journal, UUID.randomUUID(), owner, 10, 100, false));
+    var notes = insights.takeNotes(owner, 10);
+    assertThat(notes).hasSize(1);
+    assertThat(notes.get(0).kind()).isEqualTo("delivered");
+    assertThat(notes.get(0).payload()).startsWith("minecraft:diamond|10|");
+  }
+
+  @Test
+  void anOnlineOwnerGetsNoDeliveryNote() {
+    UUID owner = UUID.randomUUID();
+    insights.onlineCheck(id -> id.equals(owner));
+    insights.deliveryCommitted(
+        delivery(UUID.randomUUID(), UUID.randomUUID(), owner, 10, 100, false));
+    assertThat(insights.takeNotes(owner, 10)).isEmpty();
+  }
+
+  @Test
+  void anExpiredOrderNotesTheOfflineOwnerOnceAndIgnoresUnknownOrders() {
+    UUID owner = UUID.randomUUID();
+    long id =
+        storage
+            .transact(uow ->
+                uow.orders()
+                    .insert(
+                        new dev.orderhub.domain.NewOrder(
+                            owner,
+                            "test",
+                            new dev.orderhub.domain.ItemSnapshot(
+                                "minecraft:stick", 1, new byte[] {1, 2, 3}),
+                            100,
+                            5,
+                            1,
+                            2_000_000L,
+                            false,
+                            "misc"),
+                        1_000_000L)
+                    .id())
+            .join();
+    insights.noteExpired(id);
+    insights.noteExpired(id);
+    insights.noteExpired(99_999);
+    var notes = insights.takeNotes(owner, 10);
+    assertThat(notes).hasSize(1);
+    assertThat(notes.get(0).kind()).isEqualTo("expired");
+    assertThat(notes.get(0).payload()).isEqualTo("minecraft:stick|5|" + id);
+  }
 }

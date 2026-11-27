@@ -87,6 +87,7 @@ favorites:
   alert-set: "<green>Price alert set for <item> at <price>."
 
 notify:
+  login-summary: "<aqua>While you were away: <items> items arrived in <deliveries> deliveries, <expired> of your orders expired."
   price-alert: "<aqua>Price alert: <quantity>x <item> wanted at <unit> each (order #<id>)."
   claims-waiting: "<aqua>You have <count> item packages waiting. Use <white>/order claims</white>."
   delivered: "<aqua>Order #<id>: <quantity>x <item> delivered."

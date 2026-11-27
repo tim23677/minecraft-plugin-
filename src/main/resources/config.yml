@@ -119,6 +119,10 @@ market:
 notifications:
   # Mindestabstand zwischen zwei Benachrichtigungen gleicher Art an einen Spieler.
   cooldown-seconds: 60
+  # Wie die Zusammenfassung beim Login angezeigt wird: chat, actionbar oder title.
+  display: chat
+  # Ton bei der Zusammenfassung, zum Beispiel entity.experience_orb.pickup. Leer = kein Ton.
+  sound: ""
 
 retention:
   # Aufbewahrung von Preisverlauf und Markt-Snapshots in Tagen.

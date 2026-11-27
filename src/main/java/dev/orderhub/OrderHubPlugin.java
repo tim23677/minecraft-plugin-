@@ -336,6 +336,7 @@ public class OrderHubPlugin extends JavaPlugin {
             discord,
             () -> settings.notificationCooldownSeconds(),
             () -> settings.minTradesForRecommendation());
+    insights.onlineCheck(id -> getServer().getPlayer(id) != null);
     services =
         new Services(
             getLogger(),
@@ -407,9 +408,11 @@ public class OrderHubPlugin extends JavaPlugin {
                       () ->
                           orders.expireDue(
                               100,
-                              id ->
-                                  dev.orderhub.integration.Events.fire(
-                                      new dev.orderhub.api.event.OrderExpireEvent(id)))),
+                              id -> {
+                                dev.orderhub.integration.Events.fire(
+                                    new dev.orderhub.api.event.OrderExpireEvent(id));
+                                guarded("expiry note", () -> insights.noteExpired(id));
+                              })),
               15_000,
               60_000);
           scheduler.runAsyncRepeating(

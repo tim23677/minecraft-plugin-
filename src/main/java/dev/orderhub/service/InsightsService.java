@@ -37,6 +37,15 @@ public final class InsightsService {
   private final DiscordService discord;
   private final IntSupplier alertCooldownSeconds;
   private final IntSupplier minTradesForRecommendation;
+  private volatile java.util.function.Predicate<UUID> online = id -> false;
+
+  /**
+   * Legt fest, ob ein Spieler gerade online ist. Nur fuer Offline-Spieler werden Hinweise "waehrend
+   * du weg warst" gespeichert. Ohne Angabe gelten alle als offline.
+   */
+  public void onlineCheck(java.util.function.Predicate<UUID> check) {
+    this.online = check;
+  }
 
   public InsightsService(
       Storage storage,
@@ -110,6 +119,15 @@ public final class InsightsService {
             if (e.orderCompleted()) {
               uow.insights().recordOrderCompleted(e.owner(), now);
             }
+            if (!online.test(e.owner())) {
+              uow.insights()
+                  .addNote(
+                      e.owner(),
+                      "delivered",
+                      e.itemKey() + "|" + e.quantity() + "|" + e.orderId(),
+                      "deliv:" + e.journalId(),
+                      now);
+            }
           }
           return null;
         })
@@ -120,6 +138,28 @@ public final class InsightsService {
           "Order #" + e.orderId() + " completed",
           e.itemKey() + " fully delivered");
     }
+  }
+
+  /**
+   * Ein Auftrag ist abgelaufen: Hinweis fuer den Auftraggeber, wenn er offline ist. Idempotent
+   * ueber die Auftrags-Id.
+   */
+  public void noteExpired(long orderId) {
+    storage
+        .transact(uow -> {
+          var order = uow.orders().find(orderId);
+          if (order.isPresent() && !online.test(order.get().owner())) {
+            uow.insights()
+                .addNote(
+                    order.get().owner(),
+                    "expired",
+                    order.get().item().itemKey() + "|" + order.get().remaining() + "|" + orderId,
+                    "exp:" + orderId,
+                    uow.now());
+          }
+          return null;
+        })
+        .join();
   }
 
   public Optional<InsightsRepository.PlayerStats> stats(UUID player) {

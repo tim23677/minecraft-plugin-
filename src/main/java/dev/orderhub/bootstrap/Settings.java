@@ -39,6 +39,8 @@ public record Settings(
     int payoutMaxAttempts,
     int minTradesForRecommendation,
     int notificationCooldownSeconds,
+    String notificationDisplay,
+    String notificationSound,
     int historyRetentionDays,
     int cleanupIntervalMinutes,
     boolean economyAsyncSafe,
@@ -101,6 +103,8 @@ public record Settings(
         range(cfg, "payouts.max-attempts", 5, 1, 100, warnings),
         range(cfg, "market.min-trades-for-recommendation", 5, 1, 10_000, warnings),
         range(cfg, "notifications.cooldown-seconds", 60, 0, 86_400, warnings),
+        display(cfg, warnings),
+        str(cfg, "notifications.sound", ""),
         range(cfg, "retention.history-days", 120, 1, 3650, warnings),
         range(cfg, "retention.cleanup-interval-minutes", 30, 1, 1440, warnings),
         cfg.getBoolean("economy.async-safe", false),
@@ -125,6 +129,15 @@ public record Settings(
       }
     }
     return unknown;
+  }
+
+  private static String display(ConfigurationSection cfg, List<String> warnings) {
+    String raw = str(cfg, "notifications.display", "chat").toLowerCase(java.util.Locale.ROOT);
+    if (!List.of("chat", "actionbar", "title").contains(raw)) {
+      warnings.add("notifications.display '" + raw + "' is invalid, using 'chat'");
+      return "chat";
+    }
+    return raw;
   }
 
   private static String validRepositoryOrEmpty(String repository, List<String> warnings) {
