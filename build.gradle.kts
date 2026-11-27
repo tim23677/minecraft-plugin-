@@ -385,7 +385,6 @@ pitest {
     excludedGroups.set(listOf("integration", "load"))
     threads.set(2)
     timeoutConstInMillis.set(10000)
-    timeoutFactor.set(java.math.BigDecimal("2.0"))
     outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
 }
