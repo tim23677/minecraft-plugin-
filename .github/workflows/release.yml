@@ -1,0 +1,47 @@
+name: release
+
+# Hinweis: Die Actions sind noch ueber Versions-Tags eingebunden. Renovate (helpers:pinGitHubActionDigests)
+# schlaegt die Umstellung auf feste Commit-SHAs vor. Vor dem ersten Release diesen PR zusammenfuehren.
+
+# Ein Git-Tag der Form v1.2.3 baut das Release: Jar, SHA256SUMS, Kaeufer- und Quellpaket,
+# Provenance-Attestation und ein GitHub-Release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Check the tag matches build.gradle.kts
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts | head -1)"
+          test "v${version}" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} does not match version ${version}"; exit 1; }
+      - name: Build
+        run: ./gradlew build -x dependencyCheckAnalyze
+      - name: Package
+        run: tools/release/package.sh
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.zip
+            build/libs/OrderHub-*.jar
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/*.zip dist/SHA256SUMS \
+            --title "OrderHub ${GITHUB_REF_NAME#v}" \
+            --notes-file CHANGELOG.md

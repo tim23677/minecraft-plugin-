@@ -1,0 +1,306 @@
+# Manueller Testplan
+
+Dieser Plan beschreibt Szenarien für einen lokalen Paper-Server und einen Folia-Server. Die Spalte "Tatsächliches Ergebnis" ist bis zur Durchführung "nicht ausgeführt". Automatisierte Entsprechungen und ihre Ergebnisse stehen in RELEASE_REPORT.md.
+
+Durchführung: `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` startet Paper und Folia mit dem Jar (die EULA-Zustimmung liegt bei der ausführenden Person), siehe tools/README.md.
+
+## 1. Auftrag erstellen
+
+Voraussetzungen: Vault und Economy aktiv, Spieler mit 1000 Guthaben, 64 Diamanten Item in der Hand.
+
+Durchführung: /order create 64 8 ausführen und bestätigen.
+
+Erwartetes Ergebnis: Auftrag erscheint in /order mine, Guthaben sinkt um 512 plus Gebühr, Escrow 512 im Auftrag.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 2. Auftrag mit zu wenig Guthaben erstellen
+
+Voraussetzungen: Spieler mit 10 Guthaben.
+
+Durchführung: /order create 64 8.
+
+Erwartetes Ergebnis: Meldung zu wenig Guthaben, kein Auftrag, kein Guthabenverlust.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 3. Auftrag teilweise beliefern
+
+Voraussetzungen: Offener Auftrag über 64, zweiter Spieler mit 20 Stück.
+
+Durchführung: /order deliver <id>, 20 Stück einlegen, liefern.
+
+Erwartetes Ergebnis: Fortschritt 20/64, Lieferant erhält 20 mal Preis abzüglich Steuer, Auftraggeber findet 20 in /order claims.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 4. Auftrag vollständig beliefern
+
+Voraussetzungen: Wie oben, Rest 44.
+
+Durchführung: Rest liefern.
+
+Erwartetes Ergebnis: Auftrag COMPLETED, Escrow 0, Auftraggeber erhält Hinweis.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 5. Auftrag abbrechen
+
+Voraussetzungen: Offener Auftrag mit Teillieferung.
+
+Durchführung: /order cancel <id> bestätigen.
+
+Erwartetes Ergebnis: Nur Restbetrag wird erstattet, Auftrag CANCELLED.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 6. Auftrag läuft ab
+
+Voraussetzungen: orders.expiry-hours auf 1 setzen, Zeit abwarten oder Ablauf in DB vorziehen.
+
+Durchführung: Ablaufprüfung (Minute) oder /orderadmin purge-expired confirm test.
+
+Erwartetes Ergebnis: Auftrag EXPIRED, Restbetrag erstattet.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 7. Inventar voll
+
+Voraussetzungen: Auftraggeber mit vollem Inventar, Claim vorhanden.
+
+Durchführung: /order claims.
+
+Erwartetes Ergebnis: Meldung Inventar voll, Items bleiben gespeichert, nichts auf dem Boden.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 8. Liefermenü schließen
+
+Voraussetzungen: Items im Liefermenü.
+
+Durchführung: Menü per Esc schließen.
+
+Erwartetes Ergebnis: Items kommen zurück ins Inventar oder in /order returns.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 9. Spieler verlässt den Server
+
+Voraussetzungen: Items im Liefermenü.
+
+Durchführung: Verbindung trennen.
+
+Erwartetes Ergebnis: Beim nächsten Login werden Items automatisch zurückgegeben.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 10. Spieler wird gekickt
+
+Voraussetzungen: Items im Liefermenü.
+
+Durchführung: /kick.
+
+Erwartetes Ergebnis: Wie Disconnect.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 11. Spieler stirbt
+
+Voraussetzungen: Items im Liefermenü.
+
+Durchführung: Spieler töten.
+
+Erwartetes Ergebnis: Items nicht verloren und nicht dupliziert.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 12. Spieler wechselt die Welt
+
+Voraussetzungen: Items im Liefermenü.
+
+Durchführung: Teleport in andere Welt.
+
+Erwartetes Ergebnis: Menü schließt, Items zurück.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 13. Serverneustart während einer Lieferung
+
+Voraussetzungen: Lieferung bestätigt, Server hart beenden (kill -9).
+
+Durchführung: Neustart.
+
+Erwartetes Ergebnis: Recovery-Bericht im Log, kein doppelter Payout, Items oder Claim konsistent.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 14. Datenbankausfall
+
+Voraussetzungen: MariaDB-Server anhalten.
+
+Durchführung: /order market, Lieferung versuchen.
+
+Erwartetes Ergebnis: Fehlermeldung, kein Verlust, nach Wiederanlauf funktioniert alles.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 15. Vault-Auszahlungsfehler
+
+Voraussetzungen: Economy-Plugin deaktivieren oder Fehler erzwingen.
+
+Durchführung: Lieferung ausführen.
+
+Erwartetes Ergebnis: Payout bleibt PENDING mit Wiederholung, nach Economy-Rückkehr wird gezahlt.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 16. Zwei Spieler liefern gleichzeitig
+
+Voraussetzungen: Auftrag mit Restmenge 10.
+
+Durchführung: Beide liefern 10.
+
+Erwartetes Ergebnis: Gesamtlieferung höchstens 10, der andere bekommt Items zurück.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 17. 20 Spieler liefern gleichzeitig
+
+Voraussetzungen: Auftrag mit Restmenge 64, 20 Bots.
+
+Durchführung: Alle liefern.
+
+Erwartetes Ergebnis: Summe der Lieferungen gleich Auftragsmenge, genau eine Auszahlung je Lieferung.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 18. Zwei Server bearbeiten denselben Auftrag
+
+Voraussetzungen: MariaDB, zwei Server mit verschiedener server-id.
+
+Durchführung: Gleichzeitig liefern und stornieren.
+
+Erwartetes Ergebnis: Nur eine Aktion gewinnt, kein doppeltes Geld.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 19. Admin storniert während einer Lieferung
+
+Voraussetzungen: Lieferung läuft.
+
+Durchführung: /orderadmin cancel <id> confirm test.
+
+Erwartetes Ergebnis: Lieferung oder Storno gewinnt, nie beides mit doppeltem Geld.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 20. Auftrag läuft während einer Lieferung ab
+
+Voraussetzungen: Ablaufzeit knapp.
+
+Durchführung: Liefern.
+
+Erwartetes Ergebnis: Eine der beiden Aktionen gewinnt konsistent.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 21. Claim während eines Neustarts
+
+Voraussetzungen: Claim läuft.
+
+Durchführung: Server beenden.
+
+Erwartetes Ergebnis: Paket bleibt RESERVED, Recovery eskaliert nach MANUAL_REVIEW oder gibt belegt sicher frei.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 22. Doppelte Transaktionsanfrage
+
+Voraussetzungen: Zweimal schnell auf Bestätigen klicken.
+
+Durchführung: Klick wiederholen.
+
+Erwartetes Ergebnis: Genau ein Auftrag, genau eine Lieferung.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## 23. Recovery nach unklarem Auszahlungsstatus
+
+Voraussetzungen: Absturz während PAYOUT_IN_PROGRESS.
+
+Durchführung: Neustart, /orderadmin statistics.
+
+Erwartetes Ergebnis: Eintrag in MANUAL_REVIEW, keine automatische Zahlung.
+
+Tatsächliches Ergebnis Paper: nicht ausgeführt. Status: offen.
+
+Tatsächliches Ergebnis Folia: nicht ausgeführt. Status: offen.
+
+## Echter Serverlauf (mcstage)
+
+Befehl: `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` (EULA-Zustimmung vom Nutzer im Auftrag erteilt).
+
+| Plattform | Ergebnis | Geprüft |
+|---|---|---|
+| Paper 1.21.11 (Build 132) | bestanden | Plugin lädt, `OrderHub enabled (server-id main, SQLITE)`, Recovery läuft ohne Fehler, Konsolenbefehl `orderhub` antwortet "only be used by players" |
+| Folia 1.21.11 (Build 14) | bestanden | wie oben |
+
+Summary: 2 passed in 51.0s. Nicht geprüft: Auftrag erstellen, liefern, abholen, Neustart mit Spieler und Vault-Economy (braucht einen Bot-Spieler und ein Economy-Plugin, siehe RELEASE_REPORT.md).
+
+## Lauf für 1.1.0
+
+| Prüfung | Befehl | Ergebnis |
+|---|---|---|
+| Build mit -Xlint:all -Werror, Spotless, SpotBugs (Main und Test), Tests | `./gradlew clean build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 860 Tests, 0 Fehler, 0 übersprungen |
+| Integrationstests gegen MariaDB 11.4 (Testcontainers) | `TESTCONTAINERS_RYUK_DISABLED=true ./gradlew integrationTest --max-workers=1` | erfolgreich, 49 bestanden, 1 übersprungen (SQLite-Test) |
+| Lasttest SQLite, 100.000 Aufträge, 8 Sucher | `./gradlew loadTest --max-workers=1` | p50 19 ms, p95 156 ms, Maximum 867 ms |
+| Echter Server Paper 1.21.11 und Folia 1.21.11, mit Konsolenbefehlen `orderadmin health`, `backup`, `export orders`, `export ledger`, `review list` | `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` | 2 bestanden in 82,8 s |
+| Spieler-Szenario, Paper 1.21.11, VaultUnlocked 2.20.3, EssentialsX 2.22.0, zwei Bots | `node tools/e2e/e2e.js ../srv ../result.json` | 17 von 17 bestanden |
+
+Das Spieler-Szenario prüft: Server startet ohne ERROR und SLF4J-Zeilen, Vault-Economy erkannt, Auftrag erstellt und Escrow 50,00 gebucht, Lieferung mit 3 Überschuss-Items (8 im Menü, 5 gebraucht), Auftrag COMPLETED, Auszahlung COMPLETED (49,00 nach 2 % Steuer, per `/balance` bei EssentialsX bestätigt), Überschuss wieder beim Lieferanten, Abholung der 5 Diamanten, Claim CLAIMED, Storno mit Erstattung (REFUND COMPLETED, 40,00), harter Absturz (SIGKILL) direkt nach dem Bestätigen einer Lieferung mit 9 Items im Menü, Neustart, Recovery mit `itemsReturned=1`, keine offene Reservierung, Claim + Rückgabe = 9, keine Zahlung in MANUAL_REVIEW.
+
+Nicht ausgeführt: Spieler-Szenario auf Folia (EssentialsX läuft nicht auf Folia), andere Economy-Plugins, MariaDB-Lasttest, MariaDB 10.11, `dependencyCheckAnalyze` (kein NVD_API_KEY).

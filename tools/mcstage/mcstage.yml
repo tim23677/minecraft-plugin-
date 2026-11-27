@@ -8,12 +8,15 @@ versions: ["1.21.11"]
 memory: 1G
 
 plugins:
-  - build/libs/OrderHub-0.1.0-SNAPSHOT.jar
+  - build/libs/OrderHub-1.1.0.jar
 
 properties:
   online-mode: "false"
 
 forbid:
+  - "SLF4J"
+  - "Nag author"
+  - "ERROR]: [OrderHub]"
   - "Could not load 'plugins"
   - re:Exception in thread "Server thread"
   - "Error occurred while enabling OrderHub"
@@ -27,8 +30,28 @@ steps:
   - expect: "OrderHub"
     timeout: 30s
 
+  # Die Initialisierung laeuft asynchron (Datenbank, Recovery). Erst danach antwortet der Befehl.
+  - wait: 10s
+
   # Die Konsole darf das Menue nicht oeffnen.
   - send: "orderhub"
-  - expect: "Only players can use this command."
+  - expect: "This command can only be used by players."
+
+  # Betriebswerkzeuge ueber die Konsole: Zustand, Sicherung, Export, manuelle Pruefung.
+  - send: "orderadmin health"
+  - expect: "Database pool"
+    timeout: 20s
+  - send: "orderadmin backup confirm release check"
+  - expect: "Backup written"
+    timeout: 30s
+  - send: "orderadmin export orders confirm release check"
+  - expect: "Exported"
+    timeout: 30s
+  - send: "orderadmin export ledger confirm release check"
+  - expect: "Exported"
+    timeout: 30s
+  - send: "orderadmin review list"
+  - expect: "(0)"
+    timeout: 20s
 
   - wait: 5s

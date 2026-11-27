@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     java
     alias(libs.plugins.shadow)
@@ -8,7 +10,7 @@ plugins {
 }
 
 group = "dev.orderhub"
-version = "0.1.0-SNAPSHOT"
+version = "1.1.0"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
@@ -17,16 +19,19 @@ java {
 dependencies {
     compileOnly(libs.paper.api)
     compileOnly(libs.vault.api) { exclude(group = "org.bukkit") }
+    compileOnly(libs.placeholderapi)
     compileOnly(libs.spotbugs.annotations)
 
-    implementation(libs.hikaricp)
-    implementation(libs.slf4j.api)
-    runtimeOnly(libs.sqlite.jdbc)
-    runtimeOnly(libs.mariadb.jdbc)
+    // Zur Laufzeit liefert Paper diese Bibliotheken (plugin.yml "libraries", Maven Central) bzw.
+    // sein eigenes slf4j. Das Jar bleibt klein, Treiber kollidieren nicht mit anderen Plugins.
+    compileOnly(libs.hikaricp)
+    compileOnly(libs.slf4j.api)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.paper.api)
+    testImplementation(libs.hikaricp)
+    testImplementation(libs.slf4j.api)
     testImplementation(libs.mockbukkit)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj)
@@ -45,14 +50,20 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.processResources {
-    val props = mapOf("version" to project.version)
+    val props =
+        mapOf(
+            "version" to project.version,
+            "hikariVersion" to libs.versions.hikari.get(),
+            "sqliteVersion" to libs.versions.sqlite.get(),
+            "mariadbVersion" to libs.versions.mariadb.get(),
+        )
     inputs.properties(props)
     filesMatching("plugin.yml") { expand(props) }
 }
 
 tasks.test {
     useJUnitPlatform {
-        excludeTags("integration")
+        excludeTags("integration", "load")
     }
     testLogging { events("passed", "skipped", "failed") }
 }
@@ -71,12 +82,48 @@ val integrationTest by tasks.registering(Test::class) {
     testLogging { events("passed", "skipped", "failed") }
 }
 
+// Reproduzierbarer Lasttest (100.000 Auftraege auf SQLite). Ergebnis: build/reports/load.txt
+val loadTest by tasks.registering(Test::class) {
+    description = "Runs tests tagged 'load' (100k orders, parallel searches)."
+    group = "verification"
+    testClassesDirs =
+        sourceSets.test
+            .get()
+            .output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("load") }
+    testLogging {
+        events("passed", "failed")
+        showStandardStreams = true
+    }
+}
+
 tasks.shadowJar {
     archiveClassifier.set("")
-    relocate("com.zaxxer.hikari", "dev.orderhub.libs.hikari")
-    relocate("org.slf4j", "dev.orderhub.libs.slf4j")
 }
 tasks.build { dependsOn(tasks.shadowJar) }
+
+// Kopiert das fertige Plugin-Jar nach release/ und schreibt die SHA-256-Pruefsumme.
+val release by tasks.registering {
+    description = "Copies the shadow jar to release/ and writes SHA256SUMS."
+    group = "distribution"
+    dependsOn(tasks.shadowJar)
+    doLast {
+        val jar =
+            tasks.shadowJar
+                .get()
+                .archiveFile
+                .get()
+                .asFile
+        val dir = layout.projectDirectory.dir("release").asFile
+        dir.mkdirs()
+        val target = File(dir, jar.name)
+        jar.copyTo(target, overwrite = true)
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hex = digest.digest(target.readBytes()).joinToString("") { "%02x".format(it) }
+        File(dir, "SHA256SUMS").writeText("$hex  ${target.name}\n")
+    }
+}
 tasks.jar { archiveClassifier.set("plain") }
 
 spotless {
@@ -115,6 +162,9 @@ pitest {
     junit5PluginVersion.set(libs.versions.pitestJunit5)
     pitestVersion.set(libs.versions.pitest)
     targetClasses.set(listOf("dev.orderhub.*"))
+    // Nur Testklassen als Tests: Ohne diese Angabe hielt PIT Hauptklassen mit Vault-Abhaengigkeit fuer Tests.
+    targetTests.set(listOf("dev.orderhub.*Test", "dev.orderhub.*Tests"))
+    excludedGroups.set(listOf("integration"))
     threads.set(2)
     outputFormats.set(listOf("HTML"))
     timestampedReports.set(false)
