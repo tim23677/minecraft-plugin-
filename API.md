@@ -1,6 +1,24 @@
 # OrderHub Developer API
 
-Package `dev.orderhub.api`. Version 1 (`OrderHubApi.API_VERSION`).
+Package `dev.orderhub.api`. Version 1 (`OrderHubApi.API_VERSION`). Since 2.0.0 the API lives in its own Gradle module `orderhub-api` (interfaces, records and events only) with its own version (currently 1.1.0, Semantic Versioning). The plugin jar contains the API classes, so other plugins find them through OrderHub's class loader.
+
+## Using the API in your plugin
+
+Compile against the small API artifact, not against the whole plugin:
+
+```kotlin
+dependencies {
+    compileOnly("dev.orderhub:orderhub-api:1.1.0")
+}
+```
+
+The artifact is published to GitHub Packages (`https://maven.pkg.github.com/OWNER/REPOSITORY`, token required) or, for a public mirror, through JitPack. Until a release is published, run `./gradlew :orderhub-api:publishToMavenLocal` in the OrderHub project and add `mavenLocal()`. A complete example is in `examples/order-listener`.
+
+Every public element has an `@since` tag. The build compares the API with the last release (japicmp, task `:orderhub-api:compatibility`) and fails on binary incompatible changes.
+
+## Input validation
+
+Calls never throw for expected problems. Creation and cancellation return a status. Methods that return data complete the future exceptionally with `IllegalArgumentException` when an argument is `null` or an item key is not of the form `namespace:name` (lowercase letters, digits, `_ . -`, `/` in the name). Page sizes are clamped to 1..100, offsets below 0 count as 0, market windows are clamped to 1..90 days, unknown ids give empty results. Read methods take no database locks.
 
 ## Getting the API
 

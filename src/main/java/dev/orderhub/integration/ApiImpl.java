@@ -45,6 +45,22 @@ public final class ApiImpl implements OrderHubApi {
     this.async = r -> services.scheduler().runAsync(r);
   }
 
+  private static final java.util.regex.Pattern ITEM_KEY =
+      java.util.regex.Pattern.compile("[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,120}");
+
+  /** Gueltiger Material-Key wie {@code minecraft:diamond} (Namespace, Doppelpunkt, Name). */
+  public static boolean validItemKey(String key) {
+    return key != null && key.length() <= 190 && ITEM_KEY.matcher(key).matches();
+  }
+
+  private static OrderQuery countQuery(UUID owner, OrderStatus status) {
+    return new OrderQuery(owner, null, null, status, OrderQuery.Sort.NEWEST, 0, 1);
+  }
+
+  private static <T> CompletableFuture<T> invalid(String message) {
+    return CompletableFuture.failedFuture(new IllegalArgumentException(message));
+  }
+
   private <T> CompletableFuture<T> run(Supplier<T> work) {
     return CompletableFuture.supplyAsync(work, async);
   }
@@ -116,6 +132,14 @@ public final class ApiImpl implements OrderHubApi {
               || request.item() == null) {
             return CompletableFuture.completedFuture(
                 new CreateResult(CreateStatus.ERROR, null, "request fields missing"));
+          }
+          if (request.quantity() < 1) {
+            return CompletableFuture.completedFuture(
+                new CreateResult(CreateStatus.INVALID_QUANTITY, null, "quantity must be >= 1"));
+          }
+          if (request.unitPriceMinor() <= 0) {
+            return CompletableFuture.completedFuture(
+                new CreateResult(CreateStatus.INVALID_PRICE, null, "price must be > 0"));
           }
           // Item-Zustand jetzt kopieren und pruefen, bevor der Aufrufer es veraendern kann.
           ValidationResult check = s.matcher().validateForOrder(request.item().clone());
@@ -205,6 +229,9 @@ public final class ApiImpl implements OrderHubApi {
 
         @Override
         public CompletableFuture<Optional<OrderView>> getOrder(long orderId) {
+          if (orderId < 1) {
+            return CompletableFuture.completedFuture(Optional.empty());
+          }
           return run(() ->
               s.storage().transact(uow -> uow.orders().find(orderId)).join().map(ApiImpl::view));
         }
@@ -212,6 +239,9 @@ public final class ApiImpl implements OrderHubApi {
         @Override
         public CompletableFuture<List<OrderView>> getOpenOrders(Filter filter) {
           Filter f = filter == null ? new Filter(null, null, 0, 45) : filter;
+          if (f.itemKey() != null && !validItemKey(f.itemKey())) {
+            return invalid("itemKey is not a valid material key: " + f.itemKey());
+          }
           return run(() ->
               s
                   .storage()
@@ -236,6 +266,9 @@ public final class ApiImpl implements OrderHubApi {
         public CompletableFuture<CancelResult> cancelOrder(long orderId, UUID actor) {
           if (actor == null) {
             return CompletableFuture.completedFuture(new CancelResult(CancelStatus.ERROR, 0));
+          }
+          if (orderId < 1) {
+            return CompletableFuture.completedFuture(new CancelResult(CancelStatus.NOT_FOUND, 0));
           }
           return run(() -> {
             var r = s.orders().cancelOrder(orderId, actor, false);
@@ -344,6 +377,9 @@ public final class ApiImpl implements OrderHubApi {
         @Override
         public CompletableFuture<List<OrderService.OrderView>> getOrders(
             UUID owner, int offset, int limit) {
+          if (owner == null) {
+            return invalid("owner must not be null");
+          }
           return run(() ->
               s
                   .storage()
@@ -366,50 +402,67 @@ public final class ApiImpl implements OrderHubApi {
 
         @Override
         public CompletableFuture<Integer> countOpenOrders(UUID owner) {
-          return run(
-              () -> s.storage().transact(uow -> uow.orders().countOpenByOwner(owner)).join());
+          if (owner == null) {
+            return invalid("owner must not be null");
+          }
+          // Lesen ohne Sperre: countOpenByOwner nimmt auf MariaDB Zeilensperren (FOR UPDATE) und
+          // gehoert nur in die Erstellung. Offen heisst aktiv oder pausiert.
+          return run(() -> {
+            long open =
+                s.storage()
+                    .transact(uow ->
+                        uow.orders().count(countQuery(owner, OrderStatus.ACTIVE))
+                            + uow.orders().count(countQuery(owner, OrderStatus.PAUSED)))
+                    .join();
+            return (int) Math.min(Integer.MAX_VALUE, open);
+          });
         }
       };
 
   private final MarketService market =
       (itemKey, days) ->
-          run(() -> {
-            int d = Math.max(1, Math.min(days, 90));
-            var v = ApiImpl.this.s.insights().market(itemKey, d, System.currentTimeMillis());
-            var t = v.trades();
-            var dem = v.demand();
-            var rec = v.recommendation();
-            return new MarketService.MarketStatistics(
-                itemKey,
-                d,
-                t.map(x -> x.trades()).orElse(0),
-                t.map(x -> x.volumeUnits()).orElse(0L),
-                t.map(x -> x.medianUnitPrice()).orElse(null),
-                t.map(x -> x.averageUnitPrice()).orElse(null),
-                dem.map(x -> x.orders()).orElse(0),
-                dem.map(x -> x.openUnits()).orElse(0L),
-                dem.map(x -> x.lowestUnitPrice()).orElse(null),
-                dem.map(x -> x.highestUnitPrice()).orElse(null),
-                rec.map(x -> x.low()).orElse(null),
-                rec.map(x -> x.high()).orElse(null));
-          });
+          !validItemKey(itemKey)
+              ? invalid("itemKey is not a valid material key: " + itemKey)
+              : run(() -> {
+                int d = Math.max(1, Math.min(days, 90));
+                var v = ApiImpl.this.s.insights().market(itemKey, d, System.currentTimeMillis());
+                var t = v.trades();
+                var dem = v.demand();
+                var rec = v.recommendation();
+                return new MarketService.MarketStatistics(
+                    itemKey,
+                    d,
+                    t.map(x -> x.trades()).orElse(0),
+                    t.map(x -> x.volumeUnits()).orElse(0L),
+                    t.map(x -> x.medianUnitPrice()).orElse(null),
+                    t.map(x -> x.averageUnitPrice()).orElse(null),
+                    dem.map(x -> x.orders()).orElse(0),
+                    dem.map(x -> x.openUnits()).orElse(0L),
+                    dem.map(x -> x.lowestUnitPrice()).orElse(null),
+                    dem.map(x -> x.highestUnitPrice()).orElse(null),
+                    rec.map(x -> x.low()).orElse(null),
+                    rec.map(x -> x.high()).orElse(null));
+              });
 
   private final StatisticsService statistics =
       player ->
-          run(() ->
-              ApiImpl.this
-                  .s
-                  .insights()
-                  .stats(player)
-                  .map(st ->
-                      new StatisticsService.PlayerStatistics(
-                          st.player(),
-                          st.ordersCreated(),
-                          st.ordersCompleted(),
-                          st.itemsDelivered(),
-                          st.itemsReceived(),
-                          st.moneyEarned(),
-                          st.moneySpent())));
+          player == null
+              ? ApiImpl.<java.util.Optional<StatisticsService.PlayerStatistics>>invalid(
+                  "player must not be null")
+              : run(() ->
+                  ApiImpl.this
+                      .s
+                      .insights()
+                      .stats(player)
+                      .map(st ->
+                          new StatisticsService.PlayerStatistics(
+                              st.player(),
+                              st.ordersCreated(),
+                              st.ordersCompleted(),
+                              st.itemsDelivered(),
+                              st.itemsReceived(),
+                              st.moneyEarned(),
+                              st.moneySpent())));
 
   private static TransactionService.TransactionView tv(JournalEntry e) {
     return new TransactionService.TransactionView(
@@ -428,12 +481,18 @@ public final class ApiImpl implements OrderHubApi {
       new TransactionService() {
         @Override
         public CompletableFuture<Optional<TransactionView>> getTransaction(UUID id) {
+          if (id == null) {
+            return invalid("id must not be null");
+          }
           return run(
               () -> s.storage().transact(uow -> uow.journal().find(id)).join().map(ApiImpl::tv));
         }
 
         @Override
         public CompletableFuture<List<TransactionView>> getTransactions(UUID player, int limit) {
+          if (player == null) {
+            return invalid("player must not be null");
+          }
           return run(() ->
               s
                   .storage()
@@ -450,17 +509,26 @@ public final class ApiImpl implements OrderHubApi {
       new NotificationService() {
         @Override
         public CompletableFuture<Boolean> addFavorite(UUID player, String itemKey) {
+          if (player == null || !validItemKey(itemKey)) {
+            return invalid("player and a valid material key are required");
+          }
           return run(() -> s.insights().addFavorite(player, itemKey));
         }
 
         @Override
         public CompletableFuture<Boolean> removeFavorite(UUID player, String itemKey) {
+          if (player == null || !validItemKey(itemKey)) {
+            return invalid("player and a valid material key are required");
+          }
           return run(() -> s.insights().removeFavorite(player, itemKey));
         }
 
         @Override
         public CompletableFuture<Boolean> setPriceAlert(
             UUID player, String itemKey, Long minPriceMinor) {
+          if (player == null || !validItemKey(itemKey)) {
+            return invalid("player and a valid material key are required");
+          }
           if (minPriceMinor != null && minPriceMinor <= 0) {
             return CompletableFuture.completedFuture(false);
           }
@@ -469,6 +537,9 @@ public final class ApiImpl implements OrderHubApi {
 
         @Override
         public CompletableFuture<List<FavoriteView>> getFavorites(UUID player) {
+          if (player == null) {
+            return invalid("player must not be null");
+          }
           return run(() ->
               s.insights().favorites(player).stream()
                   .map(f -> new FavoriteView(f.itemKey(), f.minPriceAlert()))

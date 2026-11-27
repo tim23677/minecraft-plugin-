@@ -11,13 +11,16 @@ plugins {
 }
 
 group = "dev.orderhub"
-version = "1.1.0"
+version = "2.0.0"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 
 dependencies {
+    // Die API liegt im eigenen Modul und wird mit ins Plugin-Jar gepackt, damit andere Plugins sie
+    // ueber den Klassenlader von OrderHub finden.
+    implementation(project(":orderhub-api"))
     compileOnly(libs.paper.api)
     compileOnly(libs.vault.api) { exclude(group = "org.bukkit") }
     compileOnly(libs.placeholderapi)
@@ -168,7 +171,7 @@ val bundledJar by tasks.registering(com.github.jengelman.gradle.plugins.shadow.t
     relocate("org.mariadb.jdbc", "dev.orderhub.libs.mariadb.jdbc")
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
 }
-tasks.build { dependsOn(tasks.shadowJar, bundledJar) }
+tasks.build { dependsOn(tasks.shadowJar, bundledJar, ":orderhub-api:build") }
 
 // Kopiert das fertige Plugin-Jar nach release/ und schreibt die SHA-256-Pruefsumme.
 val release by tasks.registering {
@@ -195,7 +198,7 @@ tasks.jar { archiveClassifier.set("plain") }
 
 spotless {
     java {
-        target("src/**/*.java")
+        target("src/**/*.java", "orderhub-api/src/**/*.java")
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()

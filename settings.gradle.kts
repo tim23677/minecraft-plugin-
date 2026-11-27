@@ -1,4 +1,5 @@
 rootProject.name = "OrderHub"
+include("orderhub-api")
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
