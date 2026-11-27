@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.spotbugs)
     alias(libs.plugins.dependency.check)
     alias(libs.plugins.pitest)
+    alias(libs.plugins.cyclonedx)
 }
 
 group = "dev.orderhub"
@@ -100,11 +101,74 @@ val loadTest by tasks.registering(Test::class) {
     }
 }
 
+// Reproduzierbare Archive: feste Zeitstempel und feste Dateireihenfolge, damit zwei Builds
+// desselben Quellstands dasselbe Jar ergeben (gleiche SHA-256).
+tasks.withType<AbstractArchiveTask>().configureEach {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+}
+
 tasks.shadowJar {
     archiveClassifier.set("")
     relocate("org.bstats", "dev.orderhub.libs.bstats")
 }
-tasks.build { dependsOn(tasks.shadowJar) }
+// Variante mit eingebetteten Treibern (HikariCP, SQLite, MariaDB) fuer Server ohne Zugriff auf
+// Maven Central. plugin.yml dieser Variante hat keinen "libraries"-Abschnitt. HikariCP und der
+// MariaDB-Treiber werden verschoben. Der SQLite-Treiber bleibt unverschoben, weil seine nativen
+// Methoden an den Paketnamen gebunden sind.
+val bundledDrivers by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+dependencies {
+    bundledDrivers(libs.hikaricp)
+    bundledDrivers(libs.sqlite.jdbc)
+    bundledDrivers(libs.mariadb.jdbc)
+}
+
+val bundledPluginYml by tasks.registering {
+    description = "Writes plugin.yml without the libraries section for the bundled variant."
+    dependsOn(tasks.processResources)
+    val source = layout.buildDirectory.file("resources/main/plugin.yml")
+    val target = layout.buildDirectory.file("bundled/plugin.yml")
+    inputs.file(source)
+    outputs.file(target)
+    doLast {
+        val kept = mutableListOf<String>()
+        var inLibraries = false
+        for (line in source.get().asFile.readLines()) {
+            if (line.startsWith("libraries:")) {
+                inLibraries = true
+                continue
+            }
+            if (inLibraries && line.startsWith("  - ")) {
+                continue
+            }
+            inLibraries = false
+            kept += line
+        }
+        target
+            .get()
+            .asFile.parentFile
+            .mkdirs()
+        target.get().asFile.writeText(kept.joinToString("\n") + "\n")
+    }
+}
+
+val bundledJar by tasks.registering(com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar::class) {
+    description = "Plugin jar with embedded database drivers (no download from Maven Central)."
+    group = "build"
+    archiveClassifier.set("bundled")
+    from(sourceSets.main.get().output) { exclude("plugin.yml") }
+    from(bundledPluginYml)
+    configurations = listOf(project.configurations.runtimeClasspath.get(), bundledDrivers)
+    mergeServiceFiles()
+    relocate("org.bstats", "dev.orderhub.libs.bstats")
+    relocate("com.zaxxer.hikari", "dev.orderhub.libs.hikari")
+    relocate("org.mariadb.jdbc", "dev.orderhub.libs.mariadb.jdbc")
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+}
+tasks.build { dependsOn(tasks.shadowJar, bundledJar) }
 
 // Kopiert das fertige Plugin-Jar nach release/ und schreibt die SHA-256-Pruefsumme.
 val release by tasks.registering {
