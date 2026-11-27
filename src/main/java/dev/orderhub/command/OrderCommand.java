@@ -45,6 +45,12 @@ public final class OrderCommand implements CommandHandler {
   private final ParcelFlow returns;
   private final dev.orderhub.flow.InsightsFlow insights;
   private volatile dev.orderhub.flow.SellFlow sell;
+  private volatile dev.orderhub.flow.InsightMenus insightMenus;
+
+  /** Verdrahtet die Menues fuer Statistik, Verlauf, Favoriten und Analyse. */
+  public void insightMenus(dev.orderhub.flow.InsightMenus menus) {
+    this.insightMenus = menus;
+  }
 
   /** Verdrahtet {@code /order sell}. */
   public void sell(dev.orderhub.flow.SellFlow flow) {
@@ -136,22 +142,46 @@ public final class OrderCommand implements CommandHandler {
       }
       case "stats" -> {
         if (need(player, "orderhub.stats")) {
-          insights.showStats(player);
+          if (insightMenus != null) {
+            insightMenus.stats(player);
+          } else {
+            insights.showStats(player);
+          }
         }
       }
       case "history" -> {
         if (need(player, "orderhub.stats")) {
-          insights.showHistory(player);
+          if (insightMenus != null) {
+            insightMenus.history(player);
+          } else {
+            insights.showHistory(player);
+          }
         }
       }
       case "favorites" -> {
         if (need(player, "orderhub.favorites")) {
-          insights.favorites(player, args);
+          if (args.length <= 1 && insightMenus != null) {
+            insightMenus.favorites(player);
+          } else {
+            insights.favorites(player, args);
+          }
         }
       }
       case "analytics" -> {
         if (need(player, "orderhub.market")) {
-          insights.analytics(player, args.length > 1 ? args[1] : null);
+          boolean fromHand = args.length <= 1;
+          var hand = player.getInventory().getItemInMainHand();
+          if (insightMenus != null && (!fromHand || !hand.isEmpty())) {
+            String key =
+                fromHand
+                    ? hand.getType().getKey().toString()
+                    : (args[1].contains(":")
+                        ? args[1].toLowerCase(Locale.ROOT)
+                        : "minecraft:" + args[1].toLowerCase(Locale.ROOT));
+            insightMenus.analytics(player, key);
+          } else {
+            insights.analytics(player, args.length > 1 ? args[1] : null);
+          }
         }
       }
       default -> player.sendMessage(s.messages().prefixed("general.unknown-subcommand"));

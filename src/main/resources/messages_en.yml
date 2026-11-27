@@ -230,3 +230,17 @@ sell:
   hand-changed: "<red>The item in your hand changed. Please try again."
   no-order: "<gray>No open order wants this item right now."
   none-fits: "<gray>Open orders exist for this item, but none accepts what you have (minimum delivery, quality or your own order)."
+
+insight:
+  value: "<white><value>"
+  stats:
+    created: "<yellow>Orders created"
+    completed: "<green>Orders completed"
+    delivered: "<aqua>Items delivered"
+    received: "<aqua>Items received"
+    earned: "<gold>Money earned"
+    spent: "<red>Money spent"
+  history:
+    title: "<yellow>Order #<order>"
+  favorites:
+    hint: "<dark_gray>Left click: market analysis, right click: remove"

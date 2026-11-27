@@ -214,3 +214,17 @@ sell:
   hand-changed: "<red>Das Item in deiner Hand hat sich geändert. Bitte versuche es erneut."
   no-order: "<gray>Zurzeit sucht kein offener Auftrag dieses Item."
   none-fits: "<gray>Es gibt offene Aufträge für dieses Item, aber keiner nimmt an, was du hast (Mindestmenge, Qualität oder dein eigener Auftrag)."
+
+insight:
+  value: "<white><value>"
+  stats:
+    created: "<yellow>Erstellte Aufträge"
+    completed: "<green>Abgeschlossene Aufträge"
+    delivered: "<aqua>Gelieferte Items"
+    received: "<aqua>Erhaltene Items"
+    earned: "<gold>Eingenommenes Geld"
+    spent: "<red>Ausgegebenes Geld"
+  history:
+    title: "<yellow>Auftrag #<order>"
+  favorites:
+    hint: "<dark_gray>Linksklick: Marktanalyse, Rechtsklick: entfernen"
