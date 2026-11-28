@@ -1,0 +1,5 @@
+server/
+jdk/
+bots/node_modules/
+out/
+out-*.log

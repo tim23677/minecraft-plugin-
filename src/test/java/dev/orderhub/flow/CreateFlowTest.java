@@ -219,4 +219,62 @@ class CreateFlowTest extends FlowTestBase {
     dev.orderhub.domain.OrderOptions found = h.storage.read(uow -> uow.orders().options(id));
     return found;
   }
+
+  private String drain() {
+    StringBuilder out = new StringBuilder();
+    net.kyori.adventure.text.Component c;
+    while ((c = supplier.nextComponentMessage()) != null) {
+      out.append(
+              net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                  .serialize(c))
+          .append('\n');
+    }
+    return out.toString();
+  }
+
+  /** Der Chat laeuft asynchron, die Antwort kommt kurz danach. */
+  private String drainWithin(long millis) {
+    long end = System.currentTimeMillis() + millis;
+    String out = drain();
+    while (out.isEmpty() && System.currentTimeMillis() < end) {
+      try {
+        Thread.sleep(25);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+      out = drain();
+    }
+    return out;
+  }
+
+  @Test
+  void anInvalidQuantityTypedInChatIsRejectedBeforeThePricePrompt() {
+    ChatInput chat = new ChatInput(scheduler, () -> "cancel", nanos::incrementAndGet);
+    server.getPluginManager().registerEvents(chat, plugin);
+    CreateFlow typed = new CreateFlow(services, chat);
+
+    typed.start(supplier, null, null);
+    drain();
+    supplier.chat("abc");
+
+    String after = drainWithin(2000);
+    assertThat(after).contains("'abc' is not a valid number").doesNotContain("price per item");
+    assertThat(chat.isWaiting(supplier.getUniqueId())).isFalse();
+    assertThat(orders()).isZero();
+  }
+
+  @Test
+  void aValidQuantityTypedInChatLeadsToThePricePrompt() {
+    ChatInput chat = new ChatInput(scheduler, () -> "cancel", nanos::incrementAndGet);
+    server.getPluginManager().registerEvents(chat, plugin);
+    CreateFlow typed = new CreateFlow(services, chat);
+
+    typed.start(supplier, null, null);
+    drain();
+    supplier.chat("5");
+
+    assertThat(drainWithin(2000)).contains("price per item");
+    assertThat(chat.isWaiting(supplier.getUniqueId())).isTrue();
+  }
 }

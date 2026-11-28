@@ -9,8 +9,8 @@ const mineflayer = require('mineflayer');
 
 const dir = path.resolve(process.argv[2]);
 const outFile = path.resolve(process.argv[3] || 'e2e-result.json');
-const PORT = 25599;
-const VERSION = '1.21.11';
+const PORT = parseInt(process.env.SIM_PORT || '25599', 10);
+const VERSION = process.env.SIM_MC_VERSION || '1.21.11';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = [];
 const logLines = [];

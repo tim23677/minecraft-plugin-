@@ -86,6 +86,12 @@ public final class CreateFlow {
         player,
         settings.inputTimeoutSeconds(),
         q -> {
+          if (parseQuantity(q).isEmpty()) {
+            // Wrong input is reported right away, the player does not type a price for nothing.
+            player.sendMessage(
+                s.messages().prefixed("general.invalid-number", Messages.text("input", q)));
+            return;
+          }
           player.sendMessage(
               s.messages()
                   .prefixed("create.prompt-price", Messages.text("cancel", settings.cancelWord())));
