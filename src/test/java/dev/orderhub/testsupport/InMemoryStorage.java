@@ -676,6 +676,15 @@ public final class InMemoryStorage implements Storage {
       }
 
       @Override
+      public int countOpenByOwnerUnlocked(UUID owner) {
+        return (int)
+            s.orders.values().stream()
+                .filter(o -> o.owner().equals(owner))
+                .filter(o -> o.status() == OrderStatus.ACTIVE || o.status() == OrderStatus.PAUSED)
+                .count();
+      }
+
+      @Override
       public int countOpenByOwner(UUID owner) {
         if (!lockedOwners.contains(owner)) {
           throw new ConstraintViolation("countOpenByOwner without lockOwner");

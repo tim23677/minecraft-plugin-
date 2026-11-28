@@ -234,6 +234,14 @@ final class JdbcOrderRepository implements OrderRepository {
   }
 
   @Override
+  public int countOpenByOwnerUnlocked(UUID owner) {
+    return (int)
+        jdbc.count(
+            "SELECT COUNT(*) FROM orders WHERE owner_uuid = ? AND status IN ('ACTIVE','PAUSED')",
+            owner);
+  }
+
+  @Override
   public int countOpenByOwner(UUID owner) {
     return (int)
         jdbc.count(

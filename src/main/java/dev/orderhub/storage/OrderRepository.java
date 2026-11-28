@@ -41,6 +41,13 @@ public interface OrderRepository {
   /** Anzahl ACTIVE und PAUSED Auftraege des Spielers. Vorher {@link #lockOwner} aufrufen. */
   int countOpenByOwner(UUID owner);
 
+  /**
+   * Wie {@link #countOpenByOwner}, aber ohne Sperre und ohne vorheriges {@link #lockOwner}. Nur zum
+   * Anzeigen gedacht (Platzhalter, Statistik): der Wert kann einen Augenblick veraltet sein, darf
+   * aber nie Zeilen sperren oder eine Erstellung ausbremsen.
+   */
+  int countOpenByOwnerUnlocked(UUID owner);
+
   /** ACTIVE Auftraege mit {@code expiresAt <= now}, aelteste zuerst. */
   List<Order> findExpired(long now, int limit);
 

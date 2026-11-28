@@ -1901,6 +1901,32 @@ abstract class StorageContractTest {
   }
 
   @Test
+  void unlockedOpenCountMatchesTheLockedCountWithoutNeedingTheLock() {
+    UUID a = UUID.randomUUID();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.orders().insert(TestData.order(a, "minecraft:diamond", 100, 3), TestData.T0);
+          u.orders().insert(TestData.order(a, "minecraft:gold_ingot", 100, 3), TestData.T0);
+          return null;
+        });
+
+    int unlocked = tx(storage(), (UnitOfWork u) -> u.orders().countOpenByOwnerUnlocked(a));
+    int locked =
+        tx(
+            storage(),
+            (UnitOfWork u) -> {
+              u.orders().lockOwner(a);
+              return u.orders().countOpenByOwner(a);
+            });
+
+    assertThat(unlocked).isEqualTo(2).isEqualTo(locked);
+    assertThat(
+            tx(storage(), (UnitOfWork u) -> u.orders().countOpenByOwnerUnlocked(UUID.randomUUID())))
+        .isZero();
+  }
+
+  @Test
   void optionsForReturnsOneEntryPerOrderInASingleCall() {
     UUID a = UUID.randomUUID();
     long first =
