@@ -10,8 +10,8 @@ Die Version ist nicht 10/10 im Sinn des Master-Prompts. Build und alle ausgefüh
 
 | Prüfung | Befehl | Ergebnis |
 |---|---|---|
-| Gesamtbuild mit `-Werror`, Spotless, SpotBugs, Tests, Jars, API-Modul, Verkaufs-ZIP | `./gradlew spotlessApply build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 1107 Tests, 0 Fehler |
-| Integrationstests gegen MariaDB 11.4 | `./gradlew integrationTest` | 60 Tests, 1 übersprungen, 0 Fehler |
+| Gesamtbuild mit `-Werror`, Spotless, SpotBugs, Tests, Jars, API-Modul, Verkaufs-ZIP | `./gradlew spotlessApply build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 1159 Tests, 0 Fehler, 0 übersprungen |
+| Integrationstests gegen MariaDB 11.4 | `./gradlew integrationTest` | 63 Tests, 1 übersprungen, 0 Fehler |
 | Echte Server Paper 1.21.11 und Folia 1.21.11 mit dem 2.0.0-Jar | `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` | 2 bestanden |
 | Spielerszenario mit zwei Bots auf Paper (EssentialsX 2.22.0, VaultUnlocked 2.20.3, harter Abbruch und Wiederanlauf) | `node tools/e2e/e2e.js` | 17 von 17 bestanden |
 | Lasttest SQLite, 100.000 Aufträge | `./gradlew loadTest` | p50 17 ms, p95 153 ms (Stand Phase 8, im Endstand nicht wiederholt) |
@@ -26,14 +26,19 @@ Zu PIT: `economy` enthält `economy.vault` (31 Mutanten ohne Abdeckung, der Vaul
 
 Sicherheits-, Folia-, Architektur- und Test-Review liefen. Behoben wurden unter anderem Geheimnisse im Support-Dump (IPv6, URL-Parameter), Dateirechte und atomares Schreiben bei Konfiguration und Sicherung, Berechtigung für `dump`, Race im Marktplatzmenü (Generationszähler), Abschalten des Transaktionslogs, Cooldown-Freigabe, Doppelstart des Auszahlungsworkers. 63 Tests kamen aus dem Test-Review hinzu.
 
+Danach behoben: Ratenbegrenzung der Textsuche (3 Suchen in 5 Sekunden je Spieler), eine Abfrage statt N+1 bei `/order sell`, Dump liest nur die letzten 2 MB des Serverlogs, beanspruchte Login-Hinweise werden freigegeben, wenn der Spieler im selben Moment geht, der Platzhalter `open_orders` zählt ohne Zeilensperre.
+
 Nicht behoben und begründet:
 - SQL-Kommentar in V1 (Migrationen dürfen wegen der Prüfsumme nicht geändert werden)
-- Ratenbegrenzung der LIKE-Suche und N+1-Abfragen bei `/order sell`
-- `readAllLines` von `latest.log` im Dump
-- Login-Hinweise gehen bei sehr schnellem Wiederbeitritt verloren
 - Datenbankzugriff der Rückgabewarteschlange beim Abschalten
 - `economy.async-safe` auf Folia
 - größere Umbauten aus dem Architektur-Review
+
+## Verbesserungen nach dem ersten Bericht
+
+Fünfzehn Änderungen, jede mit Tests: eine Abfrage für die Optionen aller Kandidaten in `/order sell`, Suchdrosselung, Dump-Log nur als Ende der Datei, Freigabe unzugestellter Hinweise, Auto-Abholung (das Flag wird jetzt ausgewertet), Auftragsoptionen per Befehl (`durability=`, `enchants`, `autoclaim` bei `/order create` und `/order template save`), Optionen in Vorlagen gespeichert und beim Benutzen angewendet, Prüfung des Ton-Schlüssels in der Konfiguration, `/order info <id>`, `/order sell all`, die Platzhalter `market_open_orders` und `claims_waiting` (Auflösung ohne PlaceholderAPI testbar), Zählung offener Aufträge ohne Sperre, Vorschlag bei falsch getipptem Unterbefehl, vollständige Hilfe, Vorlagen als Menü (Linksklick benutzt, Rechtsklick löscht).
+
+Dazu `docs/market-research.md` (Quellen, nur Listentexte gelesen) und `docs/media-checklist.md`.
 
 ## Umgesetzt
 
@@ -43,14 +48,13 @@ Marktplatz mit Suche, Kategorien, Sortierung und Keyset-Seiten; `/order sell`; A
 
 | Punkt | Stand |
 |---|---|
-| Vorlagen im Menü, Erstellmenü mit allen Optionen, Massenverkauf, Gebühr für Auto-Verlängerung, Review-Menü | nicht umgesetzt (Vorlagen und Verlängerung gibt es als Befehle) |
-| Auto-Abholung | Flag wird gespeichert, aber nirgends ausgewertet |
+| Erstellmenü mit allen Optionen, Gebühr für Auto-Verlängerung, Review-Menü | nicht umgesetzt. Optionen gehen per Befehl, Verlängerung per `/order renew`, der Review geht per Befehl |
 | Import von Konkurrenzplugins | nicht umgesetzt |
 | Aufteilung großer Klassen (Phase 6) | nicht durchgeführt |
 | PIT-Schwellen als Gradle-Prüfung | nicht eingerichtet, siehe oben |
 | Update-Prüfung über Plattform-API | bleibt bei GitHub-Releases, Standard aus |
 | Offline-MariaDB | keine Lösung, der Treiber steht unter LGPL (ADR 0005) |
-| Screenshot- und GIF-Liste, `docs/market-research.md` mit Quellen | nicht geschrieben |
+| Screenshots und GIFs selbst | nicht aufgenommen, die Liste mit Testserver-Aufbau steht in `docs/media-checklist.md` |
 
 ## Nicht ausgeführt
 
