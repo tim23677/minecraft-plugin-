@@ -141,4 +141,55 @@ class TemplateFlowTest extends FlowTestBase {
     dev.orderhub.domain.OrderOptions found = h.storage.read(uow -> uow.orders().options(id));
     return found;
   }
+
+  private void rightClick(int slot) {
+    server
+        .getPluginManager()
+        .callEvent(
+            new org.bukkit.event.inventory.InventoryClickEvent(
+                supplier.getOpenInventory(),
+                org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+                slot,
+                org.bukkit.event.inventory.ClickType.RIGHT,
+                org.bukkit.event.inventory.InventoryAction.PICKUP_HALF));
+  }
+
+  @Test
+  void theMenuListsTemplatesAndALeftClickStartsTheOrderFlow() {
+    templates.handle(supplier, new String[] {"save", "ores", "5", "100", "autoclaim"});
+    messages();
+
+    templates.handle(supplier, new String[] {});
+    assertThat(top().getItem(0)).isNotNull();
+    assertThat(top().getItem(0).getType()).isEqualTo(Material.DIAMOND);
+    assertThat(top().getItem(1)).isNull();
+
+    click(0);
+    click(ConfirmMenu.CONFIRM_SLOT);
+
+    assertThat(orders()).isEqualTo(1);
+    assertThat(h.economy.balance(player)).isEqualTo(START - 50_000);
+  }
+
+  @Test
+  void aRightClickInTheMenuDeletesTheTemplate() {
+    templates.handle(supplier, new String[] {"save", "ores", "5", "100"});
+    messages();
+    templates.handle(supplier, new String[] {});
+
+    rightClick(0);
+
+    assertThat(messages()).contains("Deleted");
+    assertThat(orders()).isZero();
+    templates.handle(supplier, new String[] {"list"});
+    assertThat(messages()).contains("no templates");
+  }
+
+  @Test
+  void noTemplatesMeansAMessageAndNoMenu() {
+    templates.handle(supplier, new String[] {});
+
+    assertThat(messages()).contains("no templates");
+    assertThat(menus.openCount()).isZero();
+  }
 }

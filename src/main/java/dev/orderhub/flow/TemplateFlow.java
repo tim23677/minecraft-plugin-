@@ -39,7 +39,7 @@ public final class TemplateFlow {
    */
   public void handle(Player player, String[] args) {
     if (args.length == 0) {
-      player.sendMessage(s.messages().prefixed("template.usage"));
+      menu(player);
       return;
     }
     switch (args[0].toLowerCase(Locale.ROOT)) {
@@ -217,5 +217,79 @@ public final class TemplateFlow {
         },
         orphan -> {},
         () -> player.sendMessage(s.messages().prefixed("general.database-error")));
+  }
+
+  private static final List<Integer> MENU_SLOTS =
+      java.util.stream.IntStream.range(0, 45).boxed().toList();
+
+  /** Oeffnet die Vorlagen als Menue: Linksklick benutzt, Rechtsklick loescht. */
+  public void menu(Player player) {
+    Async.supply(
+        s.scheduler(),
+        s.logger(),
+        player,
+        () -> s.storage().transact(uow -> uow.templates().list(player.getUniqueId())).join(),
+        (List<OrderTemplate> all) -> {
+          if (all.isEmpty()) {
+            player.sendMessage(s.messages().prefixed("template.empty"));
+            return;
+          }
+          var menu =
+              new dev.orderhub.gui.PagedMenu<OrderTemplate>(
+                  s.messages().get("menu.templates-title"),
+                  6,
+                  MENU_SLOTS,
+                  45,
+                  53,
+                  named(org.bukkit.Material.ARROW, s.messages().get("menu.previous"), List.of()),
+                  named(org.bukkit.Material.ARROW, s.messages().get("menu.next"), List.of()),
+                  t -> button(t));
+          menu.setItems(all);
+          s.menus().open(player, menu);
+        },
+        orphan -> {},
+        () -> player.sendMessage(s.messages().prefixed("general.database-error")));
+  }
+
+  private dev.orderhub.gui.Button button(OrderTemplate t) {
+    ItemStack base =
+        ItemService.decode(s.codec(), t.item())
+            .orElseGet(() -> new ItemStack(org.bukkit.Material.BARRIER));
+    base.setAmount(1);
+    var line =
+        s.messages()
+            .get(
+                "template.list-entry",
+                Messages.text("name", t.name()),
+                Messages.number("quantity", t.quantity()),
+                Messages.component("item", ItemService.nameOf(base)),
+                Messages.text("unit", Money.format(t.unitPrice())));
+    base.editMeta(meta -> {
+      meta.displayName(net.kyori.adventure.text.Component.text(t.name()));
+      meta.lore(List.of(line, s.messages().get("template.menu-hint")));
+    });
+    return dev.orderhub.gui.Button.of(
+        base,
+        ctx -> {
+          Player p = ctx.player();
+          p.closeInventory();
+          if (ctx.clickType() == org.bukkit.event.inventory.ClickType.RIGHT) {
+            handle(p, new String[] {"delete", t.name()});
+          } else {
+            handle(p, new String[] {"use", t.name()});
+          }
+        });
+  }
+
+  private static ItemStack named(
+      org.bukkit.Material material,
+      net.kyori.adventure.text.Component name,
+      List<net.kyori.adventure.text.Component> lore) {
+    ItemStack stack = new ItemStack(material);
+    stack.editMeta(meta -> {
+      meta.displayName(name);
+      meta.lore(lore);
+    });
+    return stack;
   }
 }
