@@ -54,10 +54,55 @@ orders:
   # analytics, favorites, mine, claims, returns). Protects the database from command spam (0 = off).
   query-interval-ms: 250
 
+limits:
+  # Orders one player may create within 24 hours (0 = no limit).
+  daily-orders: 0
+  # Items one player may deliver within 24 hours (0 = no limit).
+  daily-delivery-items: 0
+
+anti-exploit:
+  # A new order is refused when its unit price is this many times above or below the average of
+  # the recent trades of the item (0 = off). Needs min-trades-for-recommendation trades.
+  # The permission orderhub.bypass.price-check skips the check.
+  price-deviation-factor: 0
+  # Administrators are warned when two players trade with each other more than this often
+  # within 24 hours (0 = off). Nothing is blocked automatically.
+  pair-trades-per-day: 10
+
+rest:
+  # Read-only JSON interface for market data (web pages, bots). Off by default.
+  # Requests need the header "Authorization: Bearer <token>". The token is read from the
+  # environment variable named below and must have at least 16 characters. Only bind to a public
+  # address behind a reverse proxy with TLS.
+  enabled: false
+  bind: "127.0.0.1"
+  port: 8765
+  token-env: "ORDERHUB_REST_TOKEN"
+  requests-per-minute: 60
+
+events:
+  # Time zone of the windows below, empty = server time zone (for example Europe/Berlin).
+  timezone: ""
+  # Windows that replace the creation fee or the sales tax for a while. Example:
+  # windows:
+  #   weekend:
+  #     days: [SATURDAY, SUNDAY]
+  #     from: "00:00"
+  #     to: "23:59"
+  #     create-fee-bp: 0
+  #     sales-tax-bp: 100
+  windows: {}
+
 fees:
   # Fees in basis points (100 = 1 %). The permission orderhub.bypass.fee removes the creation fee.
   create-fee-bp: 100
   sales-tax-bp: 200
+  # Cheaper creation fee for players with a permission. The lowest fee that applies wins.
+  # tiers:
+  #   vip:
+  #     permission: orderhub.fee.vip
+  #     create-fee-bp: 50
+  tiers: {}
 
 items:
   # Rejected by default. Set to true to admit such items in orders. Admitting an item does not make
@@ -92,6 +137,13 @@ items:
   blocked-materials: []
   # Additionally blocked item tags (for example minecraft:banners).
   blocked-tags: []
+  # Price range per item, on top of orders.min-unit-price and orders.max-unit-price.
+  # Prices accept k, m and b. Example:
+  # price-limits:
+  #   diamond:
+  #     min: "5"
+  #     max: "500"
+  price-limits: {}
 
 delivery:
   # Milliseconds of quiet between two clicks in a menu (protection against double clicks).

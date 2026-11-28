@@ -371,7 +371,7 @@ public final class ApiImpl implements OrderHubApi {
       case ALREADY_CREATED -> OrderService.CreateStatus.ALREADY_CREATED;
       case INVALID_PRICE -> OrderService.CreateStatus.INVALID_PRICE;
       case INVALID_QUANTITY, INVALID_AMOUNT -> OrderService.CreateStatus.INVALID_QUANTITY;
-      case LIMIT_REACHED -> OrderService.CreateStatus.LIMIT_REACHED;
+      case LIMIT_REACHED, DAILY_LIMIT -> OrderService.CreateStatus.LIMIT_REACHED;
       case INSUFFICIENT_FUNDS -> OrderService.CreateStatus.INSUFFICIENT_FUNDS;
       case FEE_CHANGED -> OrderService.CreateStatus.FEE_CHANGED;
       case ECONOMY_UNAVAILABLE -> OrderService.CreateStatus.ECONOMY_UNAVAILABLE;

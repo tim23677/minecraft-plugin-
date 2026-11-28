@@ -1,6 +1,6 @@
 # OrderHub Developer API
 
-Package `dev.orderhub.api`. Version 1 (`OrderHubApi.API_VERSION`). Since 2.0.0 the API lives in its own Gradle module `orderhub-api` (interfaces, records and events only) with its own version (currently 1.1.0, Semantic Versioning). The plugin jar contains the API classes, so other plugins find them through OrderHub's class loader.
+Package `dev.orderhub.api`. Version 1 (`OrderHubApi.API_VERSION`). Since 2.0.0 the API lives in its own Gradle module `orderhub-api` (interfaces, records and events only) with its own version (currently 1.2.0, Semantic Versioning). The plugin jar contains the API classes, so other plugins find them through OrderHub's class loader.
 
 ## Using the API in your plugin
 
@@ -8,7 +8,7 @@ Compile against the small API artifact, not against the whole plugin:
 
 ```kotlin
 dependencies {
-    compileOnly("dev.orderhub:orderhub-api:1.1.0")
+    compileOnly("dev.orderhub:orderhub-api:1.2.0")
 }
 ```
 

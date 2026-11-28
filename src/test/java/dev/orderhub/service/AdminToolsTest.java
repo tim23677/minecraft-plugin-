@@ -106,4 +106,83 @@ class AdminToolsTest {
     assertThat(recent.get(0).detail()).isEqualTo("second");
     assertThat(admin.recentAudit(1)).hasSize(1);
   }
+
+  @Test
+  void massCancelRefundsEveryMatchingOrderAndLeavesTheOthers() {
+    Harness h = new Harness();
+    h.economy.setBalance(OWNER, 100_000_000);
+    h.economy.setBalance(SUPPLIER, 100_000_000);
+    h.create(OWNER, 100, 5, 1);
+    h.create(OWNER, 100, 5, 1);
+    long keep = h.create(SUPPLIER, 100, 5, 1).orderId();
+    long before = h.economy.balance(OWNER);
+
+    var result = admin(h).cancelMatching(OWNER, null, "console", "spam clean-up");
+    h.worker.runOnce(50);
+    h.recovery.sweep();
+
+    assertThat(result.cancelled()).isEqualTo(2);
+    assertThat(result.failed()).isZero();
+    assertThat(result.capped()).isFalse();
+    assertThat(h.storage.read(uow -> uow.orders().find(keep).orElseThrow()).status().name())
+        .isEqualTo("ACTIVE");
+    assertThat(h.economy.balance(OWNER)).isGreaterThan(before);
+    var audit = h.storage.read(uow -> uow.audit().recent(10));
+    assertThat(audit.stream().filter(a -> a.action().equals("order.cancel")).count()).isEqualTo(2);
+  }
+
+  @Test
+  void massCancelByItemUsesTheItemKeyAndANonMatchingItemChangesNothing() {
+    Harness h = new Harness();
+    h.economy.setBalance(OWNER, 100_000_000);
+    h.create(OWNER, 100, 5, 1);
+
+    assertThat(admin(h).cancelMatching(null, "minecraft:emerald", "console", "none").cancelled())
+        .isZero();
+    assertThat(
+            admin(h)
+                .cancelMatching(null, "minecraft:diamond", "console", "all diamonds")
+                .cancelled())
+        .isEqualTo(1);
+  }
+
+  @Test
+  void massCancelNeedsAReasonAndAFilter() {
+    Harness h = new Harness();
+    assertThatThrownBy(() -> admin(h).cancelMatching(OWNER, null, "console", " "))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin(h).cancelMatching(null, null, "console", "reason"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void massCancelStopsAtTheCapAndSaysSo() {
+    Harness h = new Harness();
+    h.economy.setBalance(OWNER, 1_000_000_000);
+    for (int i = 0; i < AdminService.MASS_CANCEL_CAP + 3; i++) {
+      var r =
+          h.orders.createOrder(
+              new OrderService.CreateOrderRequest(
+                  UUID.randomUUID(),
+                  OWNER,
+                  h.request(OWNER, 100, 1, 1).item(),
+                  100,
+                  1,
+                  1,
+                  null,
+                  false,
+                  "ores",
+                  1_000,
+                  false));
+      assertThat(r.status()).isEqualTo(OrderService.CreateStatus.CREATED);
+    }
+
+    var first = admin(h).cancelMatching(OWNER, null, "console", "cap test");
+    var second = admin(h).cancelMatching(OWNER, null, "console", "cap test");
+
+    assertThat(first.cancelled()).isEqualTo(AdminService.MASS_CANCEL_CAP);
+    assertThat(first.capped()).isTrue();
+    assertThat(second.cancelled()).isEqualTo(3);
+    assertThat(second.capped()).isFalse();
+  }
 }

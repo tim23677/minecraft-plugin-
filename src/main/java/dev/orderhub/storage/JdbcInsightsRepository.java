@@ -97,6 +97,35 @@ final class JdbcInsightsRepository implements InsightsRepository {
         player);
   }
 
+  private static final String TOP_EARNED =
+      "SELECT player_uuid, money_earned FROM player_statistics WHERE money_earned > 0 "
+          + "ORDER BY money_earned DESC, player_uuid ASC LIMIT ?";
+  private static final String TOP_SPENT =
+      "SELECT player_uuid, money_spent FROM player_statistics WHERE money_spent > 0 "
+          + "ORDER BY money_spent DESC, player_uuid ASC LIMIT ?";
+  private static final String TOP_DELIVERED =
+      "SELECT player_uuid, items_delivered FROM player_statistics WHERE items_delivered > 0 "
+          + "ORDER BY items_delivered DESC, player_uuid ASC LIMIT ?";
+  private static final String TOP_COMPLETED =
+      "SELECT player_uuid, orders_completed FROM player_statistics WHERE orders_completed > 0 "
+          + "ORDER BY orders_completed DESC, player_uuid ASC LIMIT ?";
+
+  @Override
+  public List<TopRow> top(TopStat stat, int limit) {
+    // Je Kennzahl eine feste SQL-Zeichenkette, nie ein zusammengesetzter Spaltenname.
+    String sql =
+        switch (stat) {
+          case EARNED -> TOP_EARNED;
+          case SPENT -> TOP_SPENT;
+          case DELIVERED -> TOP_DELIVERED;
+          case COMPLETED -> TOP_COMPLETED;
+        };
+    return jdbc.list(
+        sql,
+        rs -> new TopRow(Jdbc.uuid(rs, "player_uuid"), rs.getLong(2)),
+        Math.max(1, Math.min(limit, 100)));
+  }
+
   @Override
   public boolean recordTrade(
       UUID journalId, long orderId, String itemKey, long unitPrice, int quantity, long now) {

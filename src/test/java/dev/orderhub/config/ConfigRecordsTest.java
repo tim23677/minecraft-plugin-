@@ -91,4 +91,57 @@ class ConfigRecordsTest {
         .isInstanceOf(IllegalArgumentException.class);
     assertThat(Expiry.defaults().defaultLifetime()).isEqualTo(Duration.ofDays(7));
   }
+
+  @Test
+  void aTierOnlyLowersTheFeeAndTheLowestMatchingTierWins() {
+    Fees fees =
+        new Fees(
+            200,
+            0,
+            true,
+            List.of(new Fees.Tier("a", 100), new Fees.Tier("b", 50), new Fees.Tier("c", 300)),
+            List.of(),
+            java.time.ZoneOffset.UTC);
+    java.time.Instant now = java.time.Instant.parse("2026-11-28T10:00:00Z");
+    assertThat(fees.createFeeBpAt(p -> false, now)).isEqualTo(200);
+    assertThat(fees.createFeeBpAt(p -> p.equals("a"), now)).isEqualTo(100);
+    assertThat(fees.createFeeBpAt(p -> p.equals("a") || p.equals("b"), now)).isEqualTo(50);
+    assertThat(fees.createFeeBpAt(p -> p.equals("c"), now)).isEqualTo(200);
+    assertThat(fees.isOfferedCreateFeeBp(50, now)).isTrue();
+    assertThat(fees.isOfferedCreateFeeBp(200, now)).isTrue();
+    assertThat(fees.isOfferedCreateFeeBp(300, now)).isFalse();
+    assertThat(fees.isOfferedCreateFeeBp(7, now)).isFalse();
+  }
+
+  @Test
+  void aWindowOverMidnightCoversBothSidesAndTheTaxCanDifferFromTheFee() {
+    Fees.Window night =
+        new Fees.Window(
+            "night",
+            java.util.Set.of(),
+            java.time.LocalTime.of(22, 0),
+            java.time.LocalTime.of(2, 0),
+            0,
+            500);
+    Fees fees = new Fees(100, 200, true, List.of(), List.of(night), java.time.ZoneOffset.UTC);
+    assertThat(fees.baseCreateFeeBpAt(java.time.Instant.parse("2026-11-28T23:30:00Z"))).isZero();
+    assertThat(fees.baseCreateFeeBpAt(java.time.Instant.parse("2026-11-29T01:59:00Z"))).isZero();
+    assertThat(fees.baseCreateFeeBpAt(java.time.Instant.parse("2026-11-28T12:00:00Z")))
+        .isEqualTo(100);
+    assertThat(fees.salesTaxBpAt(java.time.Instant.parse("2026-11-28T23:30:00Z"))).isEqualTo(500);
+    assertThat(fees.salesTaxBpAt(java.time.Instant.parse("2026-11-28T12:00:00Z"))).isEqualTo(200);
+  }
+
+  @Test
+  void aPriceBandIncludesItsBoundsAndRejectsNonsense() {
+    var band = new Limits.PriceBand(100, 500);
+    assertThat(band.contains(100)).isTrue();
+    assertThat(band.contains(500)).isTrue();
+    assertThat(band.contains(99)).isFalse();
+    assertThat(band.contains(501)).isFalse();
+    assertThatThrownBy(() -> new Limits.PriceBand(0, 5))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Limits.PriceBand(9, 5))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

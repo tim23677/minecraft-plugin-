@@ -313,7 +313,9 @@ public class OrderHubPlugin extends JavaPlugin {
 
     java.util.function.Supplier<dev.orderhub.config.Rates> rateSource = () -> rates.get();
     OrderService orders = new OrderService(storage, economy, rateSource);
-    DeliveryEngine delivery = new DeliveryEngine(storage, () -> rates.get().fees());
+    DeliveryEngine delivery =
+        new DeliveryEngine(
+            storage, () -> rates.get().fees(), () -> rates.get().limits().daily().deliveryItems());
     ClaimEngine claims = new ClaimEngine(storage, audit);
     ReturnEngine returns = new ReturnEngine(storage, audit);
     PayoutWorker payouts =
@@ -396,6 +398,7 @@ public class OrderHubPlugin extends JavaPlugin {
     orderCommand.sell(new dev.orderhub.flow.SellFlow(services, deliveryFlow));
     orderCommand.renewal(new dev.orderhub.flow.RenewFlow(services));
     orderCommand.orderInfo(new dev.orderhub.flow.InfoFlow(services));
+    orderCommand.topFlow(new dev.orderhub.flow.TopFlow(services));
     orderCommand.templates(new dev.orderhub.flow.TemplateFlow(services, create));
     orderCommand.insightMenus(new dev.orderhub.flow.InsightMenus(services));
     commands.setOrder(orderCommand);
@@ -443,6 +446,7 @@ public class OrderHubPlugin extends JavaPlugin {
               () -> guarded("recovery sweep", recovery::sweep), 300_000, 300_000);
           scheduler.runAsyncRepeating(
               () -> guarded("cooldown purge", create::purgeExpiredCooldowns), 60_000, 60_000);
+          startRest(st, services);
           dev.orderhub.flow.NoteDispatcher noteDispatcher =
               new dev.orderhub.flow.NoteDispatcher(services, getServer()::getOnlinePlayers);
           scheduler.runAsyncRepeating(
@@ -726,9 +730,41 @@ public class OrderHubPlugin extends JavaPlugin {
     getLogger().info("configuration reloaded (the database and payout settings need a restart)");
   }
 
+  private volatile dev.orderhub.rest.RestServer rest;
+
+  /** Startet die lesende REST-Schnittstelle, wenn sie eingeschaltet ist und ein Token vorliegt. */
+  private void startRest(dev.orderhub.bootstrap.Settings st, dev.orderhub.flow.Services services) {
+    if (!st.restEnabled()) {
+      return;
+    }
+    String token = System.getenv(st.restTokenEnv());
+    if (token == null || token.length() < 16) {
+      getLogger()
+          .warning(
+              "rest.enabled is true but the environment variable "
+                  + st.restTokenEnv()
+                  + " is missing or shorter than 16 characters, the interface stays off");
+      return;
+    }
+    try {
+      dev.orderhub.rest.RestApi api =
+          new dev.orderhub.rest.RestApi(
+              services, token, st.restRequestsPerMinute(), System::currentTimeMillis);
+      rest = dev.orderhub.rest.RestServer.start(st.restBind(), st.restPort(), api, getLogger());
+      getLogger().info("REST interface listening on " + st.restBind() + ":" + st.restPort());
+    } catch (java.io.IOException | RuntimeException e) {
+      getLogger().log(Level.WARNING, "REST interface could not start", e);
+    }
+  }
+
   @Override
   public void onDisable() {
     ready = false;
+    dev.orderhub.rest.RestServer restServer = rest;
+    rest = null;
+    if (restServer != null) {
+      restServer.close();
+    }
     if (expansion != null) {
       expansion.unregister();
       expansion = null;

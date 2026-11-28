@@ -193,8 +193,13 @@ class OrderCommandMessagesTest {
     PlayerMock admin = admin();
     admin.performCommand("orderadmin reload");
     assertThat(drain(admin, "reloaded")).contains("reloaded");
-    admin.performCommand("orderadmin audit 5");
-    assertThat(drain(admin, "config.reload")).contains("config.reload");
+    // Der Audit-Eintrag der Neuladung wird asynchron geschrieben: abfragen, bis er da ist.
+    String audit = "";
+    for (int i = 0; i < 40 && !audit.contains("config.reload"); i++) {
+      admin.performCommand("orderadmin audit 5");
+      audit = drain(admin, "config.reload");
+    }
+    assertThat(audit).contains("config.reload");
     admin.performCommand("orderadmin audit abc");
     assertThat(drain(admin, "not a valid number")).contains("'abc' is not a valid number");
   }

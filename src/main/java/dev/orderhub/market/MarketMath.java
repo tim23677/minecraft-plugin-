@@ -110,4 +110,32 @@ public final class MarketMath {
     int rank = (int) Math.ceil(percent / 100.0 * n);
     return sortedAscending.get(Math.max(0, Math.min(n - 1, rank - 1)));
   }
+
+  /**
+   * Durchschnittlicher Stueckpreis je Tag, gewichtet nach Menge. Das Feld {@code days - 1} ist der
+   * Tag, an dem {@code nowMillis} liegt, Feld 0 der aelteste. Tage ohne Handel haben den Wert 0.
+   */
+  public static long[] dailyAverages(List<Trade> trades, long nowMillis, int days) {
+    if (days < 1) {
+      throw new IllegalArgumentException("days");
+    }
+    long day = 24L * 3_600_000L;
+    long[] money = new long[days];
+    long[] units = new long[days];
+    for (Trade t : trades) {
+      long age = Math.floorDiv(nowMillis - t.at(), day);
+      if (age < 0 || age >= days) {
+        continue;
+      }
+      int slot = days - 1 - (int) age;
+      money[slot] =
+          Math.addExact(money[slot], Math.multiplyExact(t.unitPrice(), (long) t.quantity()));
+      units[slot] += t.quantity();
+    }
+    long[] out = new long[days];
+    for (int i = 0; i < days; i++) {
+      out[i] = units[i] == 0 ? 0 : Math.floorDiv(money[i], units[i]);
+    }
+    return out;
+  }
 }

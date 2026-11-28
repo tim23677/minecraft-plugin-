@@ -37,5 +37,16 @@ public interface JournalRepository {
 
   List<JournalEntry> findByOrder(long orderId);
 
+  /**
+   * Summe der Stueckzahl aller Lieferungen des Lieferanten seit {@code since}, ohne gescheiterte.
+   */
+  long sumDeliveredSince(UUID supplier, long since);
+
+  /**
+   * Anzahl der Lieferungen des Lieferanten an Auftraege dieses Auftraggebers seit {@code since},
+   * ohne gescheiterte.
+   */
+  int countDeliveriesBetween(UUID supplier, UUID owner, long since);
+
   List<JournalEntry> findRecent(int offset, int limit);
 }

@@ -2022,6 +2022,116 @@ abstract class StorageContractTest {
   }
 
   @Test
+  void dailyCountersCoverOrdersDeliveriesAndPairs() {
+    UUID owner = UUID.randomUUID();
+    UUID supplier = UUID.randomUUID();
+    UUID stranger = UUID.randomUUID();
+    long orderId =
+        tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders()
+                        .insert(TestData.order(owner, "minecraft:diamond", 100, 50), TestData.T0))
+            .id();
+    long otherOrder =
+        tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders()
+                        .insert(
+                            TestData.order(stranger, "minecraft:diamond", 100, 50), TestData.T0))
+            .id();
+    long old = TestData.T0 - 10_000;
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          var item = TestData.item("minecraft:diamond");
+          u.journal()
+              .insertIfAbsent(
+                  dev.orderhub.tx.JournalEntry.created(
+                      "k1",
+                      orderId,
+                      supplier,
+                      "srv-a",
+                      dev.orderhub.tx.TxType.DELIVERY,
+                      item,
+                      4,
+                      400,
+                      TestData.T0));
+          u.journal()
+              .insertIfAbsent(
+                  dev.orderhub.tx.JournalEntry.created(
+                      "k2",
+                      orderId,
+                      supplier,
+                      "srv-a",
+                      dev.orderhub.tx.TxType.DELIVERY,
+                      item,
+                      6,
+                      600,
+                      TestData.T0 + 1));
+          u.journal()
+              .insertIfAbsent(
+                  dev.orderhub.tx.JournalEntry.created(
+                      "k3",
+                      orderId,
+                      supplier,
+                      "srv-a",
+                      dev.orderhub.tx.TxType.DELIVERY,
+                      item,
+                      9,
+                      900,
+                      old));
+          u.journal()
+              .insertIfAbsent(
+                  dev.orderhub.tx.JournalEntry.created(
+                      "k4",
+                      otherOrder,
+                      supplier,
+                      "srv-a",
+                      dev.orderhub.tx.TxType.DELIVERY,
+                      item,
+                      3,
+                      300,
+                      TestData.T0));
+          u.journal()
+              .insertIfAbsent(
+                  dev.orderhub.tx.JournalEntry.created(
+                      "k5",
+                      orderId,
+                      supplier,
+                      "srv-a",
+                      dev.orderhub.tx.TxType.ESCROW_CREATE,
+                      item,
+                      50,
+                      500,
+                      TestData.T0));
+          return null;
+        });
+    long since = TestData.T0 - 1;
+
+    assertThat(tx(storage(), (UnitOfWork u) -> u.journal().sumDeliveredSince(supplier, since)))
+        .isEqualTo(13L); // 4 + 6 + 3, nicht die alte Lieferung und nicht der Escrow
+    assertThat(tx(storage(), (UnitOfWork u) -> u.journal().sumDeliveredSince(stranger, since)))
+        .isZero();
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) -> u.journal().countDeliveriesBetween(supplier, owner, since)))
+        .isEqualTo(2);
+    assertThat(
+            tx(
+                storage(),
+                (UnitOfWork u) -> u.journal().countDeliveriesBetween(supplier, stranger, since)))
+        .isEqualTo(1);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().countCreatedSince(owner, since)))
+        .isEqualTo(1);
+    assertThat(
+            tx(storage(), (UnitOfWork u) -> u.orders().countCreatedSince(owner, TestData.T0 + 10)))
+        .isZero();
+  }
+
+  @Test
   void optionsForReturnsOneEntryPerOrderInASingleCall() {
     UUID a = UUID.randomUUID();
     long first =

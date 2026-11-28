@@ -32,19 +32,26 @@ public final class RenewFlow {
         s.logger(),
         player,
         () -> s.orders().changeAutoRenew(id, player.getUniqueId(), on),
-        r ->
-            player.sendMessage(
-                switch (r.status()) {
-                  case OK ->
-                      s.messages()
-                          .prefixed(on ? "renew.on" : "renew.off", Messages.number("id", id));
-                  case ALREADY_DONE ->
-                      s.messages().prefixed("renew.unchanged", Messages.number("id", id));
-                  case NOT_FOUND ->
-                      s.messages().prefixed("order.not-found", Messages.number("id", id));
-                  case NOT_OWNER -> s.messages().prefixed("order.not-yours");
-                  default -> s.messages().prefixed("order.not-active");
-                }),
+        r -> {
+          if (r.status() == dev.orderhub.service.OrderService.ActionStatus.OK) {
+            // Asynchrone Ereignisse duerfen nicht auf dem Haupt-Thread ausgeloest werden.
+            s.scheduler()
+                .runAsync(() ->
+                    dev.orderhub.integration.Events.fire(
+                        new dev.orderhub.api.event.OrderRenewEvent(id, player.getUniqueId(), on)));
+          }
+          player.sendMessage(
+              switch (r.status()) {
+                case OK ->
+                    s.messages().prefixed(on ? "renew.on" : "renew.off", Messages.number("id", id));
+                case ALREADY_DONE ->
+                    s.messages().prefixed("renew.unchanged", Messages.number("id", id));
+                case NOT_FOUND ->
+                    s.messages().prefixed("order.not-found", Messages.number("id", id));
+                case NOT_OWNER -> s.messages().prefixed("order.not-yours");
+                default -> s.messages().prefixed("order.not-active");
+              });
+        },
         orphan -> {},
         () -> player.sendMessage(s.messages().prefixed("general.database-error")));
   }

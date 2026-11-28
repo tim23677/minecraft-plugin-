@@ -51,7 +51,8 @@ public final class OrderService {
       int maxOpenOrders,
       boolean feeExempt,
       long expectedFee,
-      OrderOptions options) {
+      OrderOptions options,
+      Integer feeBp) {
 
     /** Kein erwarteter Betrag: die Gebuehr wird nicht gegen eine Anzeige geprueft. */
     public static final long FEE_UNCHECKED = -1;
@@ -113,6 +114,38 @@ public final class OrderService {
           OrderOptions.EXACT);
     }
 
+    /** Ohne ausdruecklichen Gebuehrensatz: der Grundsatz der Konfiguration gilt. */
+    public CreateOrderRequest(
+        UUID requestId,
+        UUID owner,
+        ItemSnapshot item,
+        long unitPrice,
+        int quantity,
+        int minDelivery,
+        Duration lifetime,
+        boolean autoRenew,
+        String category,
+        int maxOpenOrders,
+        boolean feeExempt,
+        long expectedFee,
+        OrderOptions options) {
+      this(
+          requestId,
+          owner,
+          item,
+          unitPrice,
+          quantity,
+          minDelivery,
+          lifetime,
+          autoRenew,
+          category,
+          maxOpenOrders,
+          feeExempt,
+          expectedFee,
+          options,
+          null);
+    }
+
     public CreateOrderRequest {
       Objects.requireNonNull(options, "options");
       Objects.requireNonNull(requestId, "requestId");
@@ -136,6 +169,8 @@ public final class OrderService {
     /** Die bestaetigte Gebuehr weicht von der abgerechneten ab (z. B. Reload dazwischen). */
     FEE_CHANGED,
     LIMIT_REACHED,
+    /** Das Tageslimit fuer neue Auftraege ist erreicht, nichts wurde abgebucht. */
+    DAILY_LIMIT,
     INSUFFICIENT_FUNDS,
     ECONOMY_UNAVAILABLE,
     ECONOMY_FAILED,
@@ -203,11 +238,25 @@ public final class OrderService {
 
   // ---------------------------------------------------------------- createOrder
 
+  private static final long DAY_MILLIS = 24L * 3_600_000L;
+
   private record Phase1(CreateResult early, JournalEntry entry) {}
 
   /** Gebuehr, die diese Instanz fuer {@code escrow} abrechnet. Einzige Quelle fuer die Anzeige. */
   public long quoteCreateFee(long escrow, boolean exempt) {
     return rates.get().fees().createFee(escrow, exempt);
+  }
+
+  /**
+   * Erstellgebuehr in Basispunkten fuer jemanden mit diesen Permissions, zum jetzigen Zeitpunkt.
+   */
+  public int createFeeBpFor(java.util.function.Predicate<String> hasPermission) {
+    return rates.get().fees().createFeeBpAt(hasPermission, java.time.Instant.now());
+  }
+
+  /** Wie {@link #quoteCreateFee(long, boolean)}, mit dem Satz der Stufe des Spielers. */
+  public long quoteCreateFee(long escrow, boolean exempt, int feeBp) {
+    return rates.get().fees().createFee(escrow, exempt, feeBp);
   }
 
   public CreateResult createOrder(CreateOrderRequest r) {
@@ -221,7 +270,13 @@ public final class OrderService {
     long total;
     try {
       escrow = Money.multiply(r.unitPrice(), r.quantity());
-      fee = current.fees().createFee(escrow, r.feeExempt());
+      java.time.Instant at = java.time.Instant.now();
+      int bp = r.feeBp() == null ? current.fees().baseCreateFeeBpAt(at) : r.feeBp();
+      if (r.feeBp() != null && !current.fees().isOfferedCreateFeeBp(bp, at)) {
+        // Ein Satz, den die Konfiguration nicht vergibt: nichts wird abgebucht.
+        return new CreateResult(CreateStatus.FEE_CHANGED, null, null, 0, 0);
+      }
+      fee = current.fees().createFee(escrow, r.feeExempt(), bp);
       total = Money.add(escrow, fee);
     } catch (ArithmeticException e) {
       return new CreateResult(CreateStatus.INVALID_AMOUNT, null, null, 0, 0);
@@ -291,6 +346,10 @@ public final class OrderService {
         || r.unitPrice() > rates.get().limits().maxPrice()) {
       return CreateStatus.INVALID_PRICE;
     }
+    var band = rates.get().limits().priceBand(r.item().itemKey());
+    if (band != null && !band.contains(r.unitPrice())) {
+      return CreateStatus.INVALID_PRICE;
+    }
     if (r.quantity() < 1 || r.quantity() > rates.get().limits().maxQuantity()) {
       return CreateStatus.INVALID_QUANTITY;
     }
@@ -313,6 +372,10 @@ public final class OrderService {
     if (uow.orders().countOpenByOwner(r.owner()) >= r.maxOpenOrders()) {
       return new Phase1(
           new CreateResult(CreateStatus.LIMIT_REACHED, null, null, escrow, fee), null);
+    }
+    int daily = rates.get().limits().daily().orders();
+    if (daily > 0 && uow.orders().countCreatedSince(r.owner(), uow.now() - DAY_MILLIS) >= daily) {
+      return new Phase1(new CreateResult(CreateStatus.DAILY_LIMIT, null, null, escrow, fee), null);
     }
     JournalEntry created =
         JournalEntry.created(

@@ -56,6 +56,8 @@ public final class DeliveryEngine {
     SELF_DELIVERY,
     BELOW_MINIMUM,
     EXCEEDS_REMAINING,
+    /** Das Tageslimit des Lieferanten ist erreicht. */
+    DAILY_LIMIT,
     STALE_ORDER,
     INVALID_QUANTITY
   }
@@ -108,8 +110,11 @@ public final class DeliveryEngine {
     NOT_FOUND
   }
 
+  private static final long DAY_MILLIS = 24L * 3_600_000L;
+
   private final Storage storage;
   private final java.util.function.Supplier<Fees> fees;
+  private final java.util.function.IntSupplier dailyItems;
 
   public DeliveryEngine(Storage storage, Fees fees) {
     this(storage, () -> fees);
@@ -118,8 +123,17 @@ public final class DeliveryEngine {
 
   /** {@code fees} liefert den aktuellen Stand (bei reload ausgetauscht), einmal je Lieferung. */
   public DeliveryEngine(Storage storage, java.util.function.Supplier<Fees> fees) {
+    this(storage, fees, () -> 0);
+  }
+
+  /** {@code dailyItems} liefert das Tageslimit gelieferter Items je Lieferant, 0 = kein Limit. */
+  public DeliveryEngine(
+      Storage storage,
+      java.util.function.Supplier<Fees> fees,
+      java.util.function.IntSupplier dailyItems) {
     this.storage = Objects.requireNonNull(storage, "storage");
     this.fees = Objects.requireNonNull(fees, "fees");
+    this.dailyItems = Objects.requireNonNull(dailyItems, "dailyItems");
   }
 
   /** Schluessel einer Lieferung. */
@@ -164,6 +178,12 @@ public final class DeliveryEngine {
     }
     if (r.quantity() < Math.min(order.minDelivery(), order.remaining())) {
       return new PrepareResult(PrepareStatus.BELOW_MINIMUM, null, r.quantity(), 0);
+    }
+    int dailyLimit = dailyItems.getAsInt();
+    if (dailyLimit > 0
+        && uow.journal().sumDeliveredSince(r.supplier(), uow.now() - DAY_MILLIS) + r.quantity()
+            > dailyLimit) {
+      return new PrepareResult(PrepareStatus.DAILY_LIMIT, null, r.quantity(), 0);
     }
     long gross = Money.multiply(order.unitPrice(), r.quantity());
     long net = gross - fees.get().salesTax(gross, r.taxExempt());

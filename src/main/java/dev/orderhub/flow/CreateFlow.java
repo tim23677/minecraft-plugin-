@@ -174,6 +174,16 @@ public final class CreateFlow {
                   Messages.text("max", Money.format(s.limits().maxPrice()))));
       return;
     }
+    var band = s.limits().priceBand(snapshot.itemKey());
+    if (band != null && !band.contains(unit)) {
+      player.sendMessage(
+          s.messages()
+              .prefixed(
+                  "create.price-band",
+                  Messages.text("min", Money.format(band.min())),
+                  Messages.text("max", Money.format(band.max()))));
+      return;
+    }
     if (q.getAsInt() < 1 || q.getAsInt() > s.limits().maxQuantity()) {
       player.sendMessage(
           s.messages()
@@ -182,14 +192,56 @@ public final class CreateFlow {
                   Messages.number("max", s.limits().maxQuantity())));
       return;
     }
-    long total = Money.multiply(unit, q.getAsInt());
+    int factor = s.settings().get().priceDeviationFactor();
+    if (factor > 0 && !player.hasPermission("orderhub.bypass.price-check")) {
+      String itemKey = snapshot.itemKey();
+      Async.supply(
+          s.scheduler(),
+          s.logger(),
+          player,
+          () -> s.insights().market(itemKey, 7, System.currentTimeMillis()).recommendation(),
+          rec -> {
+            var deviation =
+                rec.isPresent()
+                    ? PriceCheck.check(unit, rec.get().median(), factor)
+                    : PriceCheck.Deviation.NONE;
+            if (deviation == PriceCheck.Deviation.NONE) {
+              confirmStep(player, snapshot, template, q.getAsInt(), unit, options);
+              return;
+            }
+            player.sendMessage(
+                s.messages()
+                    .prefixed(
+                        deviation == PriceCheck.Deviation.TOO_HIGH
+                            ? "create.price-too-high"
+                            : "create.price-too-low",
+                        Messages.text("median", Money.format(rec.get().median())),
+                        Messages.number("factor", factor)));
+          },
+          orphan -> {},
+          () -> player.sendMessage(s.messages().prefixed("general.database-error")));
+      return;
+    }
+    confirmStep(player, snapshot, template, q.getAsInt(), unit, options);
+  }
+
+  /** Zusammenfassung und Bestaetigungsmenue, Entity-Kontext. */
+  private void confirmStep(
+      Player player,
+      ItemSnapshot snapshot,
+      ItemStack template,
+      int quantity,
+      long unit,
+      OrderOptions options) {
+    long total = Money.multiply(unit, quantity);
     boolean exempt = player.hasPermission("orderhub.bypass.fee");
-    long fee = s.orders().quoteCreateFee(total, exempt);
+    int feeBp = s.orders().createFeeBpFor(player::hasPermission);
+    long fee = s.orders().quoteCreateFee(total, exempt, feeBp);
     player.sendMessage(
         s.messages()
             .prefixed(
                 "create.summary",
-                Messages.number("quantity", q.getAsInt()),
+                Messages.number("quantity", quantity),
                 Messages.component("item", ItemService.nameOf(template)),
                 Messages.text("unit", Money.format(unit)),
                 Messages.text("total", Money.format(total)),
@@ -200,13 +252,12 @@ public final class CreateFlow {
       player.sendMessage(
           s.messages().prefixed("create.options", Messages.text("options", optionText)));
     }
-    int quantity = q.getAsInt();
     ConfirmMenu confirm =
         new ConfirmMenu(
             s.messages().get("menu.confirm-title"),
             icon(Material.LIME_STAINED_GLASS_PANE, s.messages().get("menu.confirm")),
             icon(Material.RED_STAINED_GLASS_PANE, s.messages().get("menu.cancel")),
-            p -> submit(p, snapshot, template, quantity, unit, exempt, fee, options),
+            p -> submit(p, snapshot, template, quantity, unit, exempt, fee, options, feeBp),
             id -> {});
     s.menus().open(player, confirm);
   }
@@ -248,7 +299,8 @@ public final class CreateFlow {
       long unit,
       boolean feeExempt,
       long shownFee,
-      OrderOptions options) {
+      OrderOptions options,
+      int feeBp) {
     Settings settings = s.settings().get();
     long waitMillis = cooldown.tryAcquire(player.getUniqueId(), settings.createCooldownSeconds());
     if (waitMillis > 0) {
@@ -273,7 +325,8 @@ public final class CreateFlow {
             maxOpen,
             feeExempt,
             shownFee,
-            options);
+            options,
+            feeBp);
     Async.supply(
         s.scheduler(),
         s.logger(),
@@ -294,6 +347,7 @@ public final class CreateFlow {
     switch (result.status()) {
       case INSUFFICIENT_FUNDS,
           LIMIT_REACHED,
+          DAILY_LIMIT,
           FEE_CHANGED,
           INVALID_PRICE,
           INVALID_QUANTITY,
@@ -330,6 +384,11 @@ public final class CreateFlow {
                       "create.limit-reached",
                       Messages.number("count", 0),
                       Messages.number("limit", s.limits().maxOpenOrders(player::hasPermission))));
+      case DAILY_LIMIT ->
+          player.sendMessage(
+              s.messages()
+                  .prefixed(
+                      "create.daily-limit", Messages.number("limit", s.limits().daily().orders())));
       case FEE_CHANGED ->
           player.sendMessage(
               s.messages()

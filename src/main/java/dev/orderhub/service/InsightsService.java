@@ -197,6 +197,25 @@ public final class InsightsService {
         .join();
   }
 
+  /** Rangliste der Spieler nach einer Kennzahl. */
+  public List<InsightsRepository.TopRow> top(InsightsRepository.TopStat stat, int n) {
+    return storage.transact(uow -> uow.insights().top(stat, n)).join();
+  }
+
+  /** Durchschnittspreis je Tag der letzten {@code days} Tage, Tage ohne Handel haben 0. */
+  public long[] priceTrend(String itemKey, int days, long nowMillis) {
+    long since = nowMillis - Duration.ofDays(days).toMillis();
+    return storage
+        .transact(uow -> {
+          List<Trade> trades =
+              uow.insights().tradesSince(itemKey, since, 5000).stream()
+                  .map(t -> new Trade(t.unitPrice(), t.quantity(), t.at()))
+                  .toList();
+          return MarketMath.dailyAverages(trades, nowMillis, days);
+        })
+        .join();
+  }
+
   public List<String> topItems(int n) {
     return storage.transact(uow -> uow.insights().activeItemKeys(n)).join();
   }

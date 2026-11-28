@@ -264,6 +264,13 @@ final class JdbcOrderRepository implements OrderRepository {
   }
 
   @Override
+  public int countCreatedSince(UUID owner, long since) {
+    return (int)
+        jdbc.count(
+            "SELECT COUNT(*) FROM orders WHERE owner_uuid = ? AND created_at >= ?", owner, since);
+  }
+
+  @Override
   public List<Order> findExpired(long now, int limit) {
     return jdbc.list(
         SELECT

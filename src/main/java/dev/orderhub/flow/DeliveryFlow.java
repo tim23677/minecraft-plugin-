@@ -30,9 +30,12 @@ public final class DeliveryFlow {
   private final Services s;
   private final List<Integer> inputSlots;
 
+  private final PairWatch pairWatch;
+
   public DeliveryFlow(Services services, List<Integer> inputSlots) {
     this.s = services;
     this.inputSlots = List.copyOf(inputSlots);
+    this.pairWatch = new PairWatch(services);
   }
 
   /** Laedt den Auftrag asynchron und oeffnet das Liefermenue. */
@@ -311,6 +314,7 @@ public final class DeliveryFlow {
     return switch (step.prepared().status()) {
       case BELOW_MINIMUM -> "delivery.below-minimum";
       case SELF_DELIVERY -> "delivery.own-order";
+      case DAILY_LIMIT -> "delivery.daily-limit";
       case ORDER_NOT_ACTIVE, ORDER_NOT_FOUND -> "order.not-active";
       default -> "general.busy";
     };
@@ -459,6 +463,7 @@ public final class DeliveryFlow {
           } catch (RuntimeException e) {
             s.logger().log(java.util.logging.Level.WARNING, "insights after delivery failed", e);
           }
+          pairWatch.check(event);
         }
         notifyOwner(order, template, quantity, event != null && event.orderCompleted());
         autoClaim(order);

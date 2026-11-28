@@ -62,6 +62,9 @@ public final class PlaceholderResolver {
                   .orElse("0"),
           "0");
     }
+    if (p.startsWith("top_")) {
+      return top(p.substring("top_".length()));
+    }
     if (p.equals("market_open_orders")) {
       return cache.get(
           "market-open",
@@ -129,5 +132,42 @@ public final class PlaceholderResolver {
   private static String itemKey(String raw) {
     String cleaned = raw.replaceAll("[^a-z0-9_:]", "");
     return cleaned.contains(":") ? cleaned : "minecraft:" + cleaned;
+  }
+
+  /**
+   * {@code top_<kennzahl>_<platz>_<name|value>}, Platz 1 bis 10, zum Beispiel {@code
+   * top_earned_1_name}.
+   */
+  private String top(String spec) {
+    String[] parts = spec.split("_");
+    if (parts.length != 3 || !parts[1].matches("[0-9]{1,2}")) {
+      return null;
+    }
+    dev.orderhub.storage.InsightsRepository.TopStat stat;
+    try {
+      stat =
+          dev.orderhub.storage.InsightsRepository.TopStat.valueOf(
+              parts[0].toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
+    int rank = Integer.parseInt(parts[1]);
+    boolean name = parts[2].equals("name");
+    if (rank < 1 || rank > 10 || !(name || parts[2].equals("value"))) {
+      return null;
+    }
+    return cache.get(
+        "top:" + stat + ":" + rank + ":" + parts[2],
+        () -> {
+          var rows = s.insights().top(stat, 10);
+          if (rank > rows.size()) {
+            return "-";
+          }
+          var row = rows.get(rank - 1);
+          return name
+              ? dev.orderhub.flow.TopFlow.bukkitName(row.player())
+              : dev.orderhub.flow.TopFlow.format(stat, row.value());
+        },
+        "-");
   }
 }

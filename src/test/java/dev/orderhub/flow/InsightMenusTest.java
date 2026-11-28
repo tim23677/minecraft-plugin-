@@ -148,4 +148,21 @@ class InsightMenusTest extends FlowTestBase {
     scheduler.drain();
     assertThat(supplier.isOnline()).isFalse();
   }
+
+  @Test
+  void analyticsShowsAPriceTrendLineWhenTradesExist() {
+    long now = System.currentTimeMillis();
+    insightStorage
+        .transact(uow ->
+            uow.insights()
+                .recordTrade(java.util.UUID.randomUUID(), 1, "minecraft:diamond", 500, 2, now))
+        .join();
+
+    menusUnderTest.analytics(supplier, "minecraft:diamond");
+
+    StringBuilder lore = new StringBuilder();
+    java.util.Objects.requireNonNull(top().getItem(13).lore())
+        .forEach(line -> lore.append(plain(line)).append('\n'));
+    assertThat(lore.toString()).contains("Price trend, 7 days:").contains("5.00 to 5.00");
+  }
 }

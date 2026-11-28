@@ -4,6 +4,14 @@
 
 Added
 
+- Rules in `config.yml`: price range per item (`items.price-limits`), fee tiers per permission (`fees.tiers`), time windows with other fees or tax (`events.windows`), daily limits (`limits.daily-orders`, `limits.daily-delivery-items`), price plausibility against the recent market median (`anti-exploit.price-deviation-factor`, permission `orderhub.bypass.price-check`)
+- Detection of suspicious trading pairs (`anti-exploit.pair-trades-per-day`): audit entry, hint for administrators and the API event `SuspiciousTradeEvent`
+- `/order top [earned|spent|delivered|completed] [count]` and the placeholders `%orderhub_top_<stat>_<rank>_name%` and `%orderhub_top_<stat>_<rank>_value%`
+- Price trend line (7 days) in the market analytics menu
+- `/orderadmin cancel-item <item> confirm <reason>` and `/orderadmin cancel-player <name|uuid> confirm <reason>` (up to 200 orders per command, one audit entry each)
+- `/orderadmin discord-top [stat] confirm <reason>` posts the ranking to Discord (new permission `orderhub.admin.discord`, new event `top-traders` in `discord.yml`)
+- Read-only REST interface for market data (`rest.*`, off by default, token from an environment variable, rate limit per client): `/v1/health`, `/v1/market/orders`, `/v1/market/price`, `/v1/top`
+- API 1.2.0: new events `OrderRenewEvent` and `SuspiciousTradeEvent`
 - Price filter for the marketplace: `/order market [sort] [search text] [min=<price>] [max=<price>]`, kept while the sort or category button is used
 - `/orderadmin player <name|uuid>` and `/orderadmin audit [n]`, `/orderadmin health` starts with version, platform, Java, server id and uptime, tab completion for `confirm`, players and counts
 - Login hint when open orders expire within `notifications.expiry-warning-hours` (default 24)

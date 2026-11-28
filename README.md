@@ -34,6 +34,7 @@ Players:
 - `/order market [newest|highest-price|lowest-price|almost-completed|highest-demand] [search text] [min=<price>] [max=<price>]` opens the marketplace (prices accept `k`, `m`, `b`). The menu has a search by item name, categories and sorting, and pages through large markets with keyset pagination
 - `/order sell [amount|all]` finds the open order with the best price for the item in your hand and opens the delivery menu with the items as a preview. Nothing is delivered before you confirm
 - `/order template [save <name> <quantity> <price> [options]|list|use <name>|delete <name>]` stores and reuses order settings (at most 10 per player). Without arguments it opens a menu: left click uses a template, right click deletes it
+- `/order top [earned|spent|delivered|completed] [count]` shows the best players
 - `/order info <id>` shows quantity, price, status, remaining time and options of an order
 - `/order renew <id>` switches automatic renewal of one of your orders on or off
 - `/order deliver <id>` opens the delivery menu for an order
@@ -49,6 +50,8 @@ Administrators (permission `orderhub.admin`):
 - `/orderadmin review list`, `review show <tx>`, `review resolve <tx> paid|refund|discard confirm <reason>` resolve payments that ended in MANUAL_REVIEW
 - `/orderadmin purge-expired confirm <reason>`
 - `/orderadmin recovery confirm <reason>`
+- `/orderadmin cancel-item <item> confirm <reason>`, `cancel-player <name|uuid> confirm <reason>` cancel all open orders of an item or a player (at most 200 per command)
+- `/orderadmin discord-top [stat] confirm <reason>` posts the player ranking to the Discord webhook
 - `/orderadmin player <name|uuid>` shows open orders, waiting parcels and returns and the statistics of one player
 - `/orderadmin audit [n]` lists the last audit entries (default 10, at most 50)
 - `/orderadmin health` shows version, platform, Java, uptime, database pool, queue, open payments, manual review count and the last recovery

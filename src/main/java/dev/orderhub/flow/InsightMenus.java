@@ -233,15 +233,19 @@ public final class InsightMenus {
           for (int days : WINDOWS) {
             views.add(s.insights().market(itemKey, days, now));
           }
-          return views;
+          return new Analytics(views, s.insights().priceTrend(itemKey, TREND_DAYS, now));
         },
-        views -> showAnalytics(player, itemKey, views),
+        data -> showAnalytics(player, itemKey, data.views(), data.trend()),
         orphan -> {},
         () -> player.sendMessage(s.messages().prefixed("general.database-error")));
   }
 
+  private record Analytics(List<InsightsService.MarketView> views, long[] trend) {}
+
+  private static final int TREND_DAYS = 7;
+
   private void showAnalytics(
-      Player player, String itemKey, List<InsightsService.MarketView> views) {
+      Player player, String itemKey, List<InsightsService.MarketView> views, long[] trend) {
     List<Component> lore = new ArrayList<>();
     var demand = views.get(0).demand();
     if (demand.isPresent()) {
@@ -258,6 +262,24 @@ public final class InsightMenus {
                   Messages.text("avg", Money.format(d.averageUnitPrice()))));
     } else {
       lore.add(s.messages().get("analytics.no-demand"));
+    }
+    long low = Long.MAX_VALUE;
+    long high = 0;
+    for (long v : trend) {
+      if (v > 0) {
+        low = Math.min(low, v);
+        high = Math.max(high, v);
+      }
+    }
+    if (high > 0) {
+      lore.add(
+          s.messages()
+              .get(
+                  "analytics.trend",
+                  Messages.number("days", trend.length),
+                  Messages.text("chart", dev.orderhub.market.Sparkline.of(trend)),
+                  Messages.text("low", Money.format(low)),
+                  Messages.text("high", Money.format(high))));
     }
     for (InsightsService.MarketView v : views) {
       if (v.trades().isEmpty()) {

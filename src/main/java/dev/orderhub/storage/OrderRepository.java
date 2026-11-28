@@ -54,6 +54,9 @@ public interface OrderRepository {
    */
   int countExpiringBetween(UUID owner, long from, long until);
 
+  /** Anzahl der Auftraege, die der Spieler seit {@code since} angelegt hat (jeder Status). */
+  int countCreatedSince(UUID owner, long since);
+
   /** ACTIVE Auftraege mit {@code expiresAt <= now}, aelteste zuerst. */
   List<Order> findExpired(long now, int limit);
 

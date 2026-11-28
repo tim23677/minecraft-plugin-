@@ -125,6 +125,29 @@ final class JdbcJournalRepository implements JournalRepository {
   }
 
   @Override
+  public long sumDeliveredSince(UUID supplier, long since) {
+    return jdbc.one(
+            "SELECT COALESCE(SUM(quantity), 0) FROM transaction_journal WHERE player_uuid = ? "
+                + "AND tx_type = 'DELIVERY' AND state <> 'FAILED' AND created_at >= ?",
+            rs -> rs.getLong(1),
+            supplier,
+            since)
+        .orElse(0L);
+  }
+
+  @Override
+  public int countDeliveriesBetween(UUID supplier, UUID owner, long since) {
+    return (int)
+        jdbc.count(
+            "SELECT COUNT(*) FROM transaction_journal j JOIN orders o ON o.id = j.order_id "
+                + "WHERE j.player_uuid = ? AND o.owner_uuid = ? AND j.tx_type = 'DELIVERY' "
+                + "AND j.state <> 'FAILED' AND j.created_at >= ?",
+            supplier,
+            owner,
+            since);
+  }
+
+  @Override
   public List<JournalEntry> findByOrder(long orderId) {
     return jdbc.list(
         SELECT + "WHERE order_id = ? ORDER BY created_at ASC, id ASC",

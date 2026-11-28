@@ -28,6 +28,8 @@ public final class OrderAdminCommand implements CommandHandler {
           "reload",
           "list",
           "cancel",
+          "cancel-item",
+          "cancel-player",
           "purge-expired",
           "transactions",
           "transaction",
@@ -41,6 +43,7 @@ public final class OrderAdminCommand implements CommandHandler {
           "dump",
           "player",
           "audit",
+          "discord-top",
           "debug");
 
   private final Services s;
@@ -120,6 +123,11 @@ public final class OrderAdminCommand implements CommandHandler {
                       ? s.messages().prefixed("admin.cancelled", Messages.number("id", id))
                       : s.messages().prefixed("order.not-found", Messages.number("id", id)));
             });
+      }
+      case "cancel-item", "cancel-player" -> {
+        if (need(sender, "orderhub.admin.cancel")) {
+          massCancel(sender, sub, args, actor);
+        }
       }
       case "purge-expired" -> {
         if (!need(sender, "orderhub.admin.recovery")) {
@@ -243,6 +251,11 @@ public final class OrderAdminCommand implements CommandHandler {
                   s.messages()
                       .get("admin.recovery-summary", Messages.text("summary", report.summary())));
             });
+      }
+      case "discord-top" -> {
+        if (need(sender, "orderhub.admin.discord")) {
+          discordTop(sender, args, actor);
+        }
       }
       case "player" -> {
         if (need(sender, "orderhub.admin.view")) {
@@ -513,6 +526,82 @@ public final class OrderAdminCommand implements CommandHandler {
                     Messages.text("summary", h.lastRecovery())));
   }
 
+  /**
+   * {@code cancel-item <item> confirm <grund>} und {@code cancel-player <name|uuid> confirm
+   * <grund>}.
+   */
+  private void massCancel(CommandSender sender, String sub, String[] args, String actor) {
+    if (args.length < 2) {
+      sender.sendMessage(s.messages().prefixed("admin.mass-usage"));
+      return;
+    }
+    java.util.UUID owner = null;
+    String item = null;
+    if (sub.equals("cancel-item")) {
+      String key = args[1].trim().toLowerCase(Locale.ROOT);
+      item = key.contains(":") ? key : "minecraft:" + key;
+    } else if (UUID_TEXT.matcher(args[1]).matches()) {
+      owner = java.util.UUID.fromString(args[1]);
+    } else {
+      org.bukkit.OfflinePlayer known = org.bukkit.Bukkit.getOfflinePlayerIfCached(args[1]);
+      if (known == null) {
+        sender.sendMessage(
+            s.messages().prefixed("admin.player-not-found", Messages.text("input", args[1])));
+        return;
+      }
+      owner = known.getUniqueId();
+    }
+    String reason = confirmedReason(sender, args, 2);
+    if (reason == null) {
+      return;
+    }
+    java.util.UUID ownerId = owner;
+    String itemKey = item;
+    async(
+        sender,
+        () -> {
+          var r = admin.cancelMatching(ownerId, itemKey, actor, reason);
+          reply(
+              sender,
+              s.messages()
+                  .prefixed(
+                      r.capped() ? "admin.mass-capped" : "admin.mass-done",
+                      Messages.number("count", r.cancelled()),
+                      Messages.number("failed", r.failed()),
+                      Messages.number("cap", dev.orderhub.service.AdminService.MASS_CANCEL_CAP)));
+        });
+  }
+
+  /** {@code /orderadmin discord-top [stat] confirm <grund>}. */
+  private void discordTop(CommandSender sender, String[] args, String actor) {
+    dev.orderhub.storage.InsightsRepository.TopStat stat =
+        dev.orderhub.storage.InsightsRepository.TopStat.EARNED;
+    int from = 1;
+    if (args.length > 1 && !args[1].equalsIgnoreCase("confirm")) {
+      try {
+        stat =
+            dev.orderhub.storage.InsightsRepository.TopStat.valueOf(
+                args[1].toUpperCase(Locale.ROOT));
+      } catch (IllegalArgumentException e) {
+        sender.sendMessage(s.messages().prefixed("top.usage"));
+        return;
+      }
+      from = 2;
+    }
+    String reason = confirmedReason(sender, args, from);
+    if (reason == null) {
+      return;
+    }
+    var chosen = stat;
+    async(
+        sender,
+        () -> {
+          boolean sent = new dev.orderhub.flow.TopReport(s).publish(chosen, 10, actor, reason);
+          reply(
+              sender, s.messages().prefixed(sent ? "admin.discord-top-done" : "admin.discord-off"));
+        });
+  }
+
   private static String pluginVersion() {
     try {
       return org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(OrderAdminCommand.class)
@@ -632,7 +721,8 @@ public final class OrderAdminCommand implements CommandHandler {
             "orderhub.admin.transactions",
             "orderhub.admin.recovery",
             "orderhub.admin.backup",
-            "orderhub.admin.dump")) {
+            "orderhub.admin.dump",
+            "orderhub.admin.discord")) {
       if (sender.hasPermission(permission)) {
         return true;
       }
@@ -789,10 +879,26 @@ public final class OrderAdminCommand implements CommandHandler {
               .toList(),
           args[1]);
     }
+    if (args.length == 2 && args[0].equalsIgnoreCase("discord-top")) {
+      return OrderCommand.filter(
+          java.util.stream.Stream.concat(
+                  dev.orderhub.flow.TopFlow.STATS.stream(), java.util.stream.Stream.of("confirm"))
+              .toList(),
+          args[1]);
+    }
     if (args.length == 2 && args[0].equalsIgnoreCase("audit")) {
       return OrderCommand.filter(List.of("10", "25", "50"), args[1]);
     }
-    if (args.length == 3 && args[0].equalsIgnoreCase("cancel")) {
+    if (args.length == 2 && args[0].equalsIgnoreCase("cancel-player")) {
+      return OrderCommand.filter(
+          org.bukkit.Bukkit.getOnlinePlayers().stream()
+              .map(org.bukkit.entity.Player::getName)
+              .toList(),
+          args[1]);
+    }
+    if (args.length == 3
+        && (args[0].equalsIgnoreCase("cancel")
+            || args[0].toLowerCase(Locale.ROOT).startsWith("cancel-"))) {
       return OrderCommand.filter(List.of("confirm"), args[2]);
     }
     if (args.length == 2

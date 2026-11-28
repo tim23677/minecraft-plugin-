@@ -61,6 +61,16 @@ public record Settings(
     boolean metricsEnabled,
     boolean updateCheck,
     String updateRepository,
+    dev.orderhub.config.Rules rules,
+    int dailyOrderLimit,
+    int dailyDeliveryItems,
+    int priceDeviationFactor,
+    int pairTradesPerDay,
+    boolean restEnabled,
+    String restBind,
+    int restPort,
+    String restTokenEnv,
+    int restRequestsPerMinute,
     List<String> warnings) {
 
   public Settings {
@@ -139,6 +149,16 @@ public record Settings(
         cfg.getBoolean("metrics.enabled", true),
         cfg.getBoolean("updates.check", false),
         validRepositoryOrEmpty(str(cfg, "updates.repository", ""), warnings),
+        RuleParser.parse(cfg, warnings),
+        range(cfg, "limits.daily-orders", 0, 0, 100_000, warnings),
+        range(cfg, "limits.daily-delivery-items", 0, 0, 100_000_000, warnings),
+        range(cfg, "anti-exploit.price-deviation-factor", 0, 0, 1_000_000, warnings),
+        range(cfg, "anti-exploit.pair-trades-per-day", 10, 0, 100_000, warnings),
+        cfg.getBoolean("rest.enabled", false),
+        str(cfg, "rest.bind", "127.0.0.1"),
+        range(cfg, "rest.port", 8765, 1024, 65_535, warnings),
+        str(cfg, "rest.token-env", "ORDERHUB_REST_TOKEN"),
+        range(cfg, "rest.requests-per-minute", 60, 1, 6_000, warnings),
         List.copyOf(warnings));
   }
 

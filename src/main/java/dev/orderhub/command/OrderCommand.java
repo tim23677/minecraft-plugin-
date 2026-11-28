@@ -31,6 +31,7 @@ public final class OrderCommand implements CommandHandler {
           "template",
           "renew",
           "info",
+          "top",
           "claims",
           "returns",
           "deliver",
@@ -45,17 +46,18 @@ public final class OrderCommand implements CommandHandler {
    * Recht, das sie brauchen. Wer das Recht nicht hat, bekommt die Ablehnung statt der Drosselung.
    */
   private static final java.util.Map<String, String> QUERIES =
-      java.util.Map.of(
-          "market", "orderhub.market",
-          "sell", "orderhub.market",
-          "info", "orderhub.market",
-          "analytics", "orderhub.market",
-          "mine", "orderhub.create",
-          "claims", "orderhub.use",
-          "returns", "orderhub.use",
-          "stats", "orderhub.stats",
-          "history", "orderhub.stats",
-          "favorites", "orderhub.favorites");
+      java.util.Map.ofEntries(
+          java.util.Map.entry("market", "orderhub.market"),
+          java.util.Map.entry("sell", "orderhub.market"),
+          java.util.Map.entry("info", "orderhub.market"),
+          java.util.Map.entry("analytics", "orderhub.market"),
+          java.util.Map.entry("mine", "orderhub.create"),
+          java.util.Map.entry("claims", "orderhub.use"),
+          java.util.Map.entry("returns", "orderhub.use"),
+          java.util.Map.entry("stats", "orderhub.stats"),
+          java.util.Map.entry("history", "orderhub.stats"),
+          java.util.Map.entry("top", "orderhub.stats"),
+          java.util.Map.entry("favorites", "orderhub.favorites"));
 
   private final dev.orderhub.flow.QueryThrottle throttle =
       new dev.orderhub.flow.QueryThrottle(System::currentTimeMillis);
@@ -70,6 +72,7 @@ public final class OrderCommand implements CommandHandler {
   private volatile dev.orderhub.flow.TemplateFlow templates;
   private volatile dev.orderhub.flow.RenewFlow renewal;
   private volatile dev.orderhub.flow.InfoFlow orderInfo;
+  private volatile dev.orderhub.flow.TopFlow topFlow;
   private volatile dev.orderhub.flow.InsightMenus insightMenus;
 
   /** Verdrahtet die Menues fuer Statistik, Verlauf, Favoriten und Analyse. */
@@ -80,6 +83,11 @@ public final class OrderCommand implements CommandHandler {
               + "Er wird weder veraendert noch weitergegeben.")
   public void insightMenus(dev.orderhub.flow.InsightMenus menus) {
     this.insightMenus = menus;
+  }
+
+  /** Verdrahtet {@code /order top}. */
+  public void topFlow(dev.orderhub.flow.TopFlow flow) {
+    this.topFlow = flow;
   }
 
   /** Verdrahtet {@code /order info}. */
@@ -215,6 +223,16 @@ public final class OrderCommand implements CommandHandler {
       case "cancel" -> {
         if (need(player, "orderhub.create")) {
           withId(player, args, menus::cancel);
+        }
+      }
+      case "top" -> {
+        if (need(player, "orderhub.stats")) {
+          dev.orderhub.flow.TopFlow flow = topFlow;
+          if (flow == null) {
+            player.sendMessage(s.messages().prefixed("general.not-available"));
+          } else {
+            flow.show(player, java.util.Arrays.copyOfRange(args, 1, args.length));
+          }
         }
       }
       case "info" -> {
@@ -362,6 +380,9 @@ public final class OrderCommand implements CommandHandler {
         }
       }
       return filter(options, args[args.length - 1]);
+    }
+    if (args.length == 2 && args[0].equalsIgnoreCase("top")) {
+      return filter(dev.orderhub.flow.TopFlow.STATS, args[1]);
     }
     if (args.length == 2 && args[0].equalsIgnoreCase("sell")) {
       return filter(List.of("all", "1", "16", "64"), args[1]);

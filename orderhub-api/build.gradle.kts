@@ -7,7 +7,7 @@ plugins {
 
 // Version der API, getrennt von der des Plugins (Semantic Versioning, siehe API.md).
 group = "dev.orderhub"
-version = "1.1.0"
+version = "1.2.0"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))

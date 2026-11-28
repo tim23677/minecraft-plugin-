@@ -95,4 +95,116 @@ class FeeConsistencyTest {
     assertThat(ok.fee()).isEqualTo(500);
     assertThat(base.expectedFee()).isEqualTo(CreateOrderRequest.FEE_UNCHECKED);
   }
+
+  private static CreateOrderRequest withFeeBp(Harness h, Integer feeBp, long expectedFee) {
+    CreateOrderRequest base = h.request(OWNER, 1_000, 10, 1);
+    return new CreateOrderRequest(
+        base.requestId(),
+        base.owner(),
+        base.item(),
+        base.unitPrice(),
+        base.quantity(),
+        base.minDelivery(),
+        base.lifetime(),
+        base.autoRenew(),
+        base.category(),
+        base.maxOpenOrders(),
+        base.feeExempt(),
+        expectedFee,
+        base.options(),
+        feeBp);
+  }
+
+  private static Fees tiered() {
+    return new Fees(
+        200,
+        0,
+        true,
+        java.util.List.of(new Fees.Tier("orderhub.fee.vip", 50)),
+        java.util.List.of(),
+        java.time.ZoneOffset.UTC);
+  }
+
+  @Test
+  void aConfiguredTierRateIsChargedAndShownConsistently() {
+    Harness h = new Harness(tiered(), Limits.defaults());
+    h.economy.setBalance(OWNER, 1_000_000);
+    long shown = h.orders.quoteCreateFee(10_000, false, 50);
+    assertThat(shown).isEqualTo(50);
+
+    var result = h.orders.createOrder(withFeeBp(h, 50, shown));
+
+    assertThat(result.status()).isEqualTo(CreateStatus.CREATED);
+    assertThat(result.fee()).isEqualTo(50);
+    assertThat(h.economy.balance(OWNER)).isEqualTo(1_000_000 - 10_000 - 50);
+  }
+
+  @Test
+  void aRateTheConfigurationDoesNotOfferIsRefusedBeforeAnyCharge() {
+    Harness h = new Harness(tiered(), Limits.defaults());
+    h.economy.setBalance(OWNER, 1_000_000);
+
+    var result = h.orders.createOrder(withFeeBp(h, 0, CreateOrderRequest.FEE_UNCHECKED));
+
+    assertThat(result.status()).isEqualTo(CreateStatus.FEE_CHANGED);
+    assertThat(h.economy.mutationCount()).isZero();
+    assertThat(h.storage.snapshot().journal()).isEmpty();
+  }
+
+  @Test
+  void withoutARateTheBaseRateApplies() {
+    Harness h = new Harness(tiered(), Limits.defaults());
+    h.economy.setBalance(OWNER, 1_000_000);
+
+    var result = h.orders.createOrder(withFeeBp(h, null, CreateOrderRequest.FEE_UNCHECKED));
+
+    assertThat(result.status()).isEqualTo(CreateStatus.CREATED);
+    assertThat(result.fee()).isEqualTo(200);
+  }
+
+  @Test
+  void aPriceBandOfTheItemIsEnforcedByTheService() {
+    var limits =
+        new Limits(
+            1,
+            1_000_000,
+            100,
+            5,
+            java.util.List.of(),
+            java.util.Map.of("minecraft:diamond", new Limits.PriceBand(500, 2_000)));
+    Harness h = new Harness(new Fees(0, 0, true), limits);
+    h.economy.setBalance(OWNER, 10_000_000);
+    String key = h.request(OWNER, 1_000, 1, 1).item().itemKey();
+
+    var inside = h.orders.createOrder(h.request(OWNER, 1_000, 1, 1));
+    var below = h.orders.createOrder(h.request(OWNER, 400, 1, 1));
+    var above = h.orders.createOrder(h.request(OWNER, 2_001, 1, 1));
+
+    assertThat(key).isEqualTo("minecraft:diamond");
+    assertThat(inside.status()).isEqualTo(CreateStatus.CREATED);
+    assertThat(below.status()).isEqualTo(CreateStatus.INVALID_PRICE);
+    assertThat(above.status()).isEqualTo(CreateStatus.INVALID_PRICE);
+  }
+
+  @Test
+  void theDailyOrderLimitStopsTheNextOrderBeforeAnyCharge() {
+    var limits =
+        new Limits(
+            1, 1_000_000, 100, 50, java.util.List.of(), java.util.Map.of(), new Limits.Daily(2, 0));
+    Harness h = new Harness(new Fees(0, 0, true), limits);
+    h.economy.setBalance(OWNER, 10_000_000);
+
+    assertThat(h.orders.createOrder(h.request(OWNER, 1_000, 1, 1)).status())
+        .isEqualTo(CreateStatus.CREATED);
+    assertThat(h.orders.createOrder(h.request(OWNER, 1_000, 1, 1)).status())
+        .isEqualTo(CreateStatus.CREATED);
+    long mutationsBefore = h.economy.mutationCount();
+
+    var third = h.orders.createOrder(h.request(OWNER, 1_000, 1, 1));
+
+    assertThat(third.status()).isEqualTo(CreateStatus.DAILY_LIMIT);
+    assertThat(h.economy.mutationCount()).isEqualTo(mutationsBefore);
+    assertThat(h.orders.createOrder(h.request(Harness.player(2), 1_000, 1, 1)).status())
+        .isNotEqualTo(CreateStatus.DAILY_LIMIT);
+  }
 }

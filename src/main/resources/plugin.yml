@@ -55,6 +55,9 @@ permissions:
   orderhub.admin.dump:
     description: Write a support file with version, plugins, configuration without secrets and recent errors
     default: op
+  orderhub.admin.discord:
+    description: Post the player ranking to the Discord webhook
+    default: op
   orderhub.admin.view:
     description: List orders, statistics and debug info
     default: op
@@ -72,3 +75,4 @@ permissions:
       orderhub.admin.recovery: true
       orderhub.admin.backup: true
       orderhub.admin.dump: true
+      orderhub.admin.discord: true

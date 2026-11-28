@@ -26,8 +26,16 @@ public record Rates(Limits limits, Fees fees, Expiry expiry) {
             st.maxUnitPrice(),
             st.maxQuantity(),
             st.defaultMaxOpenOrders(),
-            TIERS),
-        new Fees(st.createFeeBp(), st.salesTaxBp(), true),
+            TIERS,
+            st.rules().priceBands(),
+            new Limits.Daily(st.dailyOrderLimit(), st.dailyDeliveryItems())),
+        new Fees(
+            st.createFeeBp(),
+            st.salesTaxBp(),
+            true,
+            st.rules().feeTiers(),
+            st.rules().feeWindows(),
+            st.rules().zone()),
         new Expiry(Duration.ofHours(st.expiryHours()), true));
   }
 }

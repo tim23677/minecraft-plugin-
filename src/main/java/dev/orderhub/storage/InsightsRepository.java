@@ -42,6 +42,20 @@ public interface InsightsRepository {
 
   Optional<PlayerStats> stats(UUID player);
 
+  /** Kennzahl fuer Ranglisten. */
+  enum TopStat {
+    EARNED,
+    SPENT,
+    DELIVERED,
+    COMPLETED
+  }
+
+  /** Eine Zeile der Rangliste. */
+  record TopRow(UUID player, long value) {}
+
+  /** Die besten Spieler nach {@code stat}, absteigend, Gleichstand nach UUID. */
+  List<TopRow> top(TopStat stat, int limit);
+
   /**
    * {@code true}, wenn neu eingetragen. Wiederholung mit gleicher Journal-Id zaehlt nicht doppelt.
    */

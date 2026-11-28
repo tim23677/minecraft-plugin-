@@ -24,7 +24,8 @@ public final class DiscordService {
     ORDER_EXPIRED("order-expired"),
     ORDER_CANCELLED("order-cancelled"),
     CRITICAL_ERROR("critical-error"),
-    ADMIN_WARNING("admin-warning");
+    ADMIN_WARNING("admin-warning"),
+    TOP_TRADERS("top-traders");
 
     private final String key;
 

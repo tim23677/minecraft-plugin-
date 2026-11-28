@@ -709,6 +709,14 @@ public final class InMemoryStorage implements Storage {
       }
 
       @Override
+      public int countCreatedSince(UUID owner, long since) {
+        return (int)
+            s.orders.values().stream()
+                .filter(o -> o.owner().equals(owner) && o.createdAt() >= since)
+                .count();
+      }
+
+      @Override
       public List<Order> findExpired(long at, int limit) {
         return s.orders.values().stream()
             .filter(o -> o.status() == OrderStatus.ACTIVE && o.expiresAt() <= at)
@@ -719,6 +727,30 @@ public final class InMemoryStorage implements Storage {
     }
 
     private final class Journal implements JournalRepository {
+      @Override
+      public int countDeliveriesBetween(UUID supplier, UUID owner, long since) {
+        return (int)
+            s.journal.values().stream()
+                .filter(e ->
+                    e.playerId().equals(supplier) && e.type() == dev.orderhub.tx.TxType.DELIVERY)
+                .filter(e -> e.state() != TxState.FAILED && e.createdAt() >= since)
+                .filter(e -> {
+                  Order o = e.orderId() == null ? null : s.orders.get(e.orderId());
+                  return o != null && o.owner().equals(owner);
+                })
+                .count();
+      }
+
+      @Override
+      public long sumDeliveredSince(UUID supplier, long since) {
+        return s.journal.values().stream()
+            .filter(
+                e -> e.playerId().equals(supplier) && e.type() == dev.orderhub.tx.TxType.DELIVERY)
+            .filter(e -> e.state() != TxState.FAILED && e.createdAt() >= since)
+            .mapToLong(JournalEntry::quantity)
+            .sum();
+      }
+
       @Override
       public InsertResult insertIfAbsent(JournalEntry entry) {
         UUID existing = s.journalKeys.get(entry.idempotencyKey());

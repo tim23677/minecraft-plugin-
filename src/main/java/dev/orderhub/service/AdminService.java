@@ -69,6 +69,58 @@ public final class AdminService {
                 result.status().name()));
   }
 
+  /** Ergebnis einer Sammelstornierung. */
+  public record MassCancelResult(int cancelled, int failed, boolean capped) {}
+
+  /**
+   * Obergrenze je Sammelstornierung, damit ein Befehl den Server nicht minutenlang beschaeftigt.
+   */
+  public static final int MASS_CANCEL_CAP = 200;
+
+  /**
+   * Storniert alle offenen (ACTIVE und PAUSED) Auftraege, die zu {@code owner} und {@code itemKey}
+   * passen (jeweils {@code null} = beliebig), einzeln ueber denselben Pfad wie {@link #cancel}.
+   * Jede Stornierung hat ihren eigenen Audit-Eintrag, eine fehlgeschlagene Einzelstornierung stoppt
+   * die anderen nicht.
+   */
+  public MassCancelResult cancelMatching(
+      java.util.UUID owner, String itemKey, String actor, String reason) {
+    requireReason(reason);
+    if (owner == null && itemKey == null) {
+      throw new IllegalArgumentException("a player or an item is required");
+    }
+    List<Long> ids = new java.util.ArrayList<>();
+    for (OrderStatus status : List.of(OrderStatus.ACTIVE, OrderStatus.PAUSED)) {
+      int offset = 0;
+      while (ids.size() <= MASS_CANCEL_CAP) {
+        List<Order> page =
+            list(new OrderQuery(owner, itemKey, null, status, OrderQuery.Sort.NEWEST, offset, 100));
+        for (Order o : page) {
+          ids.add(o.id());
+        }
+        if (page.size() < 100) {
+          break;
+        }
+        offset += 100;
+      }
+    }
+    boolean capped = ids.size() > MASS_CANCEL_CAP;
+    int cancelled = 0;
+    int failed = 0;
+    for (long id : ids.stream().limit(MASS_CANCEL_CAP).toList()) {
+      try {
+        if (cancel(id, actor, reason).ok()) {
+          cancelled++;
+        } else {
+          failed++;
+        }
+      } catch (RuntimeException e) {
+        failed++;
+      }
+    }
+    return new MassCancelResult(cancelled, failed, capped);
+  }
+
   /** Verarbeitet abgelaufene Auftraege sofort. */
   public OrderService.ExpiryReport purgeExpired(String actor, String reason) {
     requireReason(reason);
@@ -424,6 +476,11 @@ public final class AdminService {
 
   private static long count(dev.orderhub.storage.UnitOfWork uow, OrderStatus status) {
     return uow.orders().count(new OrderQuery(null, null, null, status, null, 0, 1));
+  }
+
+  /** Audit-Eintrag der Anti-Exploit-Erkennung (kein Eingriff, nur Hinweis fuer Administratoren). */
+  public void auditSuspicious(String action, String target, String detail) {
+    audit("system", action, target, "anti-exploit", detail);
   }
 
   /** Audit fuer {@code /orderadmin reload}. Es gibt keine Datenbankaenderung, nur den Eintrag. */
