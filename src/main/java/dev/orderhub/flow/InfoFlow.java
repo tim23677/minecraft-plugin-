@@ -65,7 +65,7 @@ public final class InfoFlow {
             : net.kyori.adventure.text.Component.text(o.item().itemKey());
     long hours = Math.max(0, (o.expiresAt() - clock.getAsLong()) / 3_600_000L);
     String options =
-        OptionFlags.describe(f.options(), key -> s.messages().raw("create.option-" + key));
+        OptionFlags.describe(f.options(), key -> s.messages().raw(OptionFlags.messageKey(key)));
     return s.messages()
         .prefixed(
             "order.info",

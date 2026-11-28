@@ -25,6 +25,15 @@ public final class OptionFlags {
 
   private OptionFlags() {}
 
+  /** Meldungsschluessel der Kurzbeschreibung fuer {@link #describe}. */
+  public static String messageKey(String option) {
+    return switch (option) {
+      case "durability" -> "create.option-durability";
+      case "enchants" -> "create.option-enchants";
+      default -> "create.option-autoclaim";
+    };
+  }
+
   public static Result parse(List<String> tokens) {
     int durability = 100;
     boolean enchants = false;

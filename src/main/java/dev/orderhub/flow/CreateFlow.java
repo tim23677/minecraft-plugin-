@@ -189,7 +189,7 @@ public final class CreateFlow {
                 Messages.text("total", Money.format(total)),
                 Messages.text("fee", Money.format(fee))));
     String optionText =
-        OptionFlags.describe(options, key -> s.messages().raw("create.option-" + key));
+        OptionFlags.describe(options, key -> s.messages().raw(OptionFlags.messageKey(key)));
     if (!optionText.isEmpty()) {
       player.sendMessage(
           s.messages().prefixed("create.options", Messages.text("options", optionText)));
