@@ -5,11 +5,13 @@ prefix: "<gradient:#4ea8de:#7b6cf6>OrderHub</gradient> <dark_gray>|</dark_gray> 
 general:
   starting: "<yellow>OrderHub startet noch. Bitte versuche es gleich erneut."
   help: "<gray>/order create [Menge] [Preis] | mine | market [Sortierung] | claims | returns | deliver <id> | cancel <id>"
+  help-more: "<gray>Mehr: sell [Menge|all] | info <id> | template save|use|delete|list | renew <id> on|off | stats | history | favorites | analytics"
   usage-create: "<gray>Halte das gewünschte Item und nutze <white>/order create <Menge> <Preis></white> oder nur <white>/order create</white>."
   not-available: "<yellow>Diese Funktion ist in diesem Build noch nicht enthalten."
   no-permission: "<red>Dafür fehlt dir die Berechtigung."
   players-only: "<red>Dieser Befehl ist nur für Spieler."
   unknown-subcommand: "<red>Unbekannter Unterbefehl. Nutze <white>/order help</white>."
+  unknown-subcommand-suggest: "<gray>Unbekannter Unterbefehl. Meintest du <white>/order <suggestion></white>?"
   invalid-number: "<red>'<input>' ist keine gültige Zahl."
   invalid-amount: "<red>'<input>' ist kein gültiger Betrag."
   busy: "<red>Das System ist ausgelastet. Versuche es gleich erneut."

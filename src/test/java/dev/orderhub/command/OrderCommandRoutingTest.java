@@ -206,4 +206,33 @@ class OrderCommandRoutingTest {
     assertThat(suggestions(player, "order mine ")).isEmpty();
     assertThat(suggestions(player, "order market newest ")).isEmpty();
   }
+
+  @Test
+  void aMistypedSubcommandGetsASuggestion() {
+    PlayerMock player = player(ALL_PERMISSIONS);
+    player.performCommand("order marekt");
+    assertThat(player.nextMessage().replaceAll("§.", "")).contains("Did you mean /order market");
+  }
+
+  @Test
+  void anUnrelatedSubcommandGetsTheGenericHint() {
+    PlayerMock player = player(ALL_PERMISSIONS);
+    player.performCommand("order zzzzzzzz");
+    assertThat(player.nextMessage().replaceAll("§.", ""))
+        .contains("Unknown subcommand. Use /order help");
+  }
+
+  @Test
+  void helpListsTheNewerSubcommandsToo() {
+    PlayerMock player = player(ALL_PERMISSIONS);
+    player.performCommand("order help");
+    String first = player.nextMessage();
+    String second = player.nextMessage();
+    assertThat(first).isNotNull();
+    assertThat(second.replaceAll("§.", ""))
+        .contains("sell")
+        .contains("template")
+        .contains("renew")
+        .contains("info");
+  }
 }

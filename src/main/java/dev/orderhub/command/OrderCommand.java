@@ -125,7 +125,10 @@ public final class OrderCommand implements CommandHandler {
     }
     String sub = args[0].toLowerCase(Locale.ROOT);
     switch (sub) {
-      case "help" -> player.sendMessage(s.messages().prefixed("general.help"));
+      case "help" -> {
+        player.sendMessage(s.messages().prefixed("general.help"));
+        player.sendMessage(s.messages().prefixed("general.help-more"));
+      }
       case "create" -> {
         if (!need(player, "orderhub.create")) {
           return true;
@@ -255,7 +258,18 @@ public final class OrderCommand implements CommandHandler {
           }
         }
       }
-      default -> player.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
+      default -> {
+        var suggestion = Suggest.closest(args[0], SUBCOMMANDS);
+        if (suggestion.isPresent()) {
+          player.sendMessage(
+              s.messages()
+                  .prefixed(
+                      "general.unknown-subcommand-suggest",
+                      Messages.text("suggestion", suggestion.get())));
+        } else {
+          player.sendMessage(s.messages().prefixed("general.unknown-subcommand"));
+        }
+      }
     }
     return true;
   }
