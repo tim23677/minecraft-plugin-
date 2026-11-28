@@ -173,6 +173,7 @@ class OrderCommandRoutingTest {
         new com.mojang.brigadier.CommandDispatcher<
             io.papermc.paper.command.brigadier.CommandSourceStack>();
     dispatcher.getRoot().addChild(plugin.orderCommandNode());
+    dispatcher.getRoot().addChild(plugin.adminCommandNode());
     var parse =
         dispatcher.parse(
             input, org.mockbukkit.mockbukkit.command.CommandSourceStackMock.from(player));
@@ -204,7 +205,11 @@ class OrderCommandRoutingTest {
     assertThat(suggestions(player, "order create 6")).containsExactly("64");
     assertThat(suggestions(player, "order create 64 ")).isEmpty();
     assertThat(suggestions(player, "order mine ")).isEmpty();
-    assertThat(suggestions(player, "order market newest ")).isEmpty();
+    assertThat(suggestions(player, "order market newest "))
+        .containsExactlyInAnyOrder("min=", "max=");
+    assertThat(suggestions(player, "order market newest m"))
+        .containsExactlyInAnyOrder("min=", "max=");
+    assertThat(suggestions(player, "order market newest mi")).containsExactly("min=");
   }
 
   @Test
@@ -234,5 +239,49 @@ class OrderCommandRoutingTest {
         .contains("template")
         .contains("renew")
         .contains("info");
+  }
+
+  @Test
+  void aSecondLookupInsideTheIntervalIsAnsweredWithSlowDown() {
+    PlayerMock player = player(ALL_PERMISSIONS);
+    player.performCommand("order info 1");
+    player.performCommand("order info 1");
+
+    String slow = null;
+    for (int i = 0; i < 100 && slow == null; i++) {
+      server.getScheduler().performOneTick();
+      String m = player.nextMessage();
+      while (m != null) {
+        if (m.replaceAll("§.", "").contains("Please wait a moment")) {
+          slow = m;
+        }
+        m = player.nextMessage();
+      }
+    }
+    assertThat(slow).isNotNull();
+  }
+
+  @Test
+  void aPlayerWithoutThePermissionIsRefusedNotThrottled() {
+    PlayerMock player = player();
+    player.addAttachment(plugin, "orderhub.use", true);
+    player.addAttachment(plugin, "orderhub.market", false);
+    player.performCommand("order info 1");
+    player.performCommand("order info 1");
+    String first = player.nextMessage();
+    String second = player.nextMessage();
+    assertThat(first.replaceAll("§.", "")).contains("do not have permission");
+    assertThat(second.replaceAll("§.", "")).contains("do not have permission");
+  }
+
+  @Test
+  void adminSuggestsTheNewSubcommandsAndTheConfirmWord() {
+    PlayerMock admin = player("orderhub.admin");
+    assertThat(suggestions(admin, "orderadmin pl")).containsExactly("player");
+    assertThat(suggestions(admin, "orderadmin au")).containsExactly("audit");
+    assertThat(suggestions(admin, "orderadmin audit ")).containsExactlyInAnyOrder("10", "25", "50");
+    assertThat(suggestions(admin, "orderadmin backup co")).containsExactly("confirm");
+    assertThat(suggestions(admin, "orderadmin cancel 5 co")).containsExactly("confirm");
+    assertThat(suggestions(player(), "orderadmin pl")).isEmpty();
   }
 }

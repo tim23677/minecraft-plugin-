@@ -50,6 +50,9 @@ orders:
   input-timeout-seconds: 60
   # Minimum seconds between two order creations of one player (0 = off).
   create-cooldown-seconds: 5
+  # Minimum milliseconds between two lookups of one player (market, sell, info, stats, history,
+  # analytics, favorites, mine, claims, returns). Protects the database from command spam (0 = off).
+  query-interval-ms: 250
 
 fees:
   # Fees in basis points (100 = 1 %). The permission orderhub.bypass.fee removes the creation fee.
@@ -120,6 +123,8 @@ market:
 notifications:
   # Minimum seconds between two notifications of the same kind to one player.
   cooldown-seconds: 60
+  # At login, players are told when open orders expire within this many hours (0 = off).
+  expiry-warning-hours: 24
   # How the summary is shown at login: chat, actionbar or title.
   display: chat
   # Sound that plays with the summary, for example entity.experience_orb.pickup. Empty = no sound.

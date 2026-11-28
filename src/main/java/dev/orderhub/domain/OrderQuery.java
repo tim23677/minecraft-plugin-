@@ -13,6 +13,8 @@ import java.util.UUID;
  * @param offset Start der Seite
  * @param limit Seitengroesse, hart auf 100 begrenzt
  * @param text Suchtext im Itemnamen (wird normalisiert), {@code null} = kein Filter
+ * @param minUnitPrice nur Auftraege mit mindestens diesem Stueckpreis, {@code null} = kein Filter
+ * @param maxUnitPrice nur Auftraege mit hoechstens diesem Stueckpreis, {@code null} = kein Filter
  * @param after Keyset-Cursor der letzten Zeile der vorigen Seite, {@code null} = erste Seite. Mit
  *     Cursor muss {@code offset} 0 sein.
  */
@@ -25,7 +27,23 @@ public record OrderQuery(
     int offset,
     int limit,
     String text,
-    Cursor after) {
+    Cursor after,
+    Long minUnitPrice,
+    Long maxUnitPrice) {
+
+  /** Ohne Preisfilter. */
+  public OrderQuery(
+      UUID owner,
+      String itemKey,
+      String category,
+      OrderStatus status,
+      Sort sort,
+      int offset,
+      int limit,
+      String text,
+      Cursor after) {
+    this(owner, itemKey, category, status, sort, offset, limit, text, after, null, null);
+  }
 
   /** Ohne Textsuche und Cursor (Offset-Paginierung). */
   public OrderQuery(
@@ -36,7 +54,7 @@ public record OrderQuery(
       Sort sort,
       int offset,
       int limit) {
-    this(owner, itemKey, category, status, sort, offset, limit, null, null);
+    this(owner, itemKey, category, status, sort, offset, limit, null, null, null, null);
   }
 
   /**
@@ -97,6 +115,12 @@ public record OrderQuery(
     }
     if (after != null && offset != 0) {
       throw new IllegalArgumentException("offset must be 0 with a cursor");
+    }
+    if ((minUnitPrice != null && minUnitPrice < 0) || (maxUnitPrice != null && maxUnitPrice < 0)) {
+      throw new IllegalArgumentException("price filter must not be negative");
+    }
+    if (minUnitPrice != null && maxUnitPrice != null && minUnitPrice > maxUnitPrice) {
+      throw new IllegalArgumentException("minUnitPrice must not exceed maxUnitPrice");
     }
     text = normalizeText(text);
     limit = Math.max(1, Math.min(limit, 100));

@@ -40,6 +40,25 @@ public final class OrderCommand implements CommandHandler {
           "favorites",
           "analytics");
 
+  /**
+   * Unterbefehle, die je eine Datenbankabfrage ausloesen und deshalb gedrosselt werden, mit dem
+   * Recht, das sie brauchen. Wer das Recht nicht hat, bekommt die Ablehnung statt der Drosselung.
+   */
+  private static final java.util.Map<String, String> QUERIES =
+      java.util.Map.of(
+          "market", "orderhub.market",
+          "sell", "orderhub.market",
+          "info", "orderhub.market",
+          "analytics", "orderhub.market",
+          "mine", "orderhub.create",
+          "claims", "orderhub.use",
+          "returns", "orderhub.use",
+          "stats", "orderhub.stats",
+          "history", "orderhub.stats",
+          "favorites", "orderhub.favorites");
+
+  private final dev.orderhub.flow.QueryThrottle throttle =
+      new dev.orderhub.flow.QueryThrottle(System::currentTimeMillis);
   private final Services s;
   private final CreateFlow create;
   private final DeliveryFlow delivery;
@@ -124,6 +143,12 @@ public final class OrderCommand implements CommandHandler {
       return true;
     }
     String sub = args[0].toLowerCase(Locale.ROOT);
+    if (QUERIES.containsKey(sub)
+        && player.hasPermission(QUERIES.get(sub))
+        && !throttle.tryAcquire(player.getUniqueId(), s.settings().get().queryIntervalMs())) {
+      player.sendMessage(s.messages().prefixed("general.slow-down"));
+      return true;
+    }
     switch (sub) {
       case "help" -> {
         player.sendMessage(s.messages().prefixed("general.help"));
@@ -274,28 +299,16 @@ public final class OrderCommand implements CommandHandler {
     return true;
   }
 
-  /** {@code /order market [sortierung | suchtext...]}. */
+  /** {@code /order market [sortierung] [suchtext...] [min=preis] [max=preis]}. */
   private void openMarket(Player player, String[] args) {
-    if (args.length > 1 && isSort(args[1])) {
-      menus.openMarket(
-          player, new dev.orderhub.flow.MarketFlow.Filter(sortOf(args[1]), null, null));
+    var parsed = dev.orderhub.flow.MarketArgs.parse(args);
+    if (!parsed.ok()) {
+      player.sendMessage(
+          s.messages()
+              .prefixed("general.invalid-amount", Messages.text("input", parsed.invalid())));
       return;
     }
-    String text =
-        args.length > 1
-            ? String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length))
-            : null;
-    menus.openMarket(
-        player, new dev.orderhub.flow.MarketFlow.Filter(OrderQuery.Sort.NEWEST, null, text));
-  }
-
-  private static boolean isSort(String raw) {
-    try {
-      OrderQuery.Sort.valueOf(raw.toUpperCase(Locale.ROOT).replace('-', '_'));
-      return true;
-    } catch (IllegalArgumentException e) {
-      return false;
-    }
+    menus.openMarket(player, parsed.filter());
   }
 
   private void openMain(Player player) {
@@ -333,17 +346,6 @@ public final class OrderCommand implements CommandHandler {
     action.accept(player, Long.parseLong(args[1]));
   }
 
-  private static OrderQuery.Sort sortOf(String raw) {
-    if (raw == null) {
-      return OrderQuery.Sort.NEWEST;
-    }
-    try {
-      return OrderQuery.Sort.valueOf(raw.toUpperCase(Locale.ROOT).replace('-', '_'));
-    } catch (IllegalArgumentException e) {
-      return OrderQuery.Sort.NEWEST;
-    }
-  }
-
   @Override
   public List<String> complete(@NotNull CommandSender sender, @NotNull String[] args) {
     if (!sender.hasPermission("orderhub.use")) {
@@ -352,12 +354,14 @@ public final class OrderCommand implements CommandHandler {
     if (args.length == 1) {
       return filter(SUBCOMMANDS, args[0]);
     }
-    if (args.length == 2 && args[0].equalsIgnoreCase("market")) {
-      List<String> sorts = new ArrayList<>();
-      for (OrderQuery.Sort sort : OrderQuery.Sort.values()) {
-        sorts.add(sort.name().toLowerCase(Locale.ROOT).replace('_', '-'));
+    if (args.length >= 2 && args[0].equalsIgnoreCase("market")) {
+      List<String> options = new ArrayList<>(dev.orderhub.flow.MarketArgs.SUGGESTIONS);
+      if (args.length == 2) {
+        for (OrderQuery.Sort sort : OrderQuery.Sort.values()) {
+          options.add(sort.name().toLowerCase(Locale.ROOT).replace('_', '-'));
+        }
       }
-      return filter(sorts, args[1]);
+      return filter(options, args[args.length - 1]);
     }
     if (args.length == 2 && args[0].equalsIgnoreCase("sell")) {
       return filter(List.of("all", "1", "16", "64"), args[1]);

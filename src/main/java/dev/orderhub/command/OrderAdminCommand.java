@@ -39,6 +39,8 @@ public final class OrderAdminCommand implements CommandHandler {
           "backup",
           "export",
           "dump",
+          "player",
+          "audit",
           "debug");
 
   private final Services s;
@@ -241,6 +243,16 @@ public final class OrderAdminCommand implements CommandHandler {
                   s.messages()
                       .get("admin.recovery-summary", Messages.text("summary", report.summary())));
             });
+      }
+      case "player" -> {
+        if (need(sender, "orderhub.admin.view")) {
+          player(sender, args);
+        }
+      }
+      case "audit" -> {
+        if (need(sender, "orderhub.admin.transactions")) {
+          audit(sender, args);
+        }
       }
       case "statistics" -> {
         if (need(sender, "orderhub.admin.view")) {
@@ -453,6 +465,17 @@ public final class OrderAdminCommand implements CommandHandler {
         sender,
         s.messages()
             .get(
+                "admin.health-system",
+                Messages.text("version", pluginVersion()),
+                Messages.text(
+                    "platform", dev.orderhub.scheduler.FoliaDetector.isFolia() ? "Folia" : "Paper"),
+                Messages.text("java", System.getProperty("java.version", "?")),
+                Messages.text("server", s.settings().get().serverId()),
+                Messages.text("uptime", uptime())));
+    reply(
+        sender,
+        s.messages()
+            .get(
                 "admin.health-db",
                 Messages.number("active", st.poolActive()),
                 Messages.number("idle", st.poolIdle()),
@@ -488,6 +511,102 @@ public final class OrderAdminCommand implements CommandHandler {
                     Messages.text(
                         "at", java.time.Instant.ofEpochMilli(h.lastRecoveryAt()).toString()),
                     Messages.text("summary", h.lastRecovery())));
+  }
+
+  private static String pluginVersion() {
+    try {
+      return org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(OrderAdminCommand.class)
+          .getPluginMeta()
+          .getVersion();
+    } catch (RuntimeException e) {
+      return "?";
+    }
+  }
+
+  private static String uptime() {
+    long minutes = java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime() / 60_000;
+    return minutes >= 60 ? (minutes / 60) + " h " + (minutes % 60) + " min" : minutes + " min";
+  }
+
+  private static final java.util.regex.Pattern UUID_TEXT =
+      java.util.regex.Pattern.compile(
+          "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+
+  /** {@code /orderadmin player <name|uuid>}: Zahlen eines Spielers fuer die Diagnose. */
+  private void player(CommandSender sender, String[] args) {
+    if (args.length != 2) {
+      sender.sendMessage(s.messages().prefixed("admin.player-usage"));
+      return;
+    }
+    java.util.UUID id;
+    String label = args[1];
+    if (UUID_TEXT.matcher(args[1]).matches()) {
+      id = java.util.UUID.fromString(args[1]);
+    } else {
+      org.bukkit.OfflinePlayer known = org.bukkit.Bukkit.getOfflinePlayerIfCached(args[1]);
+      if (known == null) {
+        sender.sendMessage(
+            s.messages().prefixed("admin.player-not-found", Messages.text("input", args[1])));
+        return;
+      }
+      id = known.getUniqueId();
+      label = known.getName() == null ? args[1] : known.getName();
+    }
+    String shown = label;
+    async(
+        sender,
+        () -> {
+          var o = admin.playerOverview(id);
+          reply(
+              sender,
+              s.messages()
+                  .prefixed(
+                      "admin.player-overview",
+                      Messages.text("player", shown),
+                      Messages.number("open", o.openOrders()),
+                      Messages.number("claims", o.claimsWaiting()),
+                      Messages.number("returns", o.returnsWaiting()),
+                      Messages.number("completed", o.ordersCompleted()),
+                      Messages.number("delivered", o.itemsDelivered()),
+                      Messages.text("earned", Money.format(o.moneyEarned())),
+                      Messages.text("spent", Money.format(o.moneySpent()))));
+        });
+  }
+
+  /** {@code /orderadmin audit [n]}: die letzten Eintraege des Audit-Protokolls. */
+  private void audit(CommandSender sender, String[] args) {
+    int limit = 10;
+    if (args.length > 1) {
+      if (!args[1].matches("[0-9]{1,3}")) {
+        sender.sendMessage(
+            s.messages().prefixed("general.invalid-number", Messages.text("input", args[1])));
+        return;
+      }
+      limit = Math.max(1, Math.min(50, Integer.parseInt(args[1])));
+    }
+    int shown = limit;
+    async(
+        sender,
+        () -> {
+          var entries = admin.recentAudit(shown);
+          if (entries.isEmpty()) {
+            reply(sender, s.messages().prefixed("admin.audit-empty"));
+            return;
+          }
+          for (var e : entries) {
+            reply(
+                sender,
+                s.messages()
+                    .get(
+                        "admin.audit-line",
+                        Messages.text(
+                            "time", java.time.Instant.ofEpochMilli(e.createdAt()).toString()),
+                        Messages.text("actor", e.actor()),
+                        Messages.text("action", e.action()),
+                        Messages.text("target", e.target() == null ? "-" : e.target()),
+                        Messages.text("reason", e.reason() == null ? "" : e.reason())));
+          }
+        });
   }
 
   private String confirmedReason(CommandSender sender, String[] args, int from) {
@@ -662,6 +781,24 @@ public final class OrderAdminCommand implements CommandHandler {
         && args[0].equalsIgnoreCase("review")
         && args[1].equalsIgnoreCase("resolve")) {
       return OrderCommand.filter(List.of("paid", "refund", "discard"), args[3]);
+    }
+    if (args.length == 2 && args[0].equalsIgnoreCase("player")) {
+      return OrderCommand.filter(
+          org.bukkit.Bukkit.getOnlinePlayers().stream()
+              .map(org.bukkit.entity.Player::getName)
+              .toList(),
+          args[1]);
+    }
+    if (args.length == 2 && args[0].equalsIgnoreCase("audit")) {
+      return OrderCommand.filter(List.of("10", "25", "50"), args[1]);
+    }
+    if (args.length == 3 && args[0].equalsIgnoreCase("cancel")) {
+      return OrderCommand.filter(List.of("confirm"), args[2]);
+    }
+    if (args.length == 2
+        && List.of("purge-expired", "backup", "recovery")
+            .contains(args[0].toLowerCase(Locale.ROOT))) {
+      return OrderCommand.filter(List.of("confirm"), args[1]);
     }
     if (args.length == 2 && args[0].equalsIgnoreCase("list")) {
       return OrderCommand.filter(

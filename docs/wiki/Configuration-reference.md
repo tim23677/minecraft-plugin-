@@ -24,6 +24,7 @@ This page lists every option of `config.yml` with its default, its allowed value
 | `orders.cancel-word` | `cancel` | text | no, /orderadmin reload | Word that cancels a chat input. |
 | `orders.input-timeout-seconds` | `60` | 5 to 600 | no, /orderadmin reload | Seconds a chat input waits. |
 | `orders.create-cooldown-seconds` | `5` | 0 to 3600 | no, /orderadmin reload | Minimum seconds between two order creations of one player (0 = off). |
+| `orders.query-interval-ms` | `250` | 0 to 10000 | no, /orderadmin reload | Minimum milliseconds between two lookups of one player (market, sell, info, stats, history, analytics, favorites, mine, claims, returns). Protects the database from command spam (0 = off). |
 | `fees.create-fee-bp` | `100` | 0 to 10000 | no, /orderadmin reload | Fees in basis points (100 = 1 %). The permission orderhub.bypass.fee removes the creation fee. |
 | `fees.sales-tax-bp` | `200` | 0 to 10000 | no, /orderadmin reload |  |
 | `items.allow-custom-name` | `false` | true or false | yes | Rejected by default. Set to true to admit such items in orders. Admitting an item does not make deliveries inexact: the delivered item must still equal the ordered one in every component. |
@@ -42,6 +43,7 @@ This page lists every option of `config.yml` with its default, its allowed value
 | `payouts.max-attempts` | `5` | 1 to 100 | yes | Maximum retries of payments that were safely not executed. Needs a restart. |
 | `market.min-trades-for-recommendation` | `5` | 1 to 10000 | no, /orderadmin reload | Minimum number of completed trades for a price recommendation. |
 | `notifications.cooldown-seconds` | `60` | 0 to 86400 | no, /orderadmin reload | Minimum seconds between two notifications of the same kind to one player. |
+| `notifications.expiry-warning-hours` | `24` | 0 to 720 | no, /orderadmin reload | At login, players are told when open orders expire within this many hours (0 = off). |
 | `notifications.display` | `chat` | chat, actionbar or title | no, /orderadmin reload | How the summary is shown at login: chat, actionbar or title. |
 | `notifications.sound` | `(empty)` | text | no, /orderadmin reload | Sound that plays with the summary, for example entity.experience_orb.pickup. Empty = no sound. |
 | `logging.transactions.console` | `false` | true or false | yes | Also write the lines to the server console. |

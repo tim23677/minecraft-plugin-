@@ -18,6 +18,7 @@ general:
   database-error: "<red>Ein Datenbankfehler ist aufgetreten. Dein Geld ist sicher. Bitte wende dich an einen Administrator."
   reloaded: "<green>Konfiguration neu geladen."
   cooldown: "<red>Bitte warte <seconds> Sekunden."
+  slow-down: "<gray>Bitte warte einen Moment bis zur nächsten Anfrage."
 
 create:
   prompt-quantity: "<gray>Gib die Menge im Chat ein oder <white><cancel></white> zum Abbrechen."
@@ -101,6 +102,7 @@ notify:
   login-summary: "<aqua>Während du weg warst: <items> Items in <deliveries> Lieferungen, <expired> deiner Aufträge sind abgelaufen."
   price-alert: "<aqua>Preisalarm: <quantity>x <item> gesucht zu je <unit> (Auftrag #<id>)."
   claims-waiting: "<aqua>Es warten <count> Itempakete auf dich. Nutze <white>/order claims</white>."
+  expiring-soon: "<yellow><count> deiner Aufträge laufen innerhalb von <hours> Stunden ab. Mit <white>/order renew <id> on</white> verlängern sie sich automatisch."
   delivered: "<aqua>Auftrag #<id>: <quantity>x <item> geliefert."
   new-order: "<aqua>Neuer Auftrag für <item>: <quantity>x zu je <unit>."
   summary: "<aqua>Du hast <count> neue Benachrichtigungen."
@@ -110,7 +112,7 @@ admin:
   entry: "<gray><entry>"
   ledger-line: "<gray>  <kind> <white><amount></white> <player>"
   warning: "<red>[OrderHub] <message>"
-  help: "<gray>reload | list [Status] | cancel <id> confirm <Grund> | purge-expired confirm <Grund> | transactions [Spieler-UUID] | transaction <uuid> | inspect <id> | recovery confirm <Grund> | review list|show|resolve | health | dump | backup confirm <Grund> | export orders|ledger confirm <Grund> | statistics | debug"
+  help: "<gray>reload | list [Status] | cancel <id> confirm <Grund> | purge-expired confirm <Grund> | transactions [Spieler-UUID] | transaction <uuid> | inspect <id> | recovery confirm <Grund> | review list|show|resolve | health | dump | backup confirm <Grund> | export orders|ledger confirm <Grund> | statistics | debug | player <name|uuid> | audit [n]"
   confirm-required: "<yellow>Wiederhole den Befehl mit <white>confirm</white> und einer Begründung."
   reason-required: "<red>Eine Begründung ist erforderlich."
   cancelled: "<green>Auftrag #<id> von einem Administrator storniert. Begründung protokolliert."
@@ -136,6 +138,12 @@ admin:
   review-result: "<gray>Prüfung <white><tx></white> <how>: <white><status></white> (Erstattungstransaktion <refund>)"
   review-usage: "<yellow>Verwendung: /orderadmin review resolve <tx> paid|refund|discard confirm <Grund>"
   statistics: "<gray>Aktiv <white><active></white>, pausiert <white><paused></white>, abgeschlossen <white><completed></white>, storniert <white><cancelled></white>, abgelaufen <white><expired></white>, manuelle Prüfung <white><review></white>."
+  player-overview: "<gray>Spieler <white><player></white>: offene Aufträge <white><open></white>, wartende Pakete <white><claims></white>, wartende Rückgaben <white><returns></white>, abgeschlossene Aufträge <white><completed></white>, gelieferte Items <white><delivered></white>, verdient <white><earned></white>, ausgegeben <white><spent></white>."
+  player-not-found: "<yellow>Kein Spieler gefunden für <white><input></white>. Nutze den Namen eines Spielers, den dieser Server kennt, oder eine UUID."
+  audit-line: "<gray><time> <white><actor></white> <action> <target> <reason>"
+  audit-empty: "<gray>Noch keine Audit-Einträge."
+  health-system: "<gray>OrderHub <white><version></white> auf <white><platform></white>, Java <white><java></white>, Server-Id <white><server></white>, Laufzeit <white><uptime></white>."
+  player-usage: "<yellow>Nutzung: /orderadmin player <Name|UUID>"
   transaction: "<gray>Transaktion <white><id></white> <state> <amount> Spieler <player>"
 
 menu:

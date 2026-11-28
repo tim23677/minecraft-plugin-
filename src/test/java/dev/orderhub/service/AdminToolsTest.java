@@ -75,4 +75,35 @@ class AdminToolsTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("SQLite");
   }
+
+  @Test
+  void playerOverviewCountsOrdersAndParcelsWithoutLocking() {
+    Harness h = new Harness();
+    h.economy.setBalance(OWNER, 1_000_000);
+    h.create(OWNER, 100, 10, 1);
+    h.create(OWNER, 100, 10, 1);
+
+    var overview = admin(h).playerOverview(OWNER);
+
+    assertThat(overview.player()).isEqualTo(OWNER);
+    assertThat(overview.openOrders()).isEqualTo(2);
+    assertThat(overview.claimsWaiting()).isZero();
+    assertThat(overview.returnsWaiting()).isZero();
+    assertThat(overview.moneyEarned()).isZero();
+    assertThat(admin(h).playerOverview(SUPPLIER).openOrders()).isZero();
+  }
+
+  @Test
+  void recentAuditListsTheNewestEntryFirst() {
+    Harness h = new Harness();
+    AdminService admin = admin(h);
+    admin.auditReload("console", "first");
+    admin.auditReload("console", "second");
+
+    var recent = admin.recentAudit(10);
+
+    assertThat(recent).hasSizeGreaterThanOrEqualTo(2);
+    assertThat(recent.get(0).detail()).isEqualTo("second");
+    assertThat(admin.recentAudit(1)).hasSize(1);
+  }
 }

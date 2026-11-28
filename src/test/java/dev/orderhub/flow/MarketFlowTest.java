@@ -207,4 +207,24 @@ class MarketFlowTest extends FlowTestBase {
     assertThat(filled()).isEqualTo(15);
     assertThat(loreOf(0)).contains("46.00");
   }
+
+  @Test
+  void aPriceRangeShowsOnlyOrdersInsideTheBounds() {
+    seed60(); // Preise 1,00 bis 60,00 in Schritten von 1,00
+    flow.open(
+        supplier, new MarketFlow.Filter(OrderQuery.Sort.LOWEST_PRICE, null, null, 1_000L, 1_500L));
+    assertThat(filled()).isEqualTo(6); // 10,00 bis 15,00
+
+    flow.open(supplier, new MarketFlow.Filter(OrderQuery.Sort.NEWEST, null, null, null, 300L));
+    assertThat(filled()).isEqualTo(3);
+  }
+
+  @Test
+  void theBoundsSurviveChangingTheSortInTheMenu() {
+    seed60();
+    flow.open(supplier, new MarketFlow.Filter(OrderQuery.Sort.NEWEST, null, null, 5_000L, 6_000L));
+    assertThat(filled()).isEqualTo(11);
+    click(SORT);
+    assertThat(filled()).isEqualTo(11);
+  }
 }

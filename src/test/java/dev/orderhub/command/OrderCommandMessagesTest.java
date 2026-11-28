@@ -146,4 +146,64 @@ class OrderCommandMessagesTest {
     String second = admin.nextMessage();
     assertThat(first + " " + second).contains("cancel <id> confirm <reason>");
   }
+
+  private String drain(PlayerMock who, String expected) {
+    StringBuilder all = new StringBuilder();
+    for (int i = 0; i < 300 && !all.toString().contains(expected); i++) {
+      server.getScheduler().performOneTick();
+      String m = who.nextMessage();
+      while (m != null) {
+        all.append(m.replaceAll("§.", "")).append('\n');
+        m = who.nextMessage();
+      }
+      if (!all.toString().contains(expected)) {
+        try {
+          Thread.sleep(5);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
+    return all.toString();
+  }
+
+  private PlayerMock admin() {
+    PlayerMock admin = server.addPlayer();
+    admin.addAttachment(plugin, "orderhub.admin", true);
+    return admin;
+  }
+
+  @Test
+  void adminPlayerShowsTheOverviewForAUuidAndRefusesBadInput() {
+    PlayerMock admin = admin();
+    admin.performCommand("orderadmin player");
+    assertThat(drain(admin, "Usage: /orderadmin player")).contains("Usage: /orderadmin player");
+    admin.performCommand("orderadmin player NobodyKnowsMe");
+    assertThat(drain(admin, "No player found")).contains("No player found");
+
+    String uuid = "00000000-0000-0000-0000-000000000042";
+    admin.performCommand("orderadmin player " + uuid);
+    String out = drain(admin, "open orders");
+    assertThat(out).contains(uuid).contains("open orders 0").contains("claims waiting 0");
+  }
+
+  @Test
+  void adminAuditListsEntriesAndChecksTheCount() {
+    PlayerMock admin = admin();
+    admin.performCommand("orderadmin reload");
+    assertThat(drain(admin, "reloaded")).contains("reloaded");
+    admin.performCommand("orderadmin audit 5");
+    assertThat(drain(admin, "config.reload")).contains("config.reload");
+    admin.performCommand("orderadmin audit abc");
+    assertThat(drain(admin, "not a valid number")).contains("'abc' is not a valid number");
+  }
+
+  @Test
+  void adminHealthStartsWithTheSystemLine() {
+    PlayerMock admin = admin();
+    admin.performCommand("orderadmin health");
+    String out = drain(admin, "Database pool");
+    assertThat(out).contains("on Paper, Java ").contains("server id main");
+  }
 }

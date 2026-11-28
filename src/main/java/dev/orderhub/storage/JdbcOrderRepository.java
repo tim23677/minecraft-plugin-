@@ -253,6 +253,17 @@ final class JdbcOrderRepository implements OrderRepository {
   }
 
   @Override
+  public int countExpiringBetween(UUID owner, long from, long until) {
+    return (int)
+        jdbc.count(
+            "SELECT COUNT(*) FROM orders WHERE owner_uuid = ? AND status = 'ACTIVE' "
+                + "AND expires_at > ? AND expires_at <= ?",
+            owner,
+            from,
+            until);
+  }
+
+  @Override
   public List<Order> findExpired(long now, int limit) {
     return jdbc.list(
         SELECT
@@ -280,6 +291,14 @@ final class JdbcOrderRepository implements OrderRepository {
     if (q.category() != null) {
       where.append(" AND o.category = ?");
       params.add(q.category());
+    }
+    if (q.minUnitPrice() != null) {
+      where.append(" AND o.unit_price >= ?");
+      params.add(q.minUnitPrice());
+    }
+    if (q.maxUnitPrice() != null) {
+      where.append(" AND o.unit_price <= ?");
+      params.add(q.maxUnitPrice());
     }
     if (q.text() != null) {
       // Suchtext ist auf [a-z0-9_] normalisiert, Unterstrich ist im LIKE ein Platzhalter und wird

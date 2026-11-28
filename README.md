@@ -31,7 +31,7 @@ Players:
 - `/order` opens the main menu
 - `/order create [quantity] [price] [options]` creates an order for the item in your hand (prices accept `k`, `m`, `b`, for example `1.5k`). Options: `durability=<0-100>` accepts damaged items with at least that much durability left, `enchants` accepts items with at least the enchantments of your item, `autoclaim` hands delivered items to you at once while you are online
 - `/order mine` lists your orders (left click cancels, right click pauses or resumes)
-- `/order market [newest|highest-price|lowest-price|almost-completed|highest-demand]` opens the marketplace. The menu has a search by item name, categories and sorting, and pages through large markets with keyset pagination
+- `/order market [newest|highest-price|lowest-price|almost-completed|highest-demand] [search text] [min=<price>] [max=<price>]` opens the marketplace (prices accept `k`, `m`, `b`). The menu has a search by item name, categories and sorting, and pages through large markets with keyset pagination
 - `/order sell [amount|all]` finds the open order with the best price for the item in your hand and opens the delivery menu with the items as a preview. Nothing is delivered before you confirm
 - `/order template [save <name> <quantity> <price> [options]|list|use <name>|delete <name>]` stores and reuses order settings (at most 10 per player). Without arguments it opens a menu: left click uses a template, right click deletes it
 - `/order info <id>` shows quantity, price, status, remaining time and options of an order
@@ -49,7 +49,9 @@ Administrators (permission `orderhub.admin`):
 - `/orderadmin review list`, `review show <tx>`, `review resolve <tx> paid|refund|discard confirm <reason>` resolve payments that ended in MANUAL_REVIEW
 - `/orderadmin purge-expired confirm <reason>`
 - `/orderadmin recovery confirm <reason>`
-- `/orderadmin health` shows database pool, queue, open payments, manual review count and the last recovery
+- `/orderadmin player <name|uuid>` shows open orders, waiting parcels and returns and the statistics of one player
+- `/orderadmin audit [n]` lists the last audit entries (default 10, at most 50)
+- `/orderadmin health` shows version, platform, Java, uptime, database pool, queue, open payments, manual review count and the last recovery
 - `/orderadmin backup confirm <reason>` writes a consistent SQLite snapshot to `plugins/OrderHub/backups` (MariaDB: use mysqldump or a server snapshot)
 - `/orderadmin export orders|ledger confirm <reason>` writes a CSV file to `plugins/OrderHub/exports`
 - `/orderadmin reload`, `/orderadmin debug`
@@ -76,7 +78,7 @@ OrderHub talks to your economy only through Vault. If Vault or the economy plugi
 
 ## PlaceholderAPI
 
-Available placeholders: `%orderhub_open_orders%`, `%orderhub_completed_orders%`, `%orderhub_total_volume%`, `%orderhub_player_earnings%`, `%orderhub_player_deliveries%`, `%orderhub_market_average_<item>%`, `%orderhub_market_demand_<item>%`, `%orderhub_market_open_orders%`, `%orderhub_claims_waiting%` (for example `%orderhub_market_average_diamond%`). Values come from a short-lived cache, the first request after a restart shows a fallback (`0` or `-`) until the value has been loaded.
+Available placeholders: `%orderhub_open_orders%`, `%orderhub_completed_orders%`, `%orderhub_total_volume%`, `%orderhub_player_earnings%`, `%orderhub_player_deliveries%`, `%orderhub_market_average_<item>%`, `%orderhub_market_demand_<item>%`, `%orderhub_market_open_orders%`, `%orderhub_market_highest_<item>%`, `%orderhub_market_lowest_<item>%`, `%orderhub_claims_waiting%` (for example `%orderhub_market_average_diamond%`). Values come from a short-lived cache, the first request after a restart shows a fallback (`0` or `-`) until the value has been loaded.
 
 ## Databases
 

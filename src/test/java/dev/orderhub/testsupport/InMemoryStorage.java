@@ -666,6 +666,8 @@ public final class InMemoryStorage implements Storage {
             && (q.itemKey() == null || q.itemKey().equals(o.item().itemKey()))
             && (q.category() == null || q.category().equals(o.category()))
             && (q.text() == null || o.item().itemKey().contains(q.text()))
+            && (q.minUnitPrice() == null || o.unitPrice() >= q.minUnitPrice())
+            && (q.maxUnitPrice() == null || o.unitPrice() <= q.maxUnitPrice())
             && o.status() == q.status();
       }
 
@@ -693,6 +695,16 @@ public final class InMemoryStorage implements Storage {
             s.orders.values().stream()
                 .filter(o -> o.owner().equals(owner))
                 .filter(o -> o.status() == OrderStatus.ACTIVE || o.status() == OrderStatus.PAUSED)
+                .count();
+      }
+
+      @Override
+      public int countExpiringBetween(UUID owner, long from, long until) {
+        return (int)
+            s.orders.values().stream()
+                .filter(o -> o.owner().equals(owner))
+                .filter(o -> o.status() == OrderStatus.ACTIVE)
+                .filter(o -> o.expiresAt() > from && o.expiresAt() <= until)
                 .count();
       }
 

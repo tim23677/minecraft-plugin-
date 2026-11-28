@@ -377,6 +377,47 @@ public final class AdminService {
         .join();
   }
 
+  /**
+   * Zahlen eines Spielers fuer die Diagnose.
+   *
+   * @param openOrders ACTIVE und PAUSED Auftraege
+   * @param claimsWaiting abholbare Pakete
+   * @param returnsWaiting abholbare Rueckgaben
+   */
+  public record PlayerOverview(
+      java.util.UUID player,
+      int openOrders,
+      int claimsWaiting,
+      int returnsWaiting,
+      long ordersCompleted,
+      long itemsDelivered,
+      long moneyEarned,
+      long moneySpent) {}
+
+  /** Diagnose fuer einen Spieler, rein lesend und ohne Sperren. */
+  public PlayerOverview playerOverview(java.util.UUID player) {
+    return storage
+        .transact(uow -> {
+          java.util.Optional<dev.orderhub.storage.InsightsRepository.PlayerStats> stats;
+          try {
+            stats = uow.insights().stats(player);
+          } catch (UnsupportedOperationException e) {
+            // Storage without statistics (minimal test storage): the counters stay at zero.
+            stats = java.util.Optional.empty();
+          }
+          return new PlayerOverview(
+              player,
+              uow.orders().countOpenByOwnerUnlocked(player),
+              uow.claims().countAvailable(player),
+              uow.returns().countAvailable(player),
+              stats.map(x -> x.ordersCompleted()).orElse(0L),
+              stats.map(x -> x.itemsDelivered()).orElse(0L),
+              stats.map(x -> x.moneyEarned()).orElse(0L),
+              stats.map(x -> x.moneySpent()).orElse(0L));
+        })
+        .join();
+  }
+
   public List<AuditRepository.Entry> recentAudit(int limit) {
     return storage.transact(uow -> uow.audit().recent(limit)).join();
   }

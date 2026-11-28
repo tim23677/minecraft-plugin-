@@ -446,6 +446,53 @@ abstract class StorageContractTest {
     assertThat(txBool(storage(), (UnitOfWork u) -> u.orders().update(bad))).isTrue();
   }
 
+  private static OrderQuery priceRange(Long min, Long max) {
+    return new OrderQuery(
+        null, null, null, null, OrderQuery.Sort.LOWEST_PRICE, 0, 50, null, null, min, max);
+  }
+
+  @Test
+  void priceRangeFiltersSearchAndCountIncludingTheBounds() {
+    UUID a = UUID.randomUUID();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          for (long price : new long[] {100, 300, 500, 700}) {
+            u.orders()
+                .insert(
+                    new NewOrder(
+                        a,
+                        "srv-a",
+                        TestData.item("minecraft:diamond"),
+                        price,
+                        1,
+                        1,
+                        TestData.T0 + 900,
+                        false,
+                        "gems"),
+                    TestData.T0 + price);
+          }
+          return null;
+        });
+
+    var between = tx(storage(), (UnitOfWork u) -> u.orders().search(priceRange(300L, 500L)));
+    assertThat(between).extracting(Order::unitPrice).containsExactly(300L, 500L);
+    var minOnly = tx(storage(), (UnitOfWork u) -> u.orders().search(priceRange(500L, null)));
+    assertThat(minOnly).extracting(Order::unitPrice).containsExactly(500L, 700L);
+    var maxOnly = tx(storage(), (UnitOfWork u) -> u.orders().search(priceRange(null, 300L)));
+    assertThat(maxOnly).extracting(Order::unitPrice).containsExactly(100L, 300L);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().count(priceRange(300L, 500L))))
+        .isEqualTo(2);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().search(priceRange(800L, null))))
+        .isEmpty();
+  }
+
+  @Test
+  void anInvertedOrNegativePriceRangeIsRejected() {
+    assertThatThrownBy(() -> priceRange(500L, 100L)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> priceRange(-1L, null)).isInstanceOf(IllegalArgumentException.class);
+  }
+
   @Test
   void searchFiltersSortsAndPaginates() {
     UUID a = UUID.randomUUID();
@@ -1924,6 +1971,54 @@ abstract class StorageContractTest {
     assertThat(
             tx(storage(), (UnitOfWork u) -> u.orders().countOpenByOwnerUnlocked(UUID.randomUUID())))
         .isZero();
+  }
+
+  @Test
+  void countExpiringBetweenUsesAnOpenLowerAndAClosedUpperBound() {
+    UUID a = UUID.randomUUID();
+    UUID b = UUID.randomUUID();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          for (long expires : new long[] {1_000, 2_000, 3_000}) {
+            u.orders()
+                .insert(
+                    new NewOrder(
+                        a,
+                        "srv-a",
+                        TestData.item("minecraft:diamond"),
+                        100,
+                        1,
+                        1,
+                        expires,
+                        false,
+                        "gems"),
+                    TestData.T0);
+          }
+          u.orders()
+              .insert(
+                  new NewOrder(
+                      b,
+                      "srv-a",
+                      TestData.item("minecraft:diamond"),
+                      100,
+                      1,
+                      1,
+                      2_000,
+                      false,
+                      "gems"),
+                  TestData.T0);
+          return null;
+        });
+
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().countExpiringBetween(a, 1_000, 3_000)))
+        .isEqualTo(2);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().countExpiringBetween(a, 0, 1_000)))
+        .isEqualTo(1);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().countExpiringBetween(a, 3_000, 9_000)))
+        .isZero();
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().countExpiringBetween(b, 0, 9_000)))
+        .isEqualTo(1);
   }
 
   @Test

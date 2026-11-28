@@ -1,13 +1,13 @@
 package dev.orderhub.scheduler;
 
 /** Erkennt, ob der Server regionalisiert laeuft (Folia). */
-final class FoliaDetector {
+public final class FoliaDetector {
 
   private static final boolean FOLIA = detect();
 
   private FoliaDetector() {}
 
-  static boolean isFolia() {
+  public static boolean isFolia() {
     return FOLIA;
   }
 

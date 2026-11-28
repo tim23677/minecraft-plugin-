@@ -11,11 +11,13 @@ public final class JoinListener implements Listener {
   private final Services s;
   private final ParcelFlow returns;
   private final ParcelFlow claims;
+  private final ExpiryHint expiry;
 
   public JoinListener(Services services, ParcelFlow returns, ParcelFlow claims) {
     this.s = services;
     this.returns = returns;
     this.claims = claims;
+    this.expiry = new ExpiryHint(services);
   }
 
   @EventHandler
@@ -27,6 +29,7 @@ public final class JoinListener implements Listener {
             () -> {
               returns.claimAll(player, true);
               notes(player);
+              expiry.check(player);
               claims.list(
                   player,
                   0,

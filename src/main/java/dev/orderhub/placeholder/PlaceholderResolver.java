@@ -36,6 +36,20 @@ public final class PlaceholderResolver {
                   .orElse("-"),
           "-");
     }
+    if (p.startsWith("market_highest_") || p.startsWith("market_lowest_")) {
+      boolean highest = p.startsWith("market_highest_");
+      String item =
+          itemKey(p.substring(highest ? "market_highest_".length() : "market_lowest_".length()));
+      return cache.get(
+          (highest ? "high:" : "low:") + item,
+          () ->
+              s.insights()
+                  .market(item, 7, System.currentTimeMillis())
+                  .demand()
+                  .map(d -> Money.format(highest ? d.highestUnitPrice() : d.lowestUnitPrice()))
+                  .orElse("-"),
+          "-");
+    }
     if (p.startsWith("market_demand_")) {
       String item = itemKey(p.substring("market_demand_".length()));
       return cache.get(

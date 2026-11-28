@@ -274,6 +274,15 @@ async function phaseCommands() {
   await check('/order sell abc', p, '/order sell abc', { msg: /not a valid amount/ });
   await check('/order sell (eigener Auftrag passt nicht)', p, '/order sell', { msg: /No open orders|none|no order|cannot/i });
 
+  // ---- Markt: Preisfilter und Drosselung
+  await check('/order market min=1 max=100', p, '/order market min=1 max=100', { no: /not a valid amount/ });
+  await check('/order market diamond max=1.5k', p, '/order market diamond max=1.5k', { no: /not a valid amount/ });
+  await check('/order market min=abc wird abgelehnt', p, '/order market min=abc', { msg: /'min=abc' is not a valid amount/, win: false });
+  await check('/order market min=10 max=1 wird abgelehnt', p, '/order market min=10 max=1', { msg: /is not a valid amount/, win: false });
+  p.chat('/order info 1');
+  await check('zweite Abfrage direkt danach wird gebremst', p, '/order info 1', { msg: /Please wait a moment/ });
+  await sleep(500);
+
   // ---- Admin: ohne Recht
   const adminSubs = ['reload', 'list', 'cancel 1 confirm test', 'purge-expired confirm test', 'transactions', 'inspect 1', 'review list', 'health', 'dump', 'backup confirm test', 'export orders confirm test', 'recovery confirm test', 'statistics', 'debug'];
   for (const s of adminSubs) {
@@ -302,6 +311,13 @@ async function phaseCommands() {
   await check('/orderadmin purge-expired confirm', admin, '/orderadmin purge-expired confirm sim test', { msg: /Processed/ });
   await check('/orderadmin reload', admin, '/orderadmin reload', { msg: /reloaded/i });
   await check('/orderadmin unbekannter Unterbefehl', admin, '/orderadmin zzz', { no: /Exception/ });
+  await check('/orderadmin player <Name> zeigt die Uebersicht', admin, `/orderadmin player ${PLAYER}`, { msg: /open orders \d+, claims waiting \d+/ });
+  await check('/orderadmin player <UUID> zeigt die Uebersicht', admin, '/orderadmin player 00000000-0000-0000-0000-000000000042', { msg: /open orders 0/ });
+  await check('/orderadmin player unbekannt', admin, '/orderadmin player NobodyKnowsMe', { msg: /No player found/ });
+  await check('/orderadmin player ohne Argument', admin, '/orderadmin player', { msg: /Usage: \/orderadmin player/ });
+  await check('/orderadmin audit 3 zeigt Eintraege', admin, '/orderadmin audit 3', { msg: /config\.reload|export|backup|recovery|purge/ });
+  await check('/orderadmin audit abc', admin, '/orderadmin audit abc', { msg: /not a valid number/ });
+  await check('/orderadmin health beginnt mit der Systemzeile', admin, '/orderadmin health', { msg: /OrderHub \d+\.\d+\.\d+ on Paper, Java 21/ });
   const aud = db("select count(*) from audit_log")[0][0];
   record('Audit-Eintraege fuer Admin-Aktionen vorhanden', aud >= 4, 'audit rows=' + aud);
 
@@ -562,7 +578,7 @@ async function phaseConfigEdges() {
   await stopServer();
   // Grenzfall 2: Menge 1, Gebuehr 0, Cooldown 0
   fs.writeFileSync(cfg, orig);
-  setConfig({ 'orders.max-quantity': 1, 'fees.create-fee-bp': 0, 'orders.create-cooldown-seconds': 0 });
+  setConfig({ 'orders.max-quantity': 1, 'fees.create-fee-bp': 0, 'orders.create-cooldown-seconds': 0, 'orders.expiry-hours': 1 });
   await startServer();
   await sleep(3000);
   const p2 = await makeBot(PLAYER);
@@ -574,6 +590,11 @@ async function phaseConfigEdges() {
   try { await wm; await p2.clickWindow(11, 0, 0); await sleep(2500); } catch (e) {}
   record('max-quantity 1 / Gebuehr 0: Menge 1 klappt, Escrow 10,00', db("select escrow_remaining from orders order by id desc limit 1")[0][0] === 1000);
   p2.end();
+  await sleep(1500);
+  const p2b = await makeBot(PLAYER);
+  await sleep(3000);
+  record('Login-Hinweis: Auftrag laeuft innerhalb von 24 Stunden ab', p2b._msgs.some((x) => /expire within 24 hours/.test(x.m)), p2b._msgs.map((x) => x.m).join(' / ').slice(0, 200));
+  p2b.end();
   await sleep(500);
   await stopServer();
   // Grenzfall 3: Sprache

@@ -4,6 +4,11 @@
 
 Added
 
+- Price filter for the marketplace: `/order market [sort] [search text] [min=<price>] [max=<price>]`, kept while the sort or category button is used
+- `/orderadmin player <name|uuid>` and `/orderadmin audit [n]`, `/orderadmin health` starts with version, platform, Java, server id and uptime, tab completion for `confirm`, players and counts
+- Login hint when open orders expire within `notifications.expiry-warning-hours` (default 24)
+- `orders.query-interval-ms` (default 250): minimum time between two lookups of one player, protects the database from command spam
+- Placeholders `%orderhub_market_highest_<item>%` and `%orderhub_market_lowest_<item>%`
 - Order options reachable from commands: `/order create <quantity> <price> [durability=<0-100>] [enchants] [autoclaim]`, the same flags for `/order template save`, shown in the order summary and in `/order info <id>`
 - Auto-claim: with `autoclaim` set, delivered items go straight into the owner's inventory while online, what does not fit stays a parcel
 - `/order template` without arguments opens a menu (left click uses, right click deletes)
@@ -31,6 +36,7 @@ Added
 
 Changed
 
+- A quantity typed in chat for `/order create` is checked at once, a wrong value no longer leads to the price question first
 - `/order sell` loads the options of all candidate orders in one query instead of one query per order
 - Text searches in the marketplace are limited to 3 per 5 seconds and player
 - `/orderadmin dump` reads only the last 2 MB of the server log

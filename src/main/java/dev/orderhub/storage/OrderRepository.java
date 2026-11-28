@@ -48,6 +48,12 @@ public interface OrderRepository {
    */
   int countOpenByOwnerUnlocked(UUID owner);
 
+  /**
+   * Anzahl ACTIVE Auftraege des Spielers, die zwischen {@code from} (ausschliesslich) und {@code
+   * until} (einschliesslich) ablaufen. Nur lesend, ohne Sperre.
+   */
+  int countExpiringBetween(UUID owner, long from, long until);
+
   /** ACTIVE Auftraege mit {@code expiresAt <= now}, aelteste zuerst. */
   List<Order> findExpired(long now, int limit);
 

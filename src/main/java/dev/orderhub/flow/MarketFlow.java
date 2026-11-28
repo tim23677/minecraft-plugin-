@@ -31,15 +31,37 @@ import org.bukkit.inventory.ItemStack;
  */
 public final class MarketFlow {
 
-  /** Filter und Sortierung des Marktplatzes. */
-  public record Filter(OrderQuery.Sort sort, String category, String text) {
+  /**
+   * Filter und Sortierung des Marktplatzes.
+   *
+   * @param minPrice kleinster Stueckpreis oder {@code null}
+   * @param maxPrice groesster Stueckpreis oder {@code null}
+   */
+  public record Filter(
+      OrderQuery.Sort sort, String category, String text, Long minPrice, Long maxPrice) {
     public Filter {
       sort = sort == null ? OrderQuery.Sort.NEWEST : sort;
       text = OrderQuery.normalizeText(text);
     }
 
+    public Filter(OrderQuery.Sort sort, String category, String text) {
+      this(sort, category, text, null, null);
+    }
+
     public static Filter all() {
       return new Filter(OrderQuery.Sort.NEWEST, null, null);
+    }
+
+    Filter withSort(OrderQuery.Sort next) {
+      return new Filter(next, category, text, minPrice, maxPrice);
+    }
+
+    Filter withCategory(String next) {
+      return new Filter(sort, next, text, minPrice, maxPrice);
+    }
+
+    Filter withText(String next) {
+      return new Filter(sort, category, next, minPrice, maxPrice);
     }
   }
 
@@ -127,7 +149,9 @@ public final class MarketFlow {
                                 0,
                                 PAGE_SIZE + 1,
                                 f.text(),
-                                start)))
+                                start,
+                                f.minPrice(),
+                                f.maxPrice())))
                 .join(),
         rows -> {
           // Ignore answers of an older filter or page that arrive after a newer request.
@@ -234,9 +258,7 @@ public final class MarketFlow {
                     Messages.text("category", categoryName(st.filter.category()))),
                 s.messages().get("menu.market.category-hint")),
             ctx -> {
-              st.filter =
-                  new Filter(
-                      st.filter.sort(), nextCategory(st.filter.category()), st.filter.text());
+              st.filter = st.filter.withCategory(nextCategory(st.filter.category()));
               reset(ctx.player(), st);
             }));
     menu.put(
@@ -250,7 +272,7 @@ public final class MarketFlow {
             ctx -> {
               OrderQuery.Sort[] all = OrderQuery.Sort.values();
               OrderQuery.Sort next = all[(st.filter.sort().ordinal() + 1) % all.length];
-              st.filter = new Filter(next, st.filter.category(), st.filter.text());
+              st.filter = st.filter.withSort(next);
               reset(ctx.player(), st);
             }));
     menu.put(
@@ -287,7 +309,7 @@ public final class MarketFlow {
         s.settings().get().inputTimeoutSeconds(),
         input -> {
           String text = "-".equals(input.trim()) ? null : input;
-          open(player, new Filter(st.filter.sort(), st.filter.category(), text));
+          open(player, st.filter.withText(text));
         },
         () -> player.sendMessage(s.messages().prefixed("create.cancelled")));
   }
