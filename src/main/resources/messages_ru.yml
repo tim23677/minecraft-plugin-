@@ -71,6 +71,7 @@ claim:
 
 market:
   empty: "<gray>Нет открытых заказов, подходящих под ваш фильтр."
+  search-slow: "<gray>Вы ищете слишком быстро. Подождите несколько секунд."
   search-prompt: "<gray>Введите название нужного предмета (например, <white>diamond</white>). <white>-</white> очищает поиск, <white><cancel></white> отменяет."
   no-data: "<gray>Недостаточно рыночных данных"
   recommendation: "<gray>Рекомендуемый диапазон цен для <item>: от <white><low></white> до <white><high></white> (по <trades> сделкам за <days> дн.)."

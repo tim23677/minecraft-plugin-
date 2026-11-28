@@ -16,6 +16,8 @@ import java.util.UUID;
 /** JDBC-Implementierung von {@link OrderRepository}. */
 final class JdbcOrderRepository implements OrderRepository {
 
+  private static final int OPTIONS_BATCH = 500;
+
   private static final String SELECT =
       "SELECT o.id, o.owner_uuid, o.server_id, o.item_key, i.format_version, i.item_data, "
           + "o.unit_price, o.quantity_total, o.quantity_filled, o.min_delivery, "
@@ -298,6 +300,31 @@ final class JdbcOrderRepository implements OrderRepository {
             rs -> new OrderOptions(rs.getInt(1), rs.getInt(2) != 0, rs.getInt(3) != 0),
             orderId)
         .orElse(OrderOptions.EXACT);
+  }
+
+  @Override
+  public java.util.Map<Long, OrderOptions> optionsFor(java.util.Collection<Long> orderIds) {
+    java.util.Map<Long, OrderOptions> out = new java.util.HashMap<>();
+    if (orderIds.isEmpty()) {
+      return out;
+    }
+    List<Long> ids = new ArrayList<>(new java.util.LinkedHashSet<>(orderIds));
+    for (int from = 0; from < ids.size(); from += OPTIONS_BATCH) {
+      List<Long> part = ids.subList(from, Math.min(ids.size(), from + OPTIONS_BATCH));
+      String marks = String.join(",", java.util.Collections.nCopies(part.size(), "?"));
+      jdbc.list(
+              "SELECT order_id, tol_durability, tol_ench_min, auto_claim FROM order_options "
+                  + "WHERE order_id IN ("
+                  + marks
+                  + ")",
+              rs ->
+                  java.util.Map.entry(
+                      rs.getLong(1),
+                      new OrderOptions(rs.getInt(2), rs.getInt(3) != 0, rs.getInt(4) != 0)),
+              part.toArray())
+          .forEach(e -> out.put(e.getKey(), e.getValue()));
+    }
+    return out;
   }
 
   @Override

@@ -639,6 +639,19 @@ public final class InMemoryStorage implements Storage {
       }
 
       @Override
+      public java.util.Map<Long, dev.orderhub.domain.OrderOptions> optionsFor(
+          java.util.Collection<Long> orderIds) {
+        java.util.Map<Long, dev.orderhub.domain.OrderOptions> out = new java.util.HashMap<>();
+        for (Long id : orderIds) {
+          var found = s.options.get(id);
+          if (found != null) {
+            out.put(id, found);
+          }
+        }
+        return out;
+      }
+
+      @Override
       public void saveOptions(long orderId, dev.orderhub.domain.OrderOptions options) {
         s.options.put(orderId, options);
       }

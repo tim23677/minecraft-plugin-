@@ -71,6 +71,34 @@ public final class SupportDump {
     return lines;
   }
 
+  /** Obergrenze fuer den gelesenen Teil des Serverlogs. */
+  public static final int LOG_TAIL_BYTES = 2 * 1024 * 1024;
+
+  /**
+   * Liest hoechstens die letzten {@code maxBytes} Bytes einer Datei als Zeilen. Bei einer
+   * groesseren Datei faellt die angeschnittene erste Zeile weg. Ein Serverlog kann sehr gross
+   * werden, deshalb wird es nie ganz in den Speicher gelesen.
+   */
+  public static List<String> tailLines(java.nio.file.Path file, int maxBytes)
+      throws java.io.IOException {
+    try (java.io.RandomAccessFile in = new java.io.RandomAccessFile(file.toFile(), "r")) {
+      long length = in.length();
+      long start = Math.max(0, length - maxBytes);
+      in.seek(start);
+      byte[] bytes = new byte[(int) (length - start)];
+      in.readFully(bytes);
+      String text = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+      List<String> lines = new ArrayList<>(List.of(text.split("\\R", -1)));
+      if (start > 0 && !lines.isEmpty()) {
+        lines.remove(0);
+      }
+      if (!lines.isEmpty() && lines.get(lines.size() - 1).isEmpty()) {
+        lines.remove(lines.size() - 1);
+      }
+      return lines;
+    }
+  }
+
   /**
    * Die letzten {@code max} Zeilen des Serverlogs, die OrderHub betreffen: Zeilen mit WARN, ERROR,
    * SEVERE oder Exception, die OrderHub nennen, samt der folgenden Stacktrace-Zeilen.

@@ -63,4 +63,36 @@ class ReviewFixesTest {
           .anyMatch(n -> n.startsWith("transactions."));
     }
   }
+
+  @Test
+  void tailReadsOnlyTheEndOfALargeFileAndDropsTheCutLine(@TempDir Path dir) throws Exception {
+    Path log = dir.resolve("latest.log");
+    StringBuilder text = new StringBuilder();
+    for (int i = 1; i <= 100; i++) {
+      text.append("line-").append(i).append('\n');
+    }
+    Files.writeString(log, text.toString());
+
+    var lines = SupportDump.tailLines(log, 40);
+
+    assertThat(lines).isNotEmpty().endsWith("line-100").doesNotContain("line-1", "line-50");
+    assertThat(lines.get(0)).startsWith("line-");
+    assertThat(lines.size()).isLessThan(10);
+  }
+
+  @Test
+  void tailReturnsASmallFileCompletely(@TempDir Path dir) throws Exception {
+    Path log = dir.resolve("latest.log");
+    Files.writeString(log, "a\nb\nc\n");
+
+    assertThat(SupportDump.tailLines(log, 1024)).containsExactly("a", "b", "c");
+  }
+
+  @Test
+  void tailOfAnEmptyFileIsEmpty(@TempDir Path dir) throws Exception {
+    Path log = dir.resolve("latest.log");
+    Files.writeString(log, "");
+
+    assertThat(SupportDump.tailLines(log, 1024)).isEmpty();
+  }
 }

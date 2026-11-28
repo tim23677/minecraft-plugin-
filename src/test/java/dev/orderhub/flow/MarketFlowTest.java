@@ -140,6 +140,33 @@ class MarketFlowTest extends FlowTestBase {
   }
 
   @Test
+  void aFourthTextSearchWithinTheWindowIsRefusedAndLeavesTheMenuAlone() {
+    seed60();
+    for (int i = 0; i < SearchThrottle.LIMIT; i++) {
+      flow.open(supplier, new MarketFlow.Filter(OrderQuery.Sort.NEWEST, null, "iron"));
+    }
+    supplier.closeInventory();
+    while (supplier.nextComponentMessage() != null) {
+      // Meldungen der erlaubten Suchen verwerfen
+    }
+
+    flow.open(supplier, new MarketFlow.Filter(OrderQuery.Sort.NEWEST, null, "iron"));
+
+    var message = supplier.nextComponentMessage();
+    assertThat(PlainTextComponentSerializer.plainText().serialize(message))
+        .contains("search too fast");
+  }
+
+  @Test
+  void searchesWithoutTextAreNeverThrottled() {
+    seed60();
+    for (int i = 0; i < SearchThrottle.LIMIT + 3; i++) {
+      flow.open(supplier, MarketFlow.Filter.all());
+      assertThat(filled()).isEqualTo(45);
+    }
+  }
+
+  @Test
   void anEmptyResultTellsThePlayerInsteadOfOpeningAnEmptyConfusion() {
     seed60();
     flow.open(supplier, new MarketFlow.Filter(OrderQuery.Sort.NEWEST, null, "netherite"));

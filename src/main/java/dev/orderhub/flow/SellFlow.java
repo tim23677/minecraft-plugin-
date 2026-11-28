@@ -58,8 +58,7 @@ public final class SellFlow {
         () ->
             s.storage()
                 .transact(uow -> {
-                  List<Candidate> out = new ArrayList<>();
-                  for (Order order :
+                  List<Order> orders =
                       uow.orders()
                           .search(
                               new OrderQuery(
@@ -69,8 +68,12 @@ public final class SellFlow {
                                   OrderStatus.ACTIVE,
                                   OrderQuery.Sort.HIGHEST_PRICE,
                                   0,
-                                  CANDIDATES))) {
-                    out.add(new Candidate(order, uow.orders().options(order.id())));
+                                  CANDIDATES));
+                  var options = uow.orders().optionsFor(orders.stream().map(Order::id).toList());
+                  List<Candidate> out = new ArrayList<>();
+                  for (Order order : orders) {
+                    out.add(
+                        new Candidate(order, options.getOrDefault(order.id(), OrderOptions.EXACT)));
                   }
                   return out;
                 })

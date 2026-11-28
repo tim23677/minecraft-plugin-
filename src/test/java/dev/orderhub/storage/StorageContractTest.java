@@ -1714,6 +1714,38 @@ abstract class StorageContractTest {
   }
 
   @Test
+  void releasedNotesAreOpenAgainAndOnlyDeliveredOnesAreTouched() {
+    UUID p = UUID.randomUUID();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.insights().addNote(p, "order", "a", "r1", TestData.T0);
+          u.insights().addNote(p, "order", "b", "r2", TestData.T0);
+          return null;
+        });
+    var pending = tx(storage(), (UnitOfWork u) -> u.insights().pendingNotes(p, 10));
+    var ids = pending.stream().map(n -> n.id()).toList();
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.insights().claimNotes(ids, TestData.T0 + 1);
+          return null;
+        });
+    assertThat(tx(storage(), (UnitOfWork u) -> u.insights().pendingNotes(p, 10))).isEmpty();
+
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.insights().releaseNotes(List.of(ids.get(0)));
+          return null;
+        });
+
+    assertThat(tx(storage(), (UnitOfWork u) -> u.insights().pendingNotes(p, 10)))
+        .extracting(n -> n.id())
+        .containsExactly(ids.get(0));
+  }
+
+  @Test
   void discordOutboxLifecycleWithBackoff() {
     String payload = "{\"x\":\"" + UUID.randomUUID() + "\"}";
     tx(
@@ -1866,6 +1898,39 @@ abstract class StorageContractTest {
           return null;
         });
     assertThat(tx(storage(), (UnitOfWork u) -> u.orders().options(id))).isEqualTo(changed);
+  }
+
+  @Test
+  void optionsForReturnsOneEntryPerOrderInASingleCall() {
+    UUID a = UUID.randomUUID();
+    long first =
+        tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders().insert(TestData.order(a, "minecraft:diamond", 100, 3), TestData.T0))
+            .id();
+    long second =
+        tx(
+                storage(),
+                (UnitOfWork u) ->
+                    u.orders()
+                        .insert(TestData.order(a, "minecraft:gold_ingot", 100, 3), TestData.T0))
+            .id();
+    var custom = new dev.orderhub.domain.OrderOptions(60, true, true);
+    tx(
+        storage(),
+        (UnitOfWork u) -> {
+          u.orders().saveOptions(second, custom);
+          return null;
+        });
+
+    var found =
+        tx(storage(), (UnitOfWork u) -> u.orders().optionsFor(List.of(first, second, 999_999L)));
+
+    assertThat(found).doesNotContainKey(first);
+    assertThat(found).containsEntry(second, custom);
+    assertThat(found).doesNotContainKey(999_999L);
+    assertThat(tx(storage(), (UnitOfWork u) -> u.orders().optionsFor(List.of()))).isEmpty();
   }
 
   @Test

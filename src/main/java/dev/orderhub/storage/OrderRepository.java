@@ -47,6 +47,12 @@ public interface OrderRepository {
   /** Optionen des Auftrags. Ohne gespeicherte Zeile {@link OrderOptions#EXACT}. */
   OrderOptions options(long orderId);
 
+  /**
+   * Optionen mehrerer Auftraege in einer Abfrage. Auftraege ohne gespeicherte Zeile fehlen in der
+   * Antwort, sie gelten als {@link OrderOptions#EXACT}.
+   */
+  java.util.Map<Long, OrderOptions> optionsFor(java.util.Collection<Long> orderIds);
+
   /** Speichert die Optionen eines neuen oder bestehenden Auftrags. */
   void saveOptions(long orderId, OrderOptions options);
 

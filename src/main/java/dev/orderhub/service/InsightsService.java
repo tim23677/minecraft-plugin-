@@ -225,6 +225,23 @@ public final class InsightsService {
   }
 
   /**
+   * Gibt beanspruchte Hinweise wieder frei, wenn der Spieler sie nicht mehr erreicht hat (zum
+   * Beispiel Abgang zwischen Beanspruchen und Anzeigen). Sie erscheinen beim naechsten Login.
+   */
+  public void releaseNotes(List<InsightsRepository.Note> notes) {
+    if (notes.isEmpty()) {
+      return;
+    }
+    List<Long> ids = notes.stream().map(InsightsRepository.Note::id).toList();
+    storage
+        .transact(uow -> {
+          uow.insights().releaseNotes(ids);
+          return null;
+        })
+        .join();
+  }
+
+  /**
    * Holt offene Hinweise fuer die Spieler, die gerade auf diesem Server online sind (wird
    * zeitgesteuert aufgerufen). Hinweise, die ein anderer Server in derselben Zeit beansprucht hat,
    * fehlen hier.

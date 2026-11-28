@@ -104,6 +104,20 @@ class NoteDispatcherTest extends FlowTestBase {
   }
 
   @Test
+  void aNoteClaimedForAPlayerWhoLeavesIsReleasedAndShownAtTheNextLogin() {
+    note(supplier.getUniqueId(), "delivered", "minecraft:diamond|3|1", "late");
+    supplier.disconnect();
+
+    dispatcher.runOnce();
+
+    var stillPending =
+        insightStorage
+            .transact(uow -> uow.insights().pendingNotes(supplier.getUniqueId(), 10))
+            .join();
+    assertThat(stillPending).hasSize(1);
+  }
+
+  @Test
   void aBrokenDatabaseSkipsTheRunAndKeepsTheNotes() {
     note(supplier.getUniqueId(), "delivered", "minecraft:diamond|1|1", "y");
     insightStorage.close();

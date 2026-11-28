@@ -55,6 +55,7 @@ public final class MarketFlow {
   private final DeliveryFlow delivery;
   private final Function<Order, ItemStack> icons;
   private final Supplier<MenuLayout> layout;
+  private final SearchThrottle throttle;
 
   public MarketFlow(
       Services services,
@@ -62,6 +63,17 @@ public final class MarketFlow {
       DeliveryFlow delivery,
       Function<Order, ItemStack> icons,
       Supplier<MenuLayout> layout) {
+    this(services, chat, delivery, icons, layout, System::currentTimeMillis);
+  }
+
+  MarketFlow(
+      Services services,
+      ChatInput chat,
+      DeliveryFlow delivery,
+      Function<Order, ItemStack> icons,
+      Supplier<MenuLayout> layout,
+      java.util.function.LongSupplier clock) {
+    this.throttle = new SearchThrottle(clock);
     this.s = services;
     this.chat = chat;
     this.delivery = delivery;
@@ -92,6 +104,10 @@ public final class MarketFlow {
   private void load(Player player, State st) {
     OrderQuery.Cursor start = st.start;
     Filter f = st.filter;
+    if (f.text() != null && !throttle.tryAcquire(player.getUniqueId())) {
+      player.sendMessage(s.messages().prefixed("market.search-slow"));
+      return;
+    }
     int gen = st.generation.incrementAndGet();
     Async.supply(
         s.scheduler(),

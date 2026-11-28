@@ -305,4 +305,13 @@ final class JdbcInsightsRepository implements InsightsRepository {
       jdbc.update("UPDATE notifications SET delivered_at = ? WHERE id = ?", now, id);
     }
   }
+
+  @Override
+  public void releaseNotes(List<Long> ids) {
+    for (long id : ids) {
+      jdbc.update(
+          "UPDATE notifications SET delivered_at = NULL WHERE id = ? AND delivered_at IS NOT NULL",
+          id);
+    }
+  }
 }

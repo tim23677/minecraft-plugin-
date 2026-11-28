@@ -55,9 +55,15 @@ public final class NoteDispatcher {
       if (player == null) {
         return;
       }
-      // Verschwindet der Spieler jetzt, ist der Hinweis trotzdem beansprucht und geht verloren:
-      // Er ist nur eine Anzeige, die zugrunde liegende Lieferung bleibt als Paket erhalten.
-      s.scheduler().tryRunOn(player, () -> show(player, list));
+      // Verschwindet der Spieler jetzt, werden die Hinweise wieder freigegeben und erscheinen
+      // beim naechsten Login.
+      if (!s.scheduler().tryRunOn(player, () -> show(player, list))) {
+        try {
+          s.insights().releaseNotes(list);
+        } catch (RuntimeException e) {
+          s.logger().log(Level.FINE, "could not release notes", e);
+        }
+      }
     });
   }
 

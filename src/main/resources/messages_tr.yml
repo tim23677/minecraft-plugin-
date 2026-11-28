@@ -71,6 +71,7 @@ claim:
 
 market:
   empty: "<gray>Filtrene uyan açık sipariş yok."
+  search-slow: "<gray>Çok hızlı arama yapıyorsunuz. Birkaç saniye bekleyin."
   search-prompt: "<gray>Aradığın eşyanın adını yaz (örneğin <white>diamond</white>). <white>-</white> aramayı temizler, <white><cancel></white> iptal eder."
   no-data: "<gray>Yeterli piyasa verisi yok"
   recommendation: "<gray><item> için önerilen fiyat aralığı: <white><low></white> ile <white><high></white> arası (<days> günde <trades> işleme göre)."

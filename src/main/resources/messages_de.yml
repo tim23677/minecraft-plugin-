@@ -71,6 +71,7 @@ claim:
 
 market:
   empty: "<gray>Keine offenen Aufträge passen zu deinem Filter."
+  search-slow: "<gray>Du suchst zu schnell. Bitte warte ein paar Sekunden."
   search-prompt: "<gray>Tippe den Itemnamen ein, nach dem du suchen willst (zum Beispiel <white>diamond</white>). Mit <white>-</white> löschst du die Suche, mit <white><cancel></white> brichst du ab."
   no-data: "<gray>Nicht genug Marktdaten"
   recommendation: "<gray>Empfohlener Preisbereich für <item>: <white><low></white> bis <white><high></white> (basierend auf <trades> Geschäften in <days> Tagen)."

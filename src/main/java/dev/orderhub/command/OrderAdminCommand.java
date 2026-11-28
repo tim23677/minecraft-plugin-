@@ -410,7 +410,9 @@ public final class OrderAdminCommand implements CommandHandler {
               ? dataDir.resolve("latest.log")
               : serverDir.resolve("logs").resolve("latest.log");
       if (java.nio.file.Files.isRegularFile(latest)) {
-        log = java.nio.file.Files.readAllLines(latest, java.nio.charset.StandardCharsets.UTF_8);
+        log =
+            dev.orderhub.bootstrap.SupportDump.tailLines(
+                latest, dev.orderhub.bootstrap.SupportDump.LOG_TAIL_BYTES);
       }
     } catch (java.io.IOException | RuntimeException e) {
       // Ohne lesbares Log bleibt der Abschnitt leer.

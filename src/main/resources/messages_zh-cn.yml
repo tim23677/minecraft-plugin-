@@ -71,6 +71,7 @@ claim:
 
 market:
   empty: "<gray>没有符合筛选条件的未完成订单。"
+  search-slow: "<gray>搜索过于频繁，请稍等几秒。"
   search-prompt: "<gray>请输入要搜索的物品名称（例如 <white>diamond</white>）。输入 <white>-</white> 清除搜索，输入 <white><cancel></white> 取消。"
   no-data: "<gray>市场数据不足"
   recommendation: "<gray><item> 的推荐价格区间：<white><low></white> 至 <white><high></white>（基于 <days> 天内的 <trades> 笔交易）。"

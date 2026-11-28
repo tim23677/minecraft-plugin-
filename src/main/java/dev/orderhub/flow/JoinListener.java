@@ -93,6 +93,14 @@ public final class JoinListener implements Listener {
                 summary.deliveries() == 0 && summary.expiredOrders() == 0 ? sound : "");
           }
         },
-        orphan -> {});
+        orphan -> release(orphan));
+  }
+
+  private void release(java.util.List<dev.orderhub.storage.InsightsRepository.Note> notes) {
+    try {
+      s.insights().releaseNotes(notes);
+    } catch (RuntimeException e) {
+      s.logger().log(java.util.logging.Level.WARNING, "could not release login notes", e);
+    }
   }
 }

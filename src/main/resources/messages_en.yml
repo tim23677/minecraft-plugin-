@@ -71,6 +71,7 @@ claim:
 
 market:
   empty: "<gray>No open orders match your filter."
+  search-slow: "<gray>You search too fast. Please wait a few seconds."
   search-prompt: "<gray>Type the item name to search for (for example <white>diamond</white>). <white>-</white> clears the search, <white><cancel></white> aborts."
   no-data: "<gray>Not enough market data"
   recommendation: "<gray>Recommended price range for <item>: <white><low></white> to <white><high></white> (based on <trades> trades in <days> days)."

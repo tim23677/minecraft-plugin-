@@ -91,4 +91,10 @@ public interface InsightsRepository {
   List<Long> claimNotes(List<Long> ids, long now);
 
   void markNotesDelivered(List<Long> ids, long now);
+
+  /**
+   * Setzt beanspruchte Hinweise wieder auf "offen", weil der Spieler sie nicht mehr erreicht hat.
+   * Nur Zeilen, die schon zugestellt markiert sind, werden zurueckgesetzt.
+   */
+  void releaseNotes(List<Long> ids);
 }
