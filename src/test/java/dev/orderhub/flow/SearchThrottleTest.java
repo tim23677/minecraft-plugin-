@@ -8,10 +8,18 @@ import org.junit.jupiter.api.Test;
 
 class SearchThrottleTest {
 
-  private final AtomicLong clock = new AtomicLong(1_000);
-  private final SearchThrottle throttle = new SearchThrottle(clock::get);
-  private final UUID a = UUID.randomUUID();
-  private final UUID b = UUID.randomUUID();
+  private AtomicLong clock;
+  private SearchThrottle throttle;
+  private UUID a;
+  private UUID b;
+
+  @org.junit.jupiter.api.BeforeEach
+  void setUp() {
+    clock = new AtomicLong(1_000);
+    throttle = new SearchThrottle(clock::get);
+    a = UUID.randomUUID();
+    b = UUID.randomUUID();
+  }
 
   @Test
   void allowsTheLimitAndRefusesTheNextSearchInsideTheWindow() {

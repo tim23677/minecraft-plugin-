@@ -103,7 +103,8 @@ class DeliveryToleranceFlowTest extends FlowTestBase {
 
   private int swords(org.bukkit.entity.Player player) {
     int n = 0;
-    for (ItemStack stack : player.getInventory().getStorageContents()) {
+    for (ItemStack stack :
+        java.util.Objects.requireNonNull(player.getInventory().getStorageContents())) {
       if (stack != null && stack.getType() == Material.DIAMOND_SWORD) {
         n += stack.getAmount();
       }
@@ -145,7 +146,7 @@ class DeliveryToleranceFlowTest extends FlowTestBase {
   @Test
   void autoClaimWithAFullInventoryLeavesTheRestInTheParcel() throws Exception {
     var owner = onlineOwner();
-    for (int i = 0; i < owner.getInventory().getStorageContents().length; i++) {
+    for (int i = 0; i < 36; i++) {
       owner.getInventory().setItem(i, new ItemStack(Material.STONE, 64));
     }
     long id = swordOrder(new OrderOptions(100, false, true));
