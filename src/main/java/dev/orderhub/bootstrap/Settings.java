@@ -116,7 +116,7 @@ public record Settings(
         range(cfg, "market.min-trades-for-recommendation", 5, 1, 10_000, warnings),
         range(cfg, "notifications.cooldown-seconds", 60, 0, 86_400, warnings),
         display(cfg, warnings),
-        str(cfg, "notifications.sound", ""),
+        sound(cfg, warnings),
         range(cfg, "retention.history-days", 120, 1, 3650, warnings),
         range(cfg, "retention.cleanup-interval-minutes", 30, 1, 1440, warnings),
         cfg.getBoolean("economy.async-safe", false),
@@ -160,6 +160,25 @@ public record Settings(
     if (!List.of("chat", "actionbar", "title").contains(raw)) {
       warnings.add("notifications.display '" + raw + "' is invalid, using 'chat'");
       return "chat";
+    }
+    return raw;
+  }
+
+  private static final java.util.regex.Pattern SOUND_KEY =
+      java.util.regex.Pattern.compile("([a-z0-9_.-]+:)?[a-z0-9_./-]+");
+
+  /** Ein ungueltiger Ton-Schluessel schaltet den Ton aus und erzeugt eine Warnung. */
+  private static String sound(ConfigurationSection cfg, List<String> warnings) {
+    String raw = str(cfg, "notifications.sound", "").trim();
+    if (raw.isEmpty()) {
+      return "";
+    }
+    if (!SOUND_KEY.matcher(raw.toLowerCase(java.util.Locale.ROOT)).matches()) {
+      warnings.add(
+          "notifications.sound '"
+              + raw
+              + "' is not a valid sound key (example: entity.experience_orb.pickup), sound is off");
+      return "";
     }
     return raw;
   }

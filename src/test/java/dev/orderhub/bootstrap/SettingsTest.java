@@ -86,4 +86,33 @@ class SettingsTest {
     assertThat(s.componentPresets()).containsExactly("potions");
     assertThat(s.allowedComponents()).containsExactly("minecraft:repair_cost");
   }
+
+  @Test
+  void aValidSoundKeyIsKept() {
+    YamlConfiguration yaml = new YamlConfiguration();
+    yaml.set("notifications.sound", "entity.experience_orb.pickup");
+    Settings s = Settings.from(yaml);
+    assertThat(s.notificationSound()).isEqualTo("entity.experience_orb.pickup");
+    assertThat(s.warnings()).noneMatch(w -> w.contains("notifications.sound"));
+  }
+
+  @Test
+  void anInvalidSoundKeyTurnsTheSoundOffWithAWarning() {
+    for (String bad : new String[] {"Pling!", "has space", "a:b:c", "ding dong"}) {
+      YamlConfiguration yaml = new YamlConfiguration();
+      yaml.set("notifications.sound", bad);
+      Settings s = Settings.from(yaml);
+      assertThat(s.notificationSound()).as(bad).isEmpty();
+      assertThat(s.warnings()).as(bad).anyMatch(w -> w.contains("notifications.sound"));
+    }
+  }
+
+  @Test
+  void anEmptySoundIsNoWarning() {
+    YamlConfiguration yaml = new YamlConfiguration();
+    yaml.set("notifications.sound", "  ");
+    Settings s = Settings.from(yaml);
+    assertThat(s.notificationSound()).isEmpty();
+    assertThat(s.warnings()).noneMatch(w -> w.contains("notifications.sound"));
+  }
 }

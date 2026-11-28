@@ -56,6 +56,8 @@ order:
   not-yours: "<red>这不是你的订单。"
   not-active: "<red>此订单不再接受交付。"
   completed: "<green>你的订单 #<id>（<item>）已完成。"
+  info: "<yellow>订单 #<id>：<white><filled>/<total>x <item></white> <gray>单价 <unit>，状态 <status>，<hours> 小时后结束。选项：<options>"
+  info-usage: "<gray>用法：<white>/order info <id></white>。"
 
 delivery:
   processing: "<yellow>你的交付正在处理。如果物品或金钱缺失，请稍后查看 /order claims 和 /order returns。"

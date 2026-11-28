@@ -56,6 +56,8 @@ order:
   not-yours: "<red>To nie jest twoje zlecenie."
   not-active: "<red>To zlecenie nie przyjmuje już dostaw."
   completed: "<green>Twoje zlecenie nr <id> na <item> zostało zrealizowane."
+  info: "<yellow>Zlecenie #<id>: <white><filled>/<total>x <item></white> <gray>po <unit> za sztukę, status <status>, kończy się za <hours> godz. Opcje: <options>"
+  info-usage: "<gray>Użyj <white>/order info <id></white>."
 
 delivery:
   processing: "<yellow>Twoja dostawa jest przetwarzana. Jeśli brakuje przedmiotów lub pieniędzy, wkrótce sprawdź /order claims i /order returns."

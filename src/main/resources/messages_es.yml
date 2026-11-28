@@ -56,6 +56,8 @@ order:
   not-yours: "<red>Este pedido no es tuyo."
   not-active: "<red>Este pedido ya no acepta entregas."
   completed: "<green>Tu pedido n.º <id> de <item> está completo."
+  info: "<yellow>Pedido #<id>: <white><filled>/<total>x <item></white> <gray>a <unit> cada uno, estado <status>, termina en <hours> h. Opciones: <options>"
+  info-usage: "<gray>Usa <white>/order info <id></white>."
 
 delivery:
   processing: "<yellow>Tu entrega se está procesando. Si faltan objetos o dinero, revisa pronto /order claims y /order returns."

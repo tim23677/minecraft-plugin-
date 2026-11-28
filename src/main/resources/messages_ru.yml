@@ -56,6 +56,8 @@ order:
   not-yours: "<red>Это не ваш заказ."
   not-active: "<red>Этот заказ больше не принимает поставки."
   completed: "<green>Ваш заказ №<id> на <item> выполнен."
+  info: "<yellow>Заказ #<id>: <white><filled>/<total>x <item></white> <gray>по <unit> за штуку, статус <status>, закончится через <hours> ч. Параметры: <options>"
+  info-usage: "<gray>Используйте <white>/order info <id></white>."
 
 delivery:
   processing: "<yellow>Ваша поставка обрабатывается. Если не хватает предметов или денег, скоро проверьте /order claims и /order returns."

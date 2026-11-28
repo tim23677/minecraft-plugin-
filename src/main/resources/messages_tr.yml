@@ -56,6 +56,8 @@ order:
   not-yours: "<red>Bu sipariş senin değil."
   not-active: "<red>Bu sipariş artık teslimat kabul etmiyor."
   completed: "<green><item> için #<id> numaralı siparişin tamamlandı."
+  info: "<yellow>Sipariş #<id>: <white><filled>/<total>x <item></white> <gray>tanesi <unit>, durum <status>, <hours> saat sonra biter. Seçenekler: <options>"
+  info-usage: "<gray>Kullanım: <white>/order info <id></white>."
 
 delivery:
   processing: "<yellow>Teslimatın işleniyor. Eşya veya para eksikse birazdan /order claims ve /order returns komutlarına bak."
