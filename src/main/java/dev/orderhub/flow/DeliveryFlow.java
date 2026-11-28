@@ -461,6 +461,7 @@ public final class DeliveryFlow {
           }
         }
         notifyOwner(order, template, quantity, event != null && event.orderCompleted());
+        autoClaim(order);
       }
       case REJECTED_ITEMS_RETURNED -> s.logger().info("delivery rejected, items stored as return");
       default -> s.logger().warning("delivery commit ended with " + result.status());
@@ -501,6 +502,29 @@ public final class DeliveryFlow {
         new ParcelFlow(s, ParcelFlow.Kind.RETURN).claimAll(player);
       }
       default -> player.sendMessage(s.messages().prefixed("delivery.processing"));
+    }
+  }
+
+  /**
+   * Hat der Auftrag die Auto-Abholung eingeschaltet und ist der Besitzer online, werden seine
+   * Pakete sofort ins Inventar gelegt. Was nicht passt, bleibt als Paket erhalten. Async-Thread,
+   * die Uebergabe laeuft im Entity-Kontext.
+   */
+  private void autoClaim(Order order) {
+    Player owner = Bukkit.getPlayer(order.owner());
+    if (owner == null) {
+      return;
+    }
+    boolean auto;
+    try {
+      auto = s.storage().transact(uow -> uow.orders().options(order.id())).join().autoClaim();
+    } catch (RuntimeException e) {
+      s.logger().log(java.util.logging.Level.WARNING, "auto-claim lookup failed", e);
+      return;
+    }
+    if (auto) {
+      s.scheduler()
+          .tryRunOn(owner, () -> new ParcelFlow(s, ParcelFlow.Kind.CLAIM).claimAll(owner, true));
     }
   }
 

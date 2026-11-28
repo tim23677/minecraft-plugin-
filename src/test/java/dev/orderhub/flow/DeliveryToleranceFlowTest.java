@@ -94,4 +94,65 @@ class DeliveryToleranceFlowTest extends FlowTestBase {
     deliver(id, new ItemStack(Material.IRON_SWORD));
     assertThat(orderOf(id).quantityFilled()).isZero();
   }
+
+  private org.mockbukkit.mockbukkit.entity.PlayerMock onlineOwner() {
+    var owner = new org.mockbukkit.mockbukkit.entity.PlayerMock(server, "owner", OWNER);
+    server.addPlayer(owner);
+    return owner;
+  }
+
+  private int swords(org.bukkit.entity.Player player) {
+    int n = 0;
+    for (ItemStack stack : player.getInventory().getStorageContents()) {
+      if (stack != null && stack.getType() == Material.DIAMOND_SWORD) {
+        n += stack.getAmount();
+      }
+    }
+    return n;
+  }
+
+  @Test
+  void autoClaimHandsTheDeliveredItemToAnOnlineOwner() throws Exception {
+    var owner = onlineOwner();
+    long id = swordOrder(new OrderOptions(100, false, true));
+
+    deliver(id, new ItemStack(Material.DIAMOND_SWORD));
+
+    assertThat(swords(owner)).isEqualTo(1);
+    assertThat(h.storage.snapshot().claims()).allMatch(c -> c.quantity() == 0);
+  }
+
+  @Test
+  void withoutTheFlagTheItemWaitsAsAParcel() throws Exception {
+    var owner = onlineOwner();
+    long id = swordOrder(OrderOptions.EXACT);
+
+    deliver(id, new ItemStack(Material.DIAMOND_SWORD));
+
+    assertThat(swords(owner)).isZero();
+    assertThat(h.storage.snapshot().claims()).hasSize(1);
+  }
+
+  @Test
+  void autoClaimWithAnOfflineOwnerKeepsTheParcel() throws Exception {
+    long id = swordOrder(new OrderOptions(100, false, true));
+
+    deliver(id, new ItemStack(Material.DIAMOND_SWORD));
+
+    assertThat(h.storage.snapshot().claims()).hasSize(1);
+  }
+
+  @Test
+  void autoClaimWithAFullInventoryLeavesTheRestInTheParcel() throws Exception {
+    var owner = onlineOwner();
+    for (int i = 0; i < owner.getInventory().getStorageContents().length; i++) {
+      owner.getInventory().setItem(i, new ItemStack(Material.STONE, 64));
+    }
+    long id = swordOrder(new OrderOptions(100, false, true));
+
+    deliver(id, new ItemStack(Material.DIAMOND_SWORD));
+
+    assertThat(swords(owner)).isZero();
+    assertThat(h.storage.snapshot().claims()).hasSize(1);
+  }
 }
