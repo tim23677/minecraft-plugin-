@@ -1,6 +1,6 @@
 # Simulationsbericht OrderHub 2.0.0
 
-Stand: 2026-11-28. Nichts davon ist committet.
+Stand: 2026-11-28, nach der zweiten Verbesserungsrunde. Alles ist committet.
 
 ## Umgebung
 
@@ -18,10 +18,10 @@ Alles liegt in `sim/` und ist mit `sim/run.sh` wiederholbar (`SIM_DB=mariadb sim
 
 | Lauf | Ergebnis |
 |---|---|
-| SQLite, Befehle, Rechte, Ereignisse, Neustart, Konfiguration | 153 von 153 bestanden |
+| SQLite, Befehle, Rechte, Ereignisse, Neustart, Konfiguration | 166 von 166 bestanden |
 | SQLite, harter Absturz (SIGKILL) während einer Lieferung, Recovery (`tools/e2e`) | 17 von 17 bestanden |
-| MariaDB, gleiche 153 Prüfungen | 153 von 153 bestanden |
-| `./gradlew spotlessApply build -x dependencyCheckAnalyze` | erfolgreich, 1161 Tests, 0 Fehler |
+| MariaDB, gleiche 153 Prüfungen | 166 von 166 bestanden |
+| `./gradlew spotlessApply build -x dependencyCheckAnalyze` | erfolgreich, 1190 Tests, 0 Fehler |
 
 Im Server-Log beider Läufe gibt es keine Exception und keine SEVERE-Zeile. Die Warnung "Can't keep up" kam nicht vor.
 
@@ -41,6 +41,10 @@ Ereignisse und Abläufe:
 - Neustart: Aufträge und Transaktionen bleiben erhalten, Recovery läuft.
 - Konfiguration: ungültige Werte erzeugen Warnungen und fallen auf Standardwerte, Menge 1 und Gebühr 0, unbekannte Sprache fällt auf Englisch, Sprache de.
 
+## Neu in der zweiten Runde (ebenfalls auf dem echten Server geprüft)
+
+Preisfilter im Markt (`min=`, `max=`, auch zusammen mit Sortierung und Suchtext, ungültige und vertauschte Grenzen werden abgelehnt), Drosselung schneller Abfragen (`orders.query-interval-ms`), `/orderadmin player`, `/orderadmin audit`, Systemzeile in `/orderadmin health`, Login-Hinweis für bald ablaufende Aufträge. Dazu die Platzhalter `market_highest_<item>`, `market_lowest_<item>`, `market_open_orders` und `claims_waiting` (nur durch Unit-Tests abgedeckt, PlaceholderAPI ist nicht installiert).
+
 ## Gefundene Fehler
 
 1. Eingabe der Menge im Chat. Bei `/order create` ohne Argumente prüfte das Plugin die Menge erst, nachdem auch der Preis eingegeben war. Eine Eingabe wie "abc" führte also zur Preisabfrage und erst danach zur Fehlermeldung. Ursache: `CreateFlow.start` rief `withQuantity` erst im zweiten Eingabeschritt auf. Behoben: die Menge wird sofort geprüft, bei Fehler kommt die Meldung und der Ablauf endet. Regressionstests: `CreateFlowTest.anInvalidQuantityTypedInChatIsRejectedBeforeThePricePrompt` und `aValidQuantityTypedInChatLeadsToThePricePrompt`.
@@ -59,7 +63,7 @@ Weitere Abweichungen der ersten Läufe lagen im Testskript und nicht im Plugin: 
 - Nach dem harten Abbruch: `Recovery: ... itemsReturned=1`, Journal FAILED, 9 Items als Rückgabe, keine offene Reservierung, kein MANUAL_REVIEW.
 - Konfigurationswarnungen wie `config.yml: orders.max-quantity=-5 out of range 1..1000000, using 2304`.
 
-## Änderungen im Repository (nicht committet)
+## Änderungen im Repository
 
 - `src/main/java/dev/orderhub/flow/CreateFlow.java`: Sofortprüfung der Menge.
 - `src/test/java/dev/orderhub/flow/CreateFlowTest.java`: zwei neue Tests.

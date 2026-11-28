@@ -10,7 +10,7 @@ Die Version ist nicht 10/10 im Sinn des Master-Prompts. Build und alle ausgefüh
 
 | Prüfung | Befehl | Ergebnis |
 |---|---|---|
-| Gesamtbuild mit `-Werror`, Spotless, SpotBugs, Tests, Jars, API-Modul, Verkaufs-ZIP | `./gradlew spotlessApply build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 1159 Tests, 0 Fehler, 0 übersprungen |
+| Gesamtbuild mit `-Werror`, Spotless, SpotBugs, Tests, Jars, API-Modul, Verkaufs-ZIP | `./gradlew spotlessApply build -x dependencyCheckAnalyze --max-workers=1` | erfolgreich, 1190 Tests, 0 Fehler, 0 übersprungen |
 | Integrationstests gegen MariaDB 11.4 | `./gradlew integrationTest` | 63 Tests, 1 übersprungen, 0 Fehler |
 | Echte Server Paper 1.21.11 und Folia 1.21.11 mit dem 2.0.0-Jar | `ACCEPT_MINECRAFT_EULA=true tools/mcstage/run.sh` | 2 bestanden |
 | Spielerszenario mit zwei Bots auf Paper (EssentialsX 2.22.0, VaultUnlocked 2.20.3, harter Abbruch und Wiederanlauf) | `node tools/e2e/e2e.js` | 17 von 17 bestanden |
@@ -39,6 +39,12 @@ Nicht behoben und begründet:
 Fünfzehn Änderungen, jede mit Tests: eine Abfrage für die Optionen aller Kandidaten in `/order sell`, Suchdrosselung, Dump-Log nur als Ende der Datei, Freigabe unzugestellter Hinweise, Auto-Abholung (das Flag wird jetzt ausgewertet), Auftragsoptionen per Befehl (`durability=`, `enchants`, `autoclaim` bei `/order create` und `/order template save`), Optionen in Vorlagen gespeichert und beim Benutzen angewendet, Prüfung des Ton-Schlüssels in der Konfiguration, `/order info <id>`, `/order sell all`, die Platzhalter `market_open_orders` und `claims_waiting` (Auflösung ohne PlaceholderAPI testbar), Zählung offener Aufträge ohne Sperre, Vorschlag bei falsch getipptem Unterbefehl, vollständige Hilfe, Vorlagen als Menü (Linksklick benutzt, Rechtsklick löscht).
 
 Dazu `docs/market-research.md` (Quellen, nur Listentexte gelesen) und `docs/media-checklist.md`.
+
+## Zweite Verbesserungsrunde und Simulation
+
+Auf einem echten Paper-Server (1.21.11) mit EssentialsX, VaultUnlocked und LuckPerms: 166 von 166 Prüfungen mit SQLite, 166 von 166 mit MariaDB 11.4, 17 von 17 beim harten Abbruch mit Recovery. Einzelheiten stehen in `SIMULATION_REPORT.md`, wiederholbar mit `sim/run.sh`.
+
+Neu: Preisfilter im Markt, Drosselung schneller Abfragen, `/orderadmin player` und `/orderadmin audit`, Systemzeile in `/orderadmin health`, Login-Hinweis für bald ablaufende Aufträge, Marktplatzhalter, Tab-Completion für Admin-Befehle. Behoben: Die Menge im Chat wird sofort geprüft.
 
 ## Umgesetzt
 
