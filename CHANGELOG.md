@@ -4,9 +4,17 @@
 
 Added
 
+- Order options reachable from commands: `/order create <quantity> <price> [durability=<0-100>] [enchants] [autoclaim]`, the same flags for `/order template save`, shown in the order summary and in `/order info <id>`
+- Auto-claim: with `autoclaim` set, delivered items go straight into the owner's inventory while online, what does not fit stays a parcel
+- `/order template` without arguments opens a menu (left click uses, right click deletes)
+- `/order sell all` offers every matching item of the inventory to the best order
+- `/order info <id>`
+- Suggestion for mistyped subcommands, complete `/order help`, tab completion for template, sell and option flags
+- Placeholders `%orderhub_market_open_orders%` and `%orderhub_claims_waiting%`
+- Invalid `notifications.sound` values produce a warning and turn the sound off
 - Marketplace menu with search by item name, categories, sorting and keyset pagination (stable pages while orders change), layout and texts in `menus.yml`
 - `/order sell [amount]`: finds the open order with the best price for the item in hand and opens the delivery menu as a preview, delivery happens only after confirming
-- Per order options stored in the database: minimum remaining durability and "enchantments at least" tolerance for deliveries, auto-claim flag (stored, not used yet)
+- Per order options stored in the database: minimum remaining durability and "enchantments at least" tolerance for deliveries and an auto-claim flag
 - Component presets in `items.component-presets` (potions, arrows, fireworks, goat horns, banners, ominous bottles, player heads): these items can be ordered, delivery still has to match every component exactly
 - `/order template` (save, list, use, delete; 10 per player) and `/order renew <id>` (automatic renewal on or off)
 - Menus for statistics, history, favorites and market analytics
@@ -23,6 +31,11 @@ Added
 
 Changed
 
+- `/order sell` loads the options of all candidate orders in one query instead of one query per order
+- Text searches in the marketplace are limited to 3 per 5 seconds and player
+- `/orderadmin dump` reads only the last 2 MB of the server log
+- Login notes that were already claimed for a player who left in the same moment are released and shown at the next login
+- The `open_orders` placeholder counts without row locks, it can no longer delay order creation on MariaDB
 - Vault calls have a timeout (`economy.timeout-ms`, default 3000). A call that was never started during a lag spike is retried later, a call that was started and did not finish counts as unclear (MANUAL_REVIEW) and is never repeated automatically
 - `config.yml` is written in English, `config-version` 3 (the updater adds new options and keeps your values)
 - Items with their own data components (potions, banners and so on) are accepted by default through the presets, they were rejected before
@@ -34,7 +47,7 @@ Fixed
 - A delivery of an item that differs from the order only in a tolerated trait now matches according to the order options instead of being rejected without a reason
 - Duplicate key `admin.transaction` in the German message file, missing German admin texts
 
-Not included in 2.0.0 (see RELEASE_REPORT.md): menus for order templates, create menu, bulk sell, auto-renew fee, review menu, import from other plugins, offline MariaDB driver.
+Not included in 2.0.0 (see RELEASE_REPORT.md): create menu with all options, auto-renew fee, review menu in the GUI, import from other plugins, offline MariaDB driver.
 
 ## 1.1.0 (2026-11-26)
 
