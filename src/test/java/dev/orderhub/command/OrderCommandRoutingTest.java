@@ -122,11 +122,21 @@ class OrderCommandRoutingTest {
       String command, String expected) {
     PlayerMock player = player(ALL_PERMISSIONS);
     player.performCommand("order " + command);
-    server.getScheduler().waitAsyncTasksFinished();
-    for (int i = 0; i < 50; i++) {
+    // waitAsyncTasksFinished() never returns while the plugin has repeating async tasks, so the
+    // test ticks the scheduler until the answer arrives.
+    String message = null;
+    for (int i = 0; i < 1000 && message == null; i++) {
       server.getScheduler().performOneTick();
+      message = player.nextMessage();
+      if (message == null) {
+        try {
+          Thread.sleep(2);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
     }
-    String message = player.nextMessage();
     assertThat(message).as(command).contains(expected);
     assertThat(message).doesNotContain("permission");
   }

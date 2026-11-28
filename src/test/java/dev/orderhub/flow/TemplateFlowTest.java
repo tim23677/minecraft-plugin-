@@ -114,4 +114,31 @@ class TemplateFlowTest extends FlowTestBase {
     assertThat(other.nextComponentMessage()).isNotNull();
     assertThat(orders()).isZero();
   }
+
+  @Test
+  void aTemplateKeepsItsOptionsAndAppliesThemWhenUsed() {
+    templates.handle(
+        supplier, new String[] {"save", "tools", "2", "50", "durability=40", "autoclaim"});
+    assertThat(messages()).contains("tools");
+
+    templates.handle(supplier, new String[] {"use", "tools"});
+    click(ConfirmMenu.CONFIRM_SLOT);
+
+    long id = h.storage.snapshot().orders().get(0).id();
+    assertThat(optionsOf(id)).isEqualTo(new dev.orderhub.domain.OrderOptions(40, false, true));
+  }
+
+  @Test
+  void anUnknownOptionRejectsTheSaveAndStoresNothing() {
+    templates.handle(supplier, new String[] {"save", "tools", "2", "50", "fast"});
+
+    assertThat(messages()).contains("fast");
+    templates.handle(supplier, new String[] {"list"});
+    assertThat(messages()).doesNotContain("tools");
+  }
+
+  private dev.orderhub.domain.OrderOptions optionsOf(long id) {
+    dev.orderhub.domain.OrderOptions found = h.storage.read(uow -> uow.orders().options(id));
+    return found;
+  }
 }

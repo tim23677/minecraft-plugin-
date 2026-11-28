@@ -186,4 +186,37 @@ class CreateFlowTest extends FlowTestBase {
     assertThat(timed.purgeExpiredCooldowns()).isEqualTo(1);
     assertThat(timed.cooldownSize()).isZero();
   }
+
+  @Test
+  void optionsFromTheCommandAreStoredWithTheOrderAndShownInTheSummary() {
+    var options = new dev.orderhub.domain.OrderOptions(60, true, true);
+
+    flow.start(supplier, "5", "100", options);
+    var summary = new StringBuilder();
+    net.kyori.adventure.text.Component c;
+    while ((c = supplier.nextComponentMessage()) != null) {
+      summary.append(
+          net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+              .serialize(c));
+    }
+    click(ConfirmMenu.CONFIRM_SLOT);
+
+    long id = h.storage.snapshot().orders().get(0).id();
+    assertThat(optionsOf(id)).isEqualTo(options);
+    assertThat(summary.toString()).contains("durability at least 60%").contains("auto-claim");
+  }
+
+  @Test
+  void anOrderWithoutOptionsKeepsExactMatching() {
+    flow.start(supplier, "5", "100");
+    click(ConfirmMenu.CONFIRM_SLOT);
+
+    long id = h.storage.snapshot().orders().get(0).id();
+    assertThat(optionsOf(id)).isEqualTo(dev.orderhub.domain.OrderOptions.EXACT);
+  }
+
+  private dev.orderhub.domain.OrderOptions optionsOf(long id) {
+    dev.orderhub.domain.OrderOptions found = h.storage.read(uow -> uow.orders().options(id));
+    return found;
+  }
 }

@@ -3,6 +3,7 @@ package dev.orderhub.flow;
 import dev.orderhub.bootstrap.Messages;
 import dev.orderhub.bootstrap.Settings;
 import dev.orderhub.domain.ItemSnapshot;
+import dev.orderhub.domain.OrderOptions;
 import dev.orderhub.gui.ConfirmMenu;
 import dev.orderhub.item.ItemCodecException;
 import dev.orderhub.item.ValidationResult;
@@ -39,6 +40,11 @@ public final class CreateFlow {
    * Startet die Erstellung. {@code quantity} und {@code price} duerfen {@code null} sein (Chat).
    */
   public void start(Player player, String quantity, String price) {
+    start(player, quantity, price, OrderOptions.EXACT);
+  }
+
+  /** Wie {@link #start(Player, String, String)}, mit Auftragsoptionen aus dem Befehl. */
+  public void start(Player player, String quantity, String price, OrderOptions options) {
     ItemStack hand = player.getInventory().getItemInMainHand();
     ValidationResult check = s.matcher().validateForOrder(hand);
     if (!check.valid()) {
@@ -70,7 +76,7 @@ public final class CreateFlow {
     template.setAmount(1);
     Settings settings = s.settings().get();
     if (quantity != null && price != null) {
-      withQuantity(player, snapshot, template, quantity, price);
+      withQuantity(player, snapshot, template, quantity, price, options);
       return;
     }
     player.sendMessage(
@@ -86,14 +92,19 @@ public final class CreateFlow {
           chat.await(
               player,
               settings.inputTimeoutSeconds(),
-              p -> withQuantity(player, snapshot, template, q, p),
+              p -> withQuantity(player, snapshot, template, q, p, options),
               () -> player.sendMessage(s.messages().prefixed("create.cancelled")));
         },
         () -> player.sendMessage(s.messages().prefixed("create.cancelled")));
   }
 
   private void withQuantity(
-      Player player, ItemSnapshot snapshot, ItemStack template, String qRaw, String pRaw) {
+      Player player,
+      ItemSnapshot snapshot,
+      ItemStack template,
+      String qRaw,
+      String pRaw,
+      OrderOptions options) {
     OptionalInt q = parseQuantity(qRaw);
     if (q.isEmpty()) {
       player.sendMessage(
@@ -108,12 +119,17 @@ public final class CreateFlow {
           s.messages().prefixed("general.invalid-amount", Messages.text("input", pRaw)));
       return;
     }
-    review(player, snapshot, template, q.getAsInt(), unit);
+    review(player, snapshot, template, q.getAsInt(), unit, options);
   }
 
   /** Startet die Erstellung aus einer Vorlage: gleiche Pruefungen, Zusammenfassung, Bestaetigen. */
   public void startFromTemplate(
-      Player player, ItemSnapshot snapshot, ItemStack template, int quantity, long unit) {
+      Player player,
+      ItemSnapshot snapshot,
+      ItemStack template,
+      int quantity,
+      long unit,
+      OrderOptions options) {
     ValidationResult check = s.matcher().validateForOrder(template);
     if (!check.valid()) {
       player.sendMessage(
@@ -132,11 +148,16 @@ public final class CreateFlow {
                                       .replace('_', '-')))));
       return;
     }
-    review(player, snapshot, template, quantity, unit);
+    review(player, snapshot, template, quantity, unit, options);
   }
 
   private void review(
-      Player player, ItemSnapshot snapshot, ItemStack template, int quantityValue, long unit) {
+      Player player,
+      ItemSnapshot snapshot,
+      ItemStack template,
+      int quantityValue,
+      long unit,
+      OrderOptions options) {
     OptionalInt q = OptionalInt.of(quantityValue);
     if (unit < s.limits().minPrice() || unit > s.limits().maxPrice()) {
       player.sendMessage(
@@ -167,13 +188,19 @@ public final class CreateFlow {
                 Messages.text("unit", Money.format(unit)),
                 Messages.text("total", Money.format(total)),
                 Messages.text("fee", Money.format(fee))));
+    String optionText =
+        OptionFlags.describe(options, key -> s.messages().raw("create.option-" + key));
+    if (!optionText.isEmpty()) {
+      player.sendMessage(
+          s.messages().prefixed("create.options", Messages.text("options", optionText)));
+    }
     int quantity = q.getAsInt();
     ConfirmMenu confirm =
         new ConfirmMenu(
             s.messages().get("menu.confirm-title"),
             icon(Material.LIME_STAINED_GLASS_PANE, s.messages().get("menu.confirm")),
             icon(Material.RED_STAINED_GLASS_PANE, s.messages().get("menu.cancel")),
-            p -> submit(p, snapshot, template, quantity, unit, exempt, fee),
+            p -> submit(p, snapshot, template, quantity, unit, exempt, fee, options),
             id -> {});
     s.menus().open(player, confirm);
   }
@@ -214,7 +241,8 @@ public final class CreateFlow {
       int quantity,
       long unit,
       boolean feeExempt,
-      long shownFee) {
+      long shownFee,
+      OrderOptions options) {
     Settings settings = s.settings().get();
     long waitMillis = cooldown.tryAcquire(player.getUniqueId(), settings.createCooldownSeconds());
     if (waitMillis > 0) {
@@ -238,7 +266,8 @@ public final class CreateFlow {
             categoryOf(template),
             maxOpen,
             feeExempt,
-            shownFee);
+            shownFee,
+            options);
     Async.supply(
         s.scheduler(),
         s.logger(),

@@ -2,7 +2,6 @@ package dev.orderhub.flow;
 
 import dev.orderhub.bootstrap.Messages;
 import dev.orderhub.domain.ItemSnapshot;
-import dev.orderhub.domain.OrderOptions;
 import dev.orderhub.domain.OrderTemplate;
 import dev.orderhub.item.ItemCodecException;
 import dev.orderhub.money.Money;
@@ -64,8 +63,15 @@ public final class TemplateFlow {
     if (!validName(player, args)) {
       return;
     }
-    if (args.length != 4 || !args[2].matches("[0-9]{1,7}")) {
+    if (args.length < 4 || !args[2].matches("[0-9]{1,7}")) {
       player.sendMessage(s.messages().prefixed("template.usage"));
+      return;
+    }
+    OptionFlags.Result flags =
+        OptionFlags.parse(java.util.Arrays.asList(args).subList(4, args.length));
+    if (!flags.ok()) {
+      player.sendMessage(
+          s.messages().prefixed("create.options-invalid", Messages.text("input", flags.invalid())));
       return;
     }
     int quantity = Integer.parseInt(args[2]);
@@ -111,7 +117,7 @@ public final class TemplateFlow {
             quantity,
             1,
             s.settings().get().expiryHours(),
-            OrderOptions.EXACT,
+            flags.options(),
             false,
             System.currentTimeMillis());
     Async.supply(
@@ -154,7 +160,8 @@ public final class TemplateFlow {
           }
           ItemStack sample = stack.get();
           sample.setAmount(1);
-          create.startFromTemplate(player, t.item(), sample, t.quantity(), t.unitPrice());
+          create.startFromTemplate(
+              player, t.item(), sample, t.quantity(), t.unitPrice(), t.options());
         },
         orphan -> {},
         () -> player.sendMessage(s.messages().prefixed("general.database-error")));

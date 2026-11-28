@@ -125,8 +125,17 @@ public final class OrderCommand implements CommandHandler {
         }
         if (args.length == 1) {
           create.start(player, null, null);
-        } else if (args.length == 3) {
-          create.start(player, args[1], args[2]);
+        } else if (args.length >= 3) {
+          var flags =
+              dev.orderhub.flow.OptionFlags.parse(
+                  java.util.Arrays.asList(args).subList(3, args.length));
+          if (flags.ok()) {
+            create.start(player, args[1], args[2], flags.options());
+          } else {
+            player.sendMessage(
+                s.messages()
+                    .prefixed("create.options-invalid", Messages.text("input", flags.invalid())));
+          }
         } else {
           player.sendMessage(s.messages().prefixed("general.usage-create"));
         }
@@ -319,6 +328,17 @@ public final class OrderCommand implements CommandHandler {
     }
     if (args.length == 2 && args[0].equalsIgnoreCase("create")) {
       return filter(List.of("1", "16", "64", "576", "2304"), args[1]);
+    }
+    if (args.length >= 4 && args[0].equalsIgnoreCase("create")) {
+      return filter(dev.orderhub.flow.OptionFlags.SUGGESTIONS, args[args.length - 1]);
+    }
+    if (args.length >= 5
+        && args[0].equalsIgnoreCase("template")
+        && args[1].equalsIgnoreCase("save")) {
+      return filter(dev.orderhub.flow.OptionFlags.SUGGESTIONS, args[args.length - 1]);
+    }
+    if (args.length == 2 && args[0].equalsIgnoreCase("template")) {
+      return filter(List.of("save", "use", "delete", "list"), args[1]);
     }
     return List.of();
   }
