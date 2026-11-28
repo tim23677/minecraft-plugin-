@@ -14,7 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * {@code /order sell [menge]}: sucht fuer das Item in der Hand den passenden Auftrag mit dem
+ * {@code /order sell [menge|all]}: sucht fuer das Item in der Hand den passenden Auftrag mit dem
  * hoechsten Stueckpreis und oeffnet das Liefermenue mit den Items als Vorschau. Geliefert wird erst
  * nach Bestaetigen, dort gelten unveraendert Journal, Reservierung und Wiederherstellung.
  *
@@ -35,7 +35,8 @@ public final class SellFlow {
   }
 
   /**
-   * @param amountArg Menge als Text oder {@code null} fuer alles, was in der Hand liegt
+   * @param amountArg Menge als Text, {@code all} fuer alle passenden Items im Inventar oder {@code
+   *     null} fuer den Stapel in der Hand
    */
   public void start(Player player, String amountArg) {
     ItemStack hand = player.getInventory().getItemInMainHand();
@@ -128,6 +129,9 @@ public final class SellFlow {
   static OptionalInt parseAmount(String raw, int handAmount) {
     if (raw == null) {
       return OptionalInt.of(handAmount);
+    }
+    if (raw.equalsIgnoreCase("all")) {
+      return OptionalInt.of(Integer.MAX_VALUE);
     }
     if (!raw.matches("[0-9]{1,7}")) {
       return OptionalInt.empty();

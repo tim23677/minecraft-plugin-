@@ -82,6 +82,39 @@ class SellFlowTest extends FlowTestBase {
   }
 
   @Test
+  void allTakesEveryMatchingItemFromTheWholeInventoryUpToTheOrderSize() throws Exception {
+    long id = order(100, 50);
+    holdInHand(20);
+    supplier.getInventory().setItem(20, new ItemStack(Material.DIAMOND, 30));
+    supplier.getInventory().setItem(21, new ItemStack(Material.DIAMOND, 10));
+
+    sell.start(supplier, "all");
+    click(DeliveryMenu.CONFIRM_SLOT);
+
+    assertThat(orderOf(id).quantityFilled()).isEqualTo(50);
+    assertThat(diamondsEverywhere()).isEqualTo(60);
+  }
+
+  @Test
+  void allWithNothingElseInTheInventoryUsesTheStackInHand() throws Exception {
+    long id = order(100, 50);
+    holdInHand(12);
+
+    sell.start(supplier, "ALL");
+    click(DeliveryMenu.CONFIRM_SLOT);
+
+    assertThat(orderOf(id).quantityFilled()).isEqualTo(12);
+  }
+
+  @Test
+  void parseAmountKnowsAllAndRejectsNonsense() {
+    assertThat(SellFlow.parseAmount("all", 5)).hasValue(Integer.MAX_VALUE);
+    assertThat(SellFlow.parseAmount("allx", 5)).isEmpty();
+    assertThat(SellFlow.parseAmount("0", 5)).isEmpty();
+    assertThat(SellFlow.parseAmount(null, 5)).hasValue(5);
+  }
+
+  @Test
   void anAmountArgumentLimitsTheQuantity() throws Exception {
     long id = order(100, 50);
     holdInHand(40);

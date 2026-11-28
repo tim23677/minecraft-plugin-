@@ -345,6 +345,9 @@ public final class OrderCommand implements CommandHandler {
       }
       return filter(sorts, args[1]);
     }
+    if (args.length == 2 && args[0].equalsIgnoreCase("sell")) {
+      return filter(List.of("all", "1", "16", "64"), args[1]);
+    }
     if (args.length == 2 && args[0].equalsIgnoreCase("create")) {
       return filter(List.of("1", "16", "64", "576", "2304"), args[1]);
     }
