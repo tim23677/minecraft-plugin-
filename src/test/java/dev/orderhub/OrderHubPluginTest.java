@@ -2,6 +2,7 @@ package dev.orderhub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.orderhub.testsupport.PluginReady;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ class OrderHubPluginTest {
   void setUp() {
     server = MockBukkit.mock();
     plugin = MockBukkit.load(OrderHubPlugin.class);
+    assertThat(PluginReady.await(server, plugin)).isTrue();
   }
 
   @AfterEach
@@ -27,7 +29,10 @@ class OrderHubPluginTest {
   @Test
   void pluginEnablesAndRegistersCommand() {
     assertThat(plugin.isEnabled()).isTrue();
-    assertThat(plugin.getCommand("orderhub")).isNotNull();
+    assertThat(plugin.orderCommandNode().getName()).isEqualTo("order");
+    assertThat(plugin.adminCommandNode().getName()).isEqualTo("orderadmin");
+    var player = server.addPlayer();
+    assertThat(player.hasPermission("orderhub.use")).isTrue();
     assertThat(plugin.scheduler()).isNotNull();
   }
 

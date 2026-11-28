@@ -1,0 +1,173 @@
+# OrderHub: main configuration
+# config-version is managed by the plugin, do not edit it.
+config-version: 3
+
+# Unique id of this server. Every server that shares a database needs its own id.
+# Allowed: a-z, 0-9 and hyphen, at most 32 characters. Needs a restart.
+server-id: "main"
+
+# Language of the player texts: en, de, fr, es, pl, pt-br, ru, tr or zh-cn.
+# The files messages_<language>.yml lie directly in plugins/OrderHub.
+language: "en"
+
+# Extra console output (no confidential data).
+debug: false
+
+storage:
+  # sqlite (one server, default) or mariadb (several servers). Needs a restart.
+  type: "sqlite"
+  sqlite:
+    # File name inside the plugin folder, without path parts.
+    file: "orderhub.db"
+  mariadb:
+    # Complete JDBC URL. For servers that are not local, append sslMode=verify-full or verify-ca.
+    jdbc-url: "jdbc:mariadb://localhost:3306/orderhub?sslMode=disable"
+    user: "orderhub"
+    # NAME of the environment variable that holds the password. The password itself is never
+    # stored in this file.
+    password-env: "ORDERHUB_DB_PASSWORD"
+    pool-size: 10
+  # Retries on deadlock or lock conflict.
+  retry:
+    max-attempts: 5
+    initial-backoff-ms: 25
+    max-backoff-ms: 500
+
+orders:
+  # Price limits per item, written as in the game (for example 0.01, 1k, 2.5m).
+  min-unit-price: "0.01"
+  max-unit-price: "1000000"
+  # Maximum quantity per order.
+  max-quantity: 2304
+  # Default limit of open orders. The permissions orderhub.limit.5/10/25/50 raise it, the highest
+  # limit that applies wins.
+  default-max-open-orders: 3
+  # Lifetime in hours. After that the order expires and the remaining amount is refunded.
+  expiry-hours: 168
+  # Word that cancels a chat input.
+  cancel-word: "cancel"
+  # Seconds a chat input waits.
+  input-timeout-seconds: 60
+  # Minimum seconds between two order creations of one player (0 = off).
+  create-cooldown-seconds: 5
+
+fees:
+  # Fees in basis points (100 = 1 %). The permission orderhub.bypass.fee removes the creation fee.
+  create-fee-bp: 100
+  sales-tax-bp: 200
+
+items:
+  # Rejected by default. Set to true to admit such items in orders. Admitting an item does not make
+  # deliveries inexact: the delivered item must still equal the ordered one in every component.
+  allow-custom-name: false
+  allow-lore: false
+  allow-enchanted: false
+  allow-damaged: false
+  # Presets for items whose special trait lies in a data component. They admit these items in
+  # orders. Delivery must still match exactly (same effect, same shape, same pattern). Available:
+  #   potions          potions, splash potions, lingering potions (minecraft:potion_contents)
+  #   arrows           tipped arrows (minecraft:potion_contents)
+  #   fireworks        firework rockets and stars (minecraft:fireworks, firework_explosion)
+  #   goat-horns       goat horns (minecraft:instrument)
+  #   banners          patterned banners (minecraft:banner_patterns)
+  #   ominous-bottles  ominous bottles (minecraft:ominous_bottle_amplifier)
+  #   player-heads     player heads (minecraft:profile)
+  #   all              all of the above
+  # Remove a preset to reject those items again. [] rejects all of them.
+  component-presets:
+    - potions
+    - arrows
+    - fireworks
+    - goat-horns
+    - banners
+    - ominous-bottles
+    - player-heads
+  # More data components admitted one by one (keys like minecraft:repair_cost). Delivery is exact
+  # here as well.
+  allowed-components: []
+  # Additionally blocked items (material keys like minecraft:elytra).
+  blocked-materials: []
+  # Additionally blocked item tags (for example minecraft:banners).
+  blocked-tags: []
+
+delivery:
+  # Milliseconds of quiet between two clicks in a menu (protection against double clicks).
+  click-debounce-ms: 150
+
+cache:
+  # Maximum entries of the placeholder cache (PlaceholderAPI). The database is always the truth.
+  max-entries: 5000
+
+economy:
+  # false (default): Vault calls run on the global server thread, as EssentialsX, CMI and most
+  # economy plugins expect. true only if the provider is proven to be thread safe.
+  async-safe: false
+  # Wait for a Vault answer. If the call was never started by then (for example during a lag
+  # spike), no money moved and the payment is retried with backoff. If it was started and did not
+  # finish, the payment counts as unclear (MANUAL_REVIEW).
+  timeout-ms: 3000
+
+payouts:
+  # How often the payout queue is worked off, in seconds. Needs a restart.
+  worker-interval-seconds: 2
+  # Maximum retries of payments that were safely not executed. Needs a restart.
+  max-attempts: 5
+
+market:
+  # Minimum number of completed trades for a price recommendation.
+  min-trades-for-recommendation: 5
+
+notifications:
+  # Minimum seconds between two notifications of the same kind to one player.
+  cooldown-seconds: 60
+  # How the summary is shown at login: chat, actionbar or title.
+  display: chat
+  # Sound that plays with the summary, for example entity.experience_orb.pickup. Empty = no sound.
+  sound: ""
+
+logging:
+  # One structured line per money and item movement (transaction id, player UUID, amount, state).
+  # The file lies in plugins/OrderHub/logs and rotates. Needs a restart.
+  transactions:
+    # Also write the lines to the server console.
+    console: false
+    # Write the lines to logs/transactions.<n>.log.
+    file: true
+    file-max-mb: 10
+    file-count: 5
+
+health:
+  # Warning in the log (once when a limit is crossed, not at every check). 0 turns a check off.
+  warn:
+    economy-latency-ms: 1000
+    open-payments: 50
+    oldest-payment-minutes: 10
+    manual-review: 1
+
+backup:
+  # Scheduled backup of the SQLite database to plugins/OrderHub/backups (VACUUM INTO).
+  # No effect with MariaDB: use mysqldump or a snapshot of the database server there.
+  # Needs a restart.
+  auto:
+    enabled: true
+    interval-hours: 24
+    keep: 7
+
+metrics:
+  # Anonymous usage statistics through bStats (version, database type, language). No player data.
+  # false turns them off for OrderHub, server wide you can turn them off in plugins/bStats/config.yml.
+  # Needs a restart.
+  enabled: true
+
+retention:
+  # How long price history and market snapshots are kept, in days.
+  history-days: 120
+  # Background cleanup, minutes between two runs.
+  cleanup-interval-minutes: 30
+
+updates:
+  # Check for new versions against the GitHub releases of a repository. Default: off.
+  # Only the version number is requested, no data is sent.
+  check: false
+  # Repository in the form owner/name that publishes the releases.
+  repository: ""

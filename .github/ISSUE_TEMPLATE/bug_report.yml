@@ -1,0 +1,42 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: OrderHub version
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: Server software and version (Paper or Folia, Minecraft version)
+    validations:
+      required: true
+  - type: input
+    id: economy
+    attributes:
+      label: Vault and economy plugin with versions
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      options: [SQLite, MariaDB]
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: dump
+    attributes:
+      label: Output of /orderadmin dump
+      description: The dump contains no passwords. Check it before you attach it.

@@ -1,0 +1,43 @@
+OrderHub: Proprietary Software License
+
+Copyright (c) 2026 the OrderHub author. All rights reserved.
+
+This license describes what you may do with the OrderHub plugin ("the Software") after purchasing it. It is written in plain language. It has not been reviewed by a lawyer, and whether and how it is enforceable depends on the law where you live. If you need certainty, ask a legal professional.
+
+1. What you may do
+
+   a) Install and run the Software on Minecraft servers that you own or operate.
+   b) Use it inside your own network of servers (proxy and backend servers sharing one database), as long as the network belongs to you or your organization. One license covers one such network.
+   c) Edit the configuration files, language files and menu files that come with the Software.
+   d) Use the public API described in API.md to write your own plugins that work together with the Software.
+   e) Read and change the source code that comes with your purchase, for your own use on servers covered by your license.
+
+2. What you may not do
+
+   a) Resell the Software or any part of it.
+   b) Give the Software or any part of it to other people, publish it, or upload it to any download site, marketplace or file host.
+   c) Publish the source code, or parts of it, without written permission from the author.
+   d) Present the Software, or a modified version of it, as your own product.
+   e) Remove or change copyright notices or this license.
+   f) Hand on changed source code or changed builds to other people.
+   g) Provide the Software to customers or other parties who run their own servers with it. Each such party needs its own license.
+
+3. Support and updates
+
+   Updates and support are provided as stated on the page where you bought the Software. No particular response time is promised.
+
+4. No warranty
+
+   The Software is provided "as is". The author does not promise that it is free of errors or that it fits a particular purpose. Servers, economy plugins and databases differ, so test the Software on a copy of your server before you rely on it. You are responsible for backups of your server and database.
+
+5. Limit of liability
+
+   To the extent the law allows, the author is not liable for lost data, lost in-game items or currency, or lost income arising from the use of the Software. This does not limit liability that cannot be limited by law.
+
+6. Third-party components
+
+   The Software bundles or loads open-source libraries under their own licenses (HikariCP and SQLite JDBC under Apache-2.0, bStats under MIT, MariaDB Connector/J under LGPL-2.1-or-later). Their licenses remain in force for those components and are listed with their texts in THIRD_PARTY_NOTICES.md. Nothing in this license restricts the rights those licenses give you for those components. In particular, MariaDB Connector/J is not part of the Software's own jar: it is downloaded separately at first start (standard jar) and you may replace it with another compatible version.
+
+7. Termination
+
+   If you break this license, your right to use the Software ends. You must then delete all copies.

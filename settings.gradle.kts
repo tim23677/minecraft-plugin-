@@ -1,4 +1,5 @@
 rootProject.name = "OrderHub"
+include("orderhub-api")
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -10,6 +11,9 @@ dependencyResolutionManagement {
                 includeGroup("com.mojang")
                 includeGroup("net.md-5")
             }
+        }
+        maven("https://repo.helpch.at/releases/") {
+            content { includeGroup("me.clip") }
         }
         maven("https://jitpack.io") {
             content { includeGroup("com.github.MilkBowl") }

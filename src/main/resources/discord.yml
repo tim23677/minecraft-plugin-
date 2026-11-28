@@ -1,0 +1,26 @@
+# OrderHub: Discord-Webhook (optional, standardmaessig aus)
+enabled: false
+
+# Die URL wird bevorzugt aus der Umgebungsvariable ORDERHUB_DISCORD_WEBHOOK gelesen.
+# Erlaubt sind nur https-URLs der Hosts discord.com und discordapp.com.
+webhook-url: ""
+
+# Sichtbarer Absendername.
+username: "OrderHub"
+
+events:
+  large-order: true
+  order-completed: true
+  order-expired: false
+  order-cancelled: false
+  critical-error: true
+  admin-warning: true
+
+# Ab diesem Gesamtwert gilt ein Auftrag als Grossauftrag.
+large-order-threshold: "100000"
+
+# Versand: Wiederholungen mit Backoff und Pause bei Rate Limits.
+delivery:
+  max-attempts: 6
+  initial-backoff-seconds: 5
+  max-backoff-seconds: 300

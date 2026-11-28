@@ -1,6 +1,6 @@
 # OrderHub
 
-Kommerzielles Minecraft-Plugin für Paper und Folia. Java 21, Gradle Kotlin DSL, Paper API 1.21.11, SQLite und MariaDB/MySQL über HikariCP.
+Kommerzielles Minecraft-Plugin für Paper und Folia. Java 21, Gradle Kotlin DSL, Paper API 1.21.11, SQLite und MariaDB über HikariCP (MySQL wird nicht unterstützt, das Plugin lehnt es beim Start ab).
 
 ## Befehle
 

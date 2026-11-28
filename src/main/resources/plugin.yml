@@ -3,14 +3,72 @@ version: '${version}'
 main: dev.orderhub.OrderHubPlugin
 api-version: '1.21'
 folia-supported: true
-softdepend: [Vault]
-description: OrderHub
-commands:
-  orderhub:
-    description: Opens the OrderHub menu
-    usage: /<command>
-    permission: orderhub.use
+softdepend: [Vault, PlaceholderAPI]
+libraries:
+  - com.zaxxer:HikariCP:${hikariVersion}
+  - org.xerial:sqlite-jdbc:${sqliteVersion}
+  - org.mariadb.jdbc:mariadb-java-client:${mariadbVersion}
+description: Player-to-player buy order marketplace with escrow, delivery and claims
 permissions:
   orderhub.use:
-    description: Use the OrderHub menu
+    description: Use OrderHub
     default: true
+  orderhub.create:
+    description: Create and manage own orders
+    default: true
+  orderhub.market:
+    description: Browse the marketplace and deliver items
+    default: true
+  orderhub.stats:
+    description: View statistics and history
+    default: true
+  orderhub.favorites:
+    description: Use favorites and price alerts
+    default: true
+  orderhub.bypass.fee:
+    description: No creation fee
+    default: false
+  orderhub.limit.5:
+    description: Up to 5 open orders
+    default: false
+  orderhub.limit.10:
+    description: Up to 10 open orders
+    default: false
+  orderhub.limit.25:
+    description: Up to 25 open orders
+    default: false
+  orderhub.limit.50:
+    description: Up to 50 open orders
+    default: false
+  orderhub.admin.reload:
+    description: Reload the configuration
+    default: op
+  orderhub.admin.transactions:
+    description: Inspect transactions
+    default: op
+  orderhub.admin.recovery:
+    description: Run recovery and purge expired orders
+    default: op
+  orderhub.admin.backup:
+    description: Back up the SQLite database and export orders or the ledger as CSV
+    default: op
+  orderhub.admin.dump:
+    description: Write a support file with version, plugins, configuration without secrets and recent errors
+    default: op
+  orderhub.admin.view:
+    description: List orders, statistics and debug info
+    default: op
+  orderhub.admin.cancel:
+    description: Cancel any order (with confirmation and reason)
+    default: op
+  orderhub.admin:
+    description: All administration commands
+    default: op
+    children:
+      orderhub.admin.view: true
+      orderhub.admin.cancel: true
+      orderhub.admin.reload: true
+      orderhub.admin.transactions: true
+      orderhub.admin.recovery: true
+      orderhub.admin.backup: true
+      orderhub.admin.dump: true

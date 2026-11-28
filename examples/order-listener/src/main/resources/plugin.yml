@@ -1,0 +1,7 @@
+name: OrderListenerExample
+version: '1.0.0'
+main: dev.example.orderlistener.OrderListenerPlugin
+api-version: '1.21'
+folia-supported: true
+depend: [OrderHub]
+description: Example plugin that uses the OrderHub API (events and market data)

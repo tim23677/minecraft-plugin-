@@ -1,0 +1,55 @@
+# OrderHub: Menues / menus
+# Gestaltung der Menues. Jedes Menue kennt: rows (1 bis 6), title (MiniMessage, leer = Titel aus der
+# Sprachdatei), slots (Zahl, Liste oder Bereich wie "0-44"), materials (Item-Namen) und texts
+# (MiniMessage, leer = Text aus der Sprachdatei). Ungueltige Angaben werden mit einer Warnung im Log
+# durch die Vorgabe ersetzt. Aenderungen gelten nach /orderadmin reload.
+# Design of the menus: rows, title, slots, materials and texts. Invalid values fall back to the
+# default with a log warning. Changes apply after /orderadmin reload.
+menu-version: 2
+main:
+  rows: 3
+  filler: "gray_stained_glass_pane"
+marketplace:
+  rows: 6
+  page-size: 45
+market:
+  rows: 6
+  # title: "<gold>Marketplace"
+  slots:
+    content: "0-44"
+    previous: 45
+    category: 47
+    sort: 49
+    search: 51
+    next: 53
+  materials:
+    previous: arrow
+    next: arrow
+    category: compass
+    sort: hopper
+    search: oak_sign
+order-details:
+  rows: 4
+delivery:
+  rows: 6
+  input-slots: [10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25]
+claims:
+  rows: 6
+favorites:
+  rows: 6
+analytics:
+  rows: 6
+statistics:
+  rows: 4
+history:
+  rows: 6
+admin:
+  rows: 6
+inspector:
+  rows: 6
+icons:
+  back: "arrow"
+  next: "arrow"
+  confirm: "lime_stained_glass_pane"
+  cancel: "red_stained_glass_pane"
+  favorite: "nether_star"

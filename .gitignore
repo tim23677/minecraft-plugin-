@@ -8,3 +8,5 @@ out/
 *.log
 .claude/settings.local.json
 dependency-check-data/
+.claude/worktrees/
+dist/
